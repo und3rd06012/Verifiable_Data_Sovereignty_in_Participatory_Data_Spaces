@@ -1,0 +1,16 @@
+{
+  "id": "v008-missing-consent",
+  "description": "the consent property is absent from the record",
+  "now": "2026-08-30T12:00:00.000Z",
+  "record": {
+    "type": "contribution",
+    "participantRef": "p-001",
+    "siteId": "athens",
+    "collectedAt": "2026-08-30T11:00:00.000Z",
+    "channel": "app",
+    "declaredPurpose": "service-improvement",
+    "declaredRecipientClass": "statistics",
+    "fields": { "service.satisfaction": 4 }
+  },
+  "expected": { "allowed": false, "reason": "missing-consent-assertion" }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "v014-malformed-fields",
+  "description": "fields is a JSON array rather than the contracted object",
+  "now": "2026-08-30T12:00:00.000Z",
+  "record": {
+    "type": "contribution",
+    "participantRef": "p-001",
+    "siteId": "athens",
+    "collectedAt": "2026-08-30T11:00:00.000Z",
+    "channel": "app",
+    "declaredPurpose": "service-improvement",
+    "declaredRecipientClass": "statistics",
+    "fields": ["service.satisfaction"],
+    "consent": {
+      "participantRef": "p-001",
+      "assertedAt": "2026-08-01T00:00:00.000Z",
+      "grants": [
+        {
+          "field": "service.satisfaction",
+          "purpose": "service-improvement",
+          "recipientClass": "statistics",
+          "grantedAt": "2026-08-01T00:00:00.000Z",
+          "expiresAt": null
+        }
+      ]
+    }
+  },
+  "expected": { "allowed": false, "reason": "malformed-fields" }
+}

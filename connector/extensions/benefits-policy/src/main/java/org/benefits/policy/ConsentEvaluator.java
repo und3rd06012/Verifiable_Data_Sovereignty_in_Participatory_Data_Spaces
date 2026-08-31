@@ -6,6 +6,18 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * A Java transcription of the record-level consent evaluation rules that
+ * live in {@code packages/consent-core/src/evaluate.ts} (see
+ * {@code conformance/README.md}). It exists to prove those rules port
+ * faithfully to Java; it is exercised only by {@code ConformanceVectorTest}
+ * and is NOT invoked by the connector at runtime. Live release-boundary
+ * enforcement (S2) is ODRL constraint evaluation in
+ * {@code PurposeFunction}, {@code RecipientClassFunction},
+ * {@code FieldSetFunction} and {@code StewardQuorumFunction}, which
+ * evaluate a policy against a requester's claims, not a
+ * {@code ContributionRecord}.
+ */
 public final class ConsentEvaluator {
 
     private ConsentEvaluator() {
@@ -26,8 +38,12 @@ public final class ConsentEvaluator {
         }
 
         JsonNode fields = record.get("fields");
+        if (fields != null && !fields.isNull() && !fields.isObject()) {
+            return "malformed-fields";
+        }
+
         List<String> names = new ArrayList<>();
-        if (fields != null) {
+        if (fields != null && fields.isObject()) {
             for (Iterator<String> it = fields.fieldNames(); it.hasNext(); ) {
                 names.add(it.next());
             }

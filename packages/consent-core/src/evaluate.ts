@@ -6,12 +6,17 @@ export function evaluateRecord(record: ContributionRecord, nowIso: string): Deci
   }
 
   var consent = record.consent;
-  if (!consent || !consent.grants) {
+  if (!consent || consent.grants == null) {
     return { allowed: false, reason: 'missing-consent-assertion' };
   }
 
   if (consent.participantRef !== record.participantRef) {
     return { allowed: false, reason: 'participant-mismatch' };
+  }
+
+  if (record.fields !== undefined && record.fields !== null &&
+      (typeof record.fields !== 'object' || Array.isArray(record.fields))) {
+    return { allowed: false, reason: 'malformed-fields' };
   }
 
   var fields = record.fields || {};

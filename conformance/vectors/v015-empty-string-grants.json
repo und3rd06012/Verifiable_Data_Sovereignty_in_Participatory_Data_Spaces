@@ -1,0 +1,21 @@
+{
+  "id": "v015-empty-string-grants",
+  "description": "consent.grants is an empty string, which is neither absent nor null so the missing-consent-assertion check must not catch it",
+  "now": "2026-08-30T12:00:00.000Z",
+  "record": {
+    "type": "contribution",
+    "participantRef": "p-001",
+    "siteId": "athens",
+    "collectedAt": "2026-08-30T11:00:00.000Z",
+    "channel": "app",
+    "declaredPurpose": "service-improvement",
+    "declaredRecipientClass": "statistics",
+    "fields": { "service.satisfaction": 4 },
+    "consent": {
+      "participantRef": "p-001",
+      "assertedAt": "2026-08-01T00:00:00.000Z",
+      "grants": ""
+    }
+  },
+  "expected": { "allowed": false, "reason": "no-grant:service.satisfaction" }
+}

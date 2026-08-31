@@ -9,6 +9,7 @@ import org.eclipse.edc.spi.iam.IdentityService;
 import org.eclipse.edc.spi.iam.TokenParameters;
 import org.eclipse.edc.spi.iam.TokenRepresentation;
 import org.eclipse.edc.spi.iam.VerificationContext;
+import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.result.Result;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.types.TypeManager;
@@ -26,6 +27,8 @@ public class BenefitsIamExtension implements ServiceExtension {
     // silently revert to mock identity, with only a log warning to notice.
     @Inject
     private AudienceResolver audienceResolver;
+    @Inject
+    private Monitor monitor;
 
     @Override
     public String name() {
@@ -34,20 +37,25 @@ public class BenefitsIamExtension implements ServiceExtension {
 
     @Provider
     public IdentityService identityService() {
-        return new BenefitsClaimsIdentityService(contextConfig, typeManager);
+        return new BenefitsClaimsIdentityService(contextConfig, typeManager, monitor);
     }
 
     private static class BenefitsClaimsIdentityService implements IdentityService {
         private final ParticipantContextConfig contextConfig;
         private final TypeManager typeManager;
+        private final Monitor monitor;
 
-        BenefitsClaimsIdentityService(ParticipantContextConfig contextConfig, TypeManager typeManager) {
+        BenefitsClaimsIdentityService(ParticipantContextConfig contextConfig, TypeManager typeManager, Monitor monitor) {
             this.contextConfig = contextConfig;
             this.typeManager = typeManager;
+            this.monitor = monitor;
         }
 
         @Override
         public Result<TokenRepresentation> obtainClientCredentials(String participantContextId, TokenParameters parameters) {
+            // The requester claims are read out of the participant context identified by
+            // participantContextId, so this log line records which context EDC actually passes in.
+            monitor.info("obtainClientCredentials participantContextId=" + participantContextId);
             var token = Map.of(
                     "client_id", contextConfig.getString(participantContextId, "edc.participant.id"),
                     "purpose", contextConfig.getString(participantContextId, "benefits.requester.purpose", ""),

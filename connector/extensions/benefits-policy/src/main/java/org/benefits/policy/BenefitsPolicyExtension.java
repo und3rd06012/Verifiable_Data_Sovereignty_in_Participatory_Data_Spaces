@@ -49,6 +49,11 @@ public class BenefitsPolicyExtension implements ServiceExtension {
 
         policyEngine.registerFunction(ContractNegotiationPolicyContext.class, Permission.class, PROBE_KEY,
                 new ProbeConstraintFunction(monitor));
+        // The release request id is an identifier that StewardQuorumFunction reads off the rule as a
+        // sibling constraint, not an assertion about the world, so there is nothing for it to decide.
+        // It still needs a registered function because EDC rejects a bound left operand that has none.
+        policyEngine.registerFunction(ContractNegotiationPolicyContext.class, Permission.class, RELEASE_REQUEST_KEY,
+                (operator, rightValue, rule, policyContext) -> true);
         policyEngine.registerFunction(ContractNegotiationPolicyContext.class, Permission.class, STEWARD_QUORUM_KEY,
                 new StewardQuorumFunction(store, monitor));
         policyEngine.registerFunction(ContractNegotiationPolicyContext.class, Permission.class, PURPOSE_KEY,
@@ -59,5 +64,25 @@ public class BenefitsPolicyExtension implements ServiceExtension {
                 new FieldSetFunction());
 
         monitor.info("BENEFITS policy functions registered");
+
+        seed(context);
+    }
+
+    private void seed(ServiceExtensionContext context) {
+        var path = context.getSetting("benefits.seed.authorizations", "");
+        if (path.isBlank()) {
+            return;
+        }
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper()
+                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        try {
+            var type = mapper.getTypeFactory().constructCollectionType(java.util.List.class, StewardAuthorization.class);
+            java.util.List<StewardAuthorization> authorizations =
+                    mapper.readValue(java.nio.file.Files.readString(java.nio.file.Path.of(path)), type);
+            authorizations.forEach(store::save);
+            context.getMonitor().info("seeded " + authorizations.size() + " steward authorizations from " + path);
+        } catch (java.io.IOException e) {
+            throw new org.eclipse.edc.spi.EdcException("failed to seed steward authorizations from " + path, e);
+        }
     }
 }

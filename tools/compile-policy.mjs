@@ -1,0 +1,69 @@
+import { compilePolicy } from '../packages/consent-odrl/dist/compile.js';
+
+const AT = '2026-08-30T12:00:00.000Z';
+
+function grant(field, expiresAt = null) {
+  return {
+    field,
+    purpose: 'service-improvement',
+    recipientClass: 'statistics',
+    grantedAt: '2026-08-01T00:00:00.000Z',
+    expiresAt
+  };
+}
+
+const CASES = {
+  'quorum-met': [grant('service.satisfaction')],
+  'quorum-missing': [grant('service.satisfaction')],
+  'quorum-one-steward-twice': [grant('service.satisfaction')],
+  'purpose-mismatch': [grant('service.satisfaction')],
+  'recipient-class-mismatch': [grant('service.satisfaction')],
+  'field-outside-grant': [grant('service.satisfaction')],
+  'expired-grant-field-excluded': [
+    grant('service.satisfaction'),
+    grant('health.condition', '2026-08-15T00:00:00.000Z')
+  ]
+};
+
+const name = process.argv[2];
+const grants = CASES[name];
+if (!grants) {
+  console.error('unknown case: ' + name);
+  process.exit(2);
+}
+
+const policy = compilePolicy(grants, {
+  releaseRequestId: 'rr-' + name,
+  quorum: 2,
+  kAnonymity: 5,
+  epsilon: 0.5,
+  at: AT
+});
+
+// benefits:kAnonymity and benefits:epsilonBudget have no constraint function yet: they belong to
+// the privacy pipeline in a later phase. EDC 0.18.0 does not ignore an unbound left operand, it
+// rejects the whole policy definition with "not bound to any scopes" and "not bound to any
+// functions", so the consent suite drops the two constraints before publishing. The compiler still
+// emits them, unchanged. Delete this filter as soon as their functions are registered.
+const UNIMPLEMENTED = ['benefits:kAnonymity', 'benefits:epsilonBudget'];
+for (const permission of policy.permission) {
+  permission.constraint = permission.constraint.filter((c) => !UNIMPLEMENTED.includes(c.leftOperand));
+}
+
+// EDC 0.18.0's management API validator reads odrl:rightOperand as a JsonString and throws a
+// ClassCastException on a JSON number, so numeric right operands compiled by consent-odrl are
+// rendered as strings before publication. Only the JSON type changes, never the value, and the
+// constraint functions already parse their right operand from a string.
+for (const permission of policy.permission) {
+  for (const constraint of permission.constraint) {
+    if (typeof constraint.rightOperand === 'number') {
+      constraint.rightOperand = String(constraint.rightOperand);
+    }
+  }
+}
+
+process.stdout.write(JSON.stringify({
+  '@context': { '@vocab': 'https://w3id.org/edc/v0.0.1/ns/' },
+  '@id': 'benefits-policy',
+  policy
+}, null, 2));

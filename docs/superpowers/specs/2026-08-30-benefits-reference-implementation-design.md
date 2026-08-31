@@ -34,11 +34,29 @@ In scope: participant web client, steward portal, simulated device
 fleet, EDC-based community connector, experiments, figures, manuscript.
 
 Out of scope for now: the React Native application described in the
-conference paper. It is deferred to a follow-on phase after the
-manuscript is complete. The manuscript will state that the reference
-implementation uses a PWA client implementing the same three tier
-architecture, with the native application noted as separate production
-work.
+conference paper.
+
+**Decision, 2026-08-31: the mobile client is Flutter with a local outbox,
+not React Native and not PouchDB replication.** The paper describes
+consent-filtered PouchDB to CouchDB synchronisation, and there is no
+viable Dart implementation of the CouchDB replication protocol for
+mobile: Sporran, the closest equivalent, is web only and depends on
+browser storage APIs, while Couchbase Lite for Dart and Fluttercouch
+speak the Couchbase Sync Gateway protocol rather than CouchDB's.
+
+What this costs and does not cost. It does NOT cost the consent
+enforcement claim: the S1 gate lives in CouchDB's validate_doc_update
+function and runs server side, so a Flutter client posting a record with
+an ungranted field is refused identically to any other client. It DOES
+cost bidirectional replication and the published "user preference first"
+conflict resolution, which the mobile app will not implement. The
+manuscript must therefore describe the mobile client's synchronisation as
+an offline outbox rather than as PouchDB replication.
+
+The offline-first evidence in the paper does not depend on the app. The
+simulated device fleet (phase 5) is TypeScript with real PouchDB, and it
+is what runs experiment E2, revocation under partition. The mobile client
+serves demonstration, screenshots and eventual pilot use.
 
 Also out of scope: hardening the differential privacy mechanism against
 floating point side channels. One future work sentence covers it.

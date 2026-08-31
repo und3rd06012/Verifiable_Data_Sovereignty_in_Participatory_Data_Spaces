@@ -1,0 +1,18 @@
+[versions]
+edc = "0.18.0"
+assertj = "3.26.3"
+junit = "5.11.4"
+
+[libraries]
+edc-bom-controlplane-base = { module = "org.eclipse.edc:controlplane-base-bom", version.ref = "edc" }
+edc-iam-mock = { module = "org.eclipse.edc:iam-mock", version.ref = "edc" }
+edc-control-plane-spi = { module = "org.eclipse.edc:control-plane-spi", version.ref = "edc" }
+edc-control-plane-core = { module = "org.eclipse.edc:control-plane-core", version.ref = "edc" }
+edc-policy-engine-spi = { module = "org.eclipse.edc:policy-engine-spi", version.ref = "edc" }
+edc-participant-context-config-spi = { module = "org.eclipse.edc:participant-context-config-spi", version.ref = "edc" }
+edc-json-ld-spi = { module = "org.eclipse.edc:json-ld-spi", version.ref = "edc" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+[plugins]
+shadow = { id = "com.gradleup.shadow", version = "9.6.1" }

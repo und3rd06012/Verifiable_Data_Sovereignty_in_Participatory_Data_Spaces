@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Reads contributions from CouchDB using a Mango query.
@@ -24,7 +25,10 @@ import java.util.Map;
  */
 public class CouchDbContributionSource implements ContributionSource {
 
+    private static final Logger LOGGER = Logger.getLogger(CouchDbContributionSource.class.getName());
+
     private static final List<String> QUASI_IDENTIFIERS = List.of("channel", "service");
+    private static final int MAX_RESULTS = 100_000;
 
     private final String baseUrl;
     private final String database;
@@ -42,22 +46,27 @@ public class CouchDbContributionSource implements ContributionSource {
 
     @Override
     public List<Contribution> contributionsFor(String siteId) {
-        var selector = """
-                {"selector":{"type":"contribution","siteId":"%s"},"limit":100000}"""
-                .formatted(siteId);
-
-        var request = HttpRequest.newBuilder(URI.create(baseUrl + "/" + database + "/_find"))
-                .header("authorization", authorization)
-                .header("content-type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(selector))
-                .build();
-
         try {
+            var selector = buildSelector(siteId);
+
+            var request = HttpRequest.newBuilder(URI.create(baseUrl + "/" + database + "/_find"))
+                    .header("authorization", authorization)
+                    .header("content-type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(selector))
+                    .build();
+
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
                 throw new EdcException("CouchDB query failed with status " + response.statusCode());
             }
-            return parse(mapper.readTree(response.body()));
+            var root = mapper.readTree(response.body());
+            var docs = root.path("docs");
+            if (docs.size() == MAX_RESULTS) {
+                throw new EdcException("CouchDB query for siteId " + siteId
+                        + " may have been truncated at the limit of " + MAX_RESULTS
+                        + " results; pagination is not implemented");
+            }
+            return parse(root);
         } catch (IOException e) {
             throw new EdcException("CouchDB query failed", e);
         } catch (InterruptedException e) {
@@ -66,9 +75,25 @@ public class CouchDbContributionSource implements ContributionSource {
         }
     }
 
+    private String buildSelector(String siteId) throws IOException {
+        var selector = mapper.createObjectNode();
+        var criteria = selector.putObject("selector");
+        criteria.put("type", "contribution");
+        criteria.put("siteId", siteId);
+        selector.put("limit", MAX_RESULTS);
+        return mapper.writeValueAsString(selector);
+    }
+
     private List<Contribution> parse(JsonNode root) {
         List<Contribution> contributions = new ArrayList<>();
         for (JsonNode doc : root.path("docs")) {
+            if (!doc.hasNonNull("participantRef") || doc.get("participantRef").asText().isBlank()) {
+                var docId = doc.hasNonNull("_id") ? doc.get("_id").asText() : "none";
+                LOGGER.warning("skipping contribution document with missing participantRef, _id=" + docId);
+                continue;
+            }
+            var participantRef = doc.get("participantRef").asText();
+
             Map<String, String> attributes = new HashMap<>();
             for (var name : QUASI_IDENTIFIERS) {
                 if (doc.hasNonNull(name)) {
@@ -80,7 +105,7 @@ public class CouchDbContributionSource implements ContributionSource {
                 attributes.put("field." + field, doc.path("fields").path(field).asText());
             }
             contributions.add(new Contribution(
-                    doc.path("participantRef").asText(),
+                    participantRef,
                     doc.path("siteId").asText(),
                     attributes));
         }

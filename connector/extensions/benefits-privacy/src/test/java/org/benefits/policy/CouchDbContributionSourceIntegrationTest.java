@@ -72,4 +72,37 @@ class CouchDbContributionSourceIntegrationTest {
         var source = new CouchDbContributionSource(BASE, DB, "admin", "benefits", new ObjectMapper());
         assertThat(source.contributionsFor("nowhere")).isEmpty();
     }
+
+    @Test
+    void escapesASiteIdContainingAQuote() throws Exception {
+        send("POST", "/" + DB, """
+                {"type":"contribution","participantRef":"p-quote","siteId":"athens\\"malicious",
+                 "channel":"app","fields":{"service.satisfaction":2}}""");
+
+        var source = new CouchDbContributionSource(BASE, DB, "admin", "benefits", new ObjectMapper());
+        var results = source.contributionsFor("athens\"malicious");
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).participantRef()).isEqualTo("p-quote");
+        assertThat(results.get(0).siteId()).isEqualTo("athens\"malicious");
+    }
+
+    @Test
+    void skipsADocumentMissingParticipantRef() throws Exception {
+        send("POST", "/" + DB, """
+                {"type":"contribution","siteId":"corfu",
+                 "channel":"app","fields":{"service.satisfaction":1}}""");
+        send("POST", "/" + DB, """
+                {"type":"contribution","participantRef":null,"siteId":"corfu",
+                 "channel":"app","fields":{"service.satisfaction":2}}""");
+        send("POST", "/" + DB, """
+                {"type":"contribution","participantRef":"p-corfu","siteId":"corfu",
+                 "channel":"app","fields":{"service.satisfaction":5}}""");
+
+        var source = new CouchDbContributionSource(BASE, DB, "admin", "benefits", new ObjectMapper());
+        var results = source.contributionsFor("corfu");
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).participantRef()).isEqualTo("p-corfu");
+    }
 }

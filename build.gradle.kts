@@ -18,6 +18,7 @@ subprojects {
     dependencies {
         add("testImplementation", rootProject.libs.junit.jupiter)
         add("testImplementation", rootProject.libs.assertj.core)
+        add("testRuntimeOnly", rootProject.libs.junit.platform.launcher)
     }
 
     tasks.withType<Test> {

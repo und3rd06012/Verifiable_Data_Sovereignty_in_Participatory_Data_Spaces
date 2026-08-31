@@ -27,3 +27,24 @@ Reason codes are part of the contract, not diagnostics. The closed set is:
 All timestamps are ISO 8601 UTC with millisecond precision and a trailing Z.
 Expiry comparison is lexicographic string comparison, which is only correct
 for that exact format.
+
+Three rules are easy to get wrong and both implementations must follow them
+exactly, since the reason string must be byte-identical across languages:
+
+Field evaluation order. Fields are evaluated in ascending lexicographic order
+of field id. When more than one field lacks a covering grant, the reason
+names the first such field in that order, not all of them. Without this rule
+the reason string would depend on JSON object key order, which differs
+between languages.
+
+Grant matching. A grant covers a field only if all three of `field`,
+`purpose` and `recipientClass` are equal, as exact string comparisons, to
+the field id, the record's `declaredPurpose` and the record's
+`declaredRecipientClass` respectively. There is no wildcard, no prefix
+matching, and no case-insensitive comparison.
+
+Validity boundaries, stated as exclusive/inclusive. A grant is active when
+`grantedAt <= now` and either `expiresAt` is null or `expiresAt > now`. Both
+comparisons are lexicographic string comparisons on the ISO 8601 UTC
+millisecond format. In particular: `expiresAt` exactly equal to `now` means
+EXPIRED, and `grantedAt` exactly equal to `now` means ACTIVE.

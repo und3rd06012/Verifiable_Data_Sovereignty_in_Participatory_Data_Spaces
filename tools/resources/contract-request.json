@@ -1,0 +1,29 @@
+{
+  "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
+  "@type": "ContractRequest",
+  "counterPartyId": "provider",
+  "counterPartyAddress": "http://localhost:19194/protocol/2025-1",
+  "protocol": "dataspace-protocol-http:2025-1",
+  "policy": {
+    "@context": [
+      "http://www.w3.org/ns/odrl.jsonld",
+      { "benefits": "https://w3id.org/benefits/v1/ns/" }
+    ],
+    "@id": "OFFER_ID",
+    "@type": "Offer",
+    "permission": [
+      {
+        "action": "use",
+        "target": "benefits-aggregate",
+        "constraint": {
+          "@type": "AtomicConstraint",
+          "leftOperand": "benefits:probe",
+          "operator": "eq",
+          "rightOperand": "on"
+        }
+      }
+    ],
+    "assigner": "provider",
+    "target": "benefits-aggregate"
+  }
+}

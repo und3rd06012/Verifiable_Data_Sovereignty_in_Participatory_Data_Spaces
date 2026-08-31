@@ -1,0 +1,6 @@
+{
+  "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
+  "@id": "benefits-aggregate",
+  "properties": { "name": "aggregate release", "contenttype": "application/json" },
+  "dataAddress": { "type": "test" }
+}

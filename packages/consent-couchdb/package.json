@@ -5,7 +5,8 @@
   "main": "dist/build-design-doc.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run test/couchdb.integration.test.ts"
   },
   "dependencies": {
     "@benefits/consent-core": "0.1.0"

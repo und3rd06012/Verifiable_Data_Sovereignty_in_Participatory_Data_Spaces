@@ -49,5 +49,28 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
                 EPSILON_BUDGET_KEY, new EpsilonBudgetFunction(artifactStore, monitor));
 
         monitor.info("BENEFITS privacy pipeline registered");
+
+        seed(context);
+    }
+
+    private void seed(ServiceExtensionContext context) {
+        var path = context.getSetting("benefits.seed.artifacts", "");
+        if (path.isBlank()) {
+            return;
+        }
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        try {
+            var json = mapper.readTree(java.nio.file.Files.readString(java.nio.file.Path.of(path)));
+            for (var node : json) {
+                artifactStore.save(new ReleaseArtifact(
+                        node.path("releaseRequestId").asText(),
+                        node.path("payload").asText().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        node.path("computedK").asInt(),
+                        node.path("epsilonCharged").asDouble()));
+            }
+            context.getMonitor().info("seeded release artifacts from " + path);
+        } catch (java.io.IOException e) {
+            throw new org.eclipse.edc.spi.EdcException("failed to seed release artifacts from " + path, e);
+        }
     }
 }

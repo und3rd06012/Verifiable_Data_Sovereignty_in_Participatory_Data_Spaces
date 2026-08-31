@@ -11,6 +11,8 @@ CASES=(
   "recipient-class-mismatch:TERMINATED"
   "field-outside-grant:TERMINATED"
   "expired-grant-field-excluded:TERMINATED"
+  "k-below-threshold:TERMINATED"
+  "budget-exceeded:TERMINATED"
 )
 
 mkdir -p "$(dirname "$OUT")"
@@ -38,6 +40,7 @@ for entry in "${CASES[@]}"; do
   cp /tmp/negotiation.json "/tmp/negotiation-$name.json" 2>/dev/null || true
   cp /tmp/benefits-case/policy.json "/tmp/policy-$name.json" 2>/dev/null || true
   cp /tmp/benefits-case/consumer.properties "/tmp/consumer-$name.properties" 2>/dev/null || true
+  cp /tmp/benefits-case/artifacts.json "/tmp/artifacts-$name.json" 2>/dev/null || true
   if evidence=$(verify_cause "$name"); then cause=yes; else cause=no; failed=1; fi
   if [ "$observed" = "$expected" ] && [ "$cause" = yes ]; then pass=yes; else pass=no; failed=1; fi
   echo "| $name | $expected | $observed | $pass | $evidence |" >> "$OUT"

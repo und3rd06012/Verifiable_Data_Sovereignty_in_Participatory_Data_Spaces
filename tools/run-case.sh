@@ -10,6 +10,8 @@ PURPOSE=service-improvement
 RECIPIENT=statistics
 FIELDS=service.satisfaction
 SEED=""
+ARTIFACT_K=6
+ARTIFACT_EPS=0.5
 
 case "$CASE" in
   quorum-met)                   SEED="s-1 s-2" ;;
@@ -19,6 +21,8 @@ case "$CASE" in
   recipient-class-mismatch)     SEED="s-1 s-2"; RECIPIENT=provider ;;
   field-outside-grant)          SEED="s-1 s-2"; FIELDS="service.satisfaction,health.condition" ;;
   expired-grant-field-excluded) SEED="s-1 s-2"; FIELDS="health.condition" ;;
+  k-below-threshold)            SEED="s-1 s-2"; ARTIFACT_K=4;   ARTIFACT_EPS=0.5 ;;
+  budget-exceeded)              SEED="s-1 s-2"; ARTIFACT_K=6;   ARTIFACT_EPS=0.9 ;;
   *) echo "unknown case: $CASE" >&2; exit 2 ;;
 esac
 
@@ -42,6 +46,14 @@ json.dump([{
 PY
   SEED_ARG=(-Dbenefits.seed.authorizations="$WORK/seed.json")
 fi
+
+python3 - "$CASE" "$WORK/artifacts.json" "$ARTIFACT_K" "$ARTIFACT_EPS" <<'PY'
+import json, sys
+case, out, k, eps = sys.argv[1], sys.argv[2], int(sys.argv[3]), float(sys.argv[4])
+json.dump([{ "releaseRequestId": "rr-" + case, "payload": "{\"groups\":[]}",
+             "computedK": k, "epsilonCharged": eps }], open(out, "w"))
+PY
+SEED_ARG+=(-Dbenefits.seed.artifacts="$WORK/artifacts.json")
 
 sed -e "s|^benefits.requester.purpose=.*|benefits.requester.purpose=$PURPOSE|" \
     -e "s|^benefits.requester.recipientClass=.*|benefits.requester.recipientClass=$RECIPIENT|" \

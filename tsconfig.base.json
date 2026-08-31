@@ -1,0 +1,15 @@
+{
+  // The ES5 target/lib pairing is a safety margin, not a runtime requirement:
+  // the CouchDB 3.5.2 query server's source parser rejects object spread
+  // ({...o}), and an ES5 compile target provably cannot emit that syntax.
+  "compilerOptions": {
+    "target": "ES5",
+    "lib": ["ES5"],
+    "module": "ES2020",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}

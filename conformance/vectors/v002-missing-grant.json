@@ -1,0 +1,29 @@
+{
+  "id": "v002-missing-grant",
+  "description": "a second field is present with no grant covering it",
+  "now": "2026-08-30T12:00:00.000Z",
+  "record": {
+    "type": "contribution",
+    "participantRef": "p-001",
+    "siteId": "athens",
+    "collectedAt": "2026-08-30T11:00:00.000Z",
+    "channel": "app",
+    "declaredPurpose": "service-improvement",
+    "declaredRecipientClass": "statistics",
+    "fields": { "service.satisfaction": 4, "health.condition": "asthma" },
+    "consent": {
+      "participantRef": "p-001",
+      "assertedAt": "2026-08-01T00:00:00.000Z",
+      "grants": [
+        {
+          "field": "service.satisfaction",
+          "purpose": "service-improvement",
+          "recipientClass": "statistics",
+          "grantedAt": "2026-08-01T00:00:00.000Z",
+          "expiresAt": null
+        }
+      ]
+    }
+  },
+  "expected": { "allowed": false, "reason": "no-grant:health.condition" }
+}

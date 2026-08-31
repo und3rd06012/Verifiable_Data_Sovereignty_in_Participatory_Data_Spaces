@@ -91,8 +91,13 @@ class StewardQuorumFunctionTest {
     }
 
     @Test
-    void refusesAnUnsupportedOperator() {
+    void refusesAndReportsEveryOperatorExceptGeq() {
         saveAuthorization("rr-5", "s-1", "s-2");
-        assertThat(function.evaluate(Operator.NEQ, 2, permissionWithRelease("rr-5"), context())).isFalse();
+
+        for (var operator : List.of(Operator.NEQ, Operator.EQ, Operator.GT)) {
+            var ctx = context();
+            assertThat(function.evaluate(operator, 2, permissionWithRelease("rr-5"), ctx)).isFalse();
+            assertThat(ctx.getProblems()).isNotEmpty();
+        }
     }
 }

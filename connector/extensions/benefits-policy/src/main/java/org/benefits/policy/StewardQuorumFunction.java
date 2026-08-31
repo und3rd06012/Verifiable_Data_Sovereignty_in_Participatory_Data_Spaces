@@ -38,15 +38,15 @@ public class StewardQuorumFunction implements AtomicConstraintRuleFunction<Permi
             return false;
         }
 
+        if (operator != Operator.GEQ) {
+            context.reportProblem("stewardQuorum does not support operator: " + operator);
+            return false;
+        }
+
         var signed = authorization.distinctStewardCount();
         monitor.info("steward quorum check releaseRequest=" + releaseRequestId + " signed=" + signed + " required=" + required);
 
-        return switch (operator) {
-            case GEQ -> signed >= required;
-            case GT -> signed > required;
-            case EQ -> signed == required;
-            default -> false;
-        };
+        return signed >= required;
     }
 
     private static Integer asInteger(Object value) {

@@ -39,6 +39,7 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
         pipelineService.registerFactory(new ProbeDataSourceFactory());
+        pipelineService.registerFactory(new BenefitsAggregateDataSourceFactory(artifactStore));
 
         ruleBindingRegistry.bind(K_ANONYMITY_KEY, NEGOTIATION_SCOPE);
         ruleBindingRegistry.bind(EPSILON_BUDGET_KEY, NEGOTIATION_SCOPE);

@@ -58,34 +58,39 @@ class InMemoryBudgetAccountantTest {
     @Test
     void concurrentReservationsNeverOverspend() throws Exception {
         // 2.0 total, 0.5 each, so exactly 4 of 50 racing threads may succeed.
-        // A read-then-write accountant fails this; a compare-and-set one passes.
-        var accountant = new InMemoryBudgetAccountant(2.0);
-        var threads = 50;
-        var succeeded = new AtomicInteger();
-        var start = new CountDownLatch(1);
-        var done = new CountDownLatch(threads);
-        var pool = Executors.newFixedThreadPool(16);
+        // The race is repeated because a single round is a probabilistic sample: a
+        // read-then-write implementation passes a single round most of the time and
+        // only overspends when two threads interleave in the window between the read
+        // and the write. Repeating turns a weak detector into a reliable one.
+        for (var round = 0; round < 20; round++) {
+            var accountant = new InMemoryBudgetAccountant(2.0);
+            var threads = 50;
+            var succeeded = new AtomicInteger();
+            var start = new CountDownLatch(1);
+            var done = new CountDownLatch(threads);
+            var pool = Executors.newFixedThreadPool(threads);
 
-        for (var i = 0; i < threads; i++) {
-            pool.submit(() -> {
-                try {
-                    start.await();
-                    if (accountant.reserve("athens", 0.5)) {
-                        succeeded.incrementAndGet();
+            for (var i = 0; i < threads; i++) {
+                pool.submit(() -> {
+                    try {
+                        start.await();
+                        if (accountant.reserve("athens", 0.5)) {
+                            succeeded.incrementAndGet();
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        done.countDown();
                     }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    done.countDown();
-                }
-            });
+                });
+            }
+
+            start.countDown();
+            assertThat(done.await(30, TimeUnit.SECONDS)).isTrue();
+            pool.shutdownNow();
+
+            assertThat(succeeded.get()).as("round %d", round).isEqualTo(4);
+            assertThat(accountant.remaining("athens")).as("round %d", round).isEqualTo(0.0);
         }
-
-        start.countDown();
-        assertThat(done.await(30, TimeUnit.SECONDS)).isTrue();
-        pool.shutdownNow();
-
-        assertThat(succeeded.get()).isEqualTo(4);
-        assertThat(accountant.remaining("athens")).isEqualTo(0.0);
     }
 }

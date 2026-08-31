@@ -34,6 +34,18 @@ class InMemoryStewardAuthorizationStoreTest {
         assertThat(authorization("rr-3").distinctStewardCount()).isZero();
     }
 
+    @Test
+    void mutatingCallerListAfterConstructionDoesNotChangeDistinctStewardCount() {
+        var mutableSignatures = new java.util.ArrayList<StewardSignature>();
+        mutableSignatures.add(new StewardSignature("s-1", "sig-s-1", Instant.parse("2026-08-30T12:00:00Z")));
+        var auth = new StewardAuthorization("rr-4", "hash-abc", mutableSignatures,
+                Instant.parse("2026-08-30T12:00:00Z"));
+
+        mutableSignatures.add(new StewardSignature("s-2", "sig-s-2", Instant.parse("2026-08-30T12:00:00Z")));
+
+        assertThat(auth.distinctStewardCount()).isEqualTo(1);
+    }
+
     private StewardAuthorization authorization(String releaseRequestId, String... stewardIds) {
         var signatures = java.util.Arrays.stream(stewardIds)
                 .map(id -> new StewardSignature(id, "sig-" + id, Instant.parse("2026-08-30T12:00:00Z")))

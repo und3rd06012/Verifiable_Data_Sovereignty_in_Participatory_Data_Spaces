@@ -10,6 +10,10 @@ public record StewardAuthorization(
         List<StewardSignature> signatures,
         Instant issuedAt) {
 
+    public StewardAuthorization {
+        signatures = List.copyOf(signatures);
+    }
+
     public int distinctStewardCount() {
         return signatures.stream()
                 .map(StewardSignature::stewardId)

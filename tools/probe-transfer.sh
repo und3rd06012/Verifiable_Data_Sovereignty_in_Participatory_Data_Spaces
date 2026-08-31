@@ -4,7 +4,6 @@ source "$(dirname "$0")/lib.sh"
 
 WORK=/tmp/benefits-probe-transfer
 rm -rf "$WORK" && mkdir -p "$WORK"
-SINK_LOG="$WORK/sink.log"
 
 # A trivial sink: the consumer pushes to this, and we read what arrived.
 # python3 -m http.server only implements do_GET/do_HEAD, and HttpData-PUSH sends the
@@ -137,4 +136,9 @@ for _ in $(seq 1 30); do
   fi
   sleep 1
 done
-[ -n "$FOUND" ] && echo "MARKER FOUND" || echo "MARKER NOT FOUND"
+if [ -n "$FOUND" ]; then
+  echo "MARKER FOUND"
+else
+  echo "MARKER NOT FOUND" >&2
+  exit 1
+fi

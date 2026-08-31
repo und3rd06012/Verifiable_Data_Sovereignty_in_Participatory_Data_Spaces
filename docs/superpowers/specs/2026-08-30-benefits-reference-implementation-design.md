@@ -246,6 +246,46 @@ engine. `stewardQuorum` validates the co-signed token, `epsilonBudget`
 queries the budget accountant, `kAnonymity` checks the computed k of the
 candidate release. Contract negotiation fails if any constraint fails.
 
+### 4.5.1 What Phase 2 established about this policy document
+
+Three properties of the emitted policy were assumed when this spec was
+written and were tested against a running EDC 0.18.0 connector in Phase 2.
+One assumption was wrong and two constraints were previously unknown.
+
+**Constraints whose functions do not yet exist cannot be emitted.** The
+original design emitted `benefits:kAnonymity` and `benefits:epsilonBudget`
+ahead of their Phase 3 functions, assuming EDC would filter an unbound left
+operand out of scope. It does not. EDC rejects the entire policy at
+definition-creation time with HTTP 400, reporting both "not bound to any
+scopes" and "not bound to any functions". The compiler therefore does not
+emit these two constraints, and their options were removed from its
+interface rather than left inert, because an option a caller can set while
+nothing enforces it is a false affordance. Phase 3 must add the functions,
+the scope bindings, the options and the emission together, as one change.
+
+**Numeric right operands must be serialised as strings.** EDC's management
+API validator throws `ClassCastException: JsonIntNumber cannot be cast to
+JsonString` on a numeric `rightOperand`, so `benefits:stewardQuorum` emits
+`"2"` rather than `2`. This is also why the quorum function parses its
+threshold out of a string rather than expecting a number.
+
+**A bound but unregistered left operand is rejected, not ignored.**
+`benefits:releaseRequest` carries the release request id for the quorum
+function to read as a sibling constraint (4.6) and asserts nothing about the
+world, so it is registered with an always-true function. Removing its scope
+binding instead would hide it from the sibling lookup and break the quorum
+gate entirely.
+
+**Refusal reasons are not observable.** EDC 0.18.0 never surfaces the text
+passed to `PolicyContext.reportProblem` anywhere an operator can read it:
+not in the Dataspace Protocol error, not in the connector log, and not at
+debug level. The refusal echoes only the rule that failed. Constraint
+functions therefore report problems for the evaluation record's benefit, and
+the correctness suite establishes the cause of each refusal by a
+single-variable differential against a finalizing baseline rather than by
+reading a reason string. The manuscript must not claim an operator can read
+refusal reasons out of this connector.
+
 ### 4.6 Steward authorization
 
 ```
@@ -481,3 +521,14 @@ phase's gate rather than by guessing now.
 4. Whether the meet operation makes realistic aggregates too thin to be
    useful, which would be a finding rather than a defect. Settled by G2
    in phase 7.
+
+Settled during phases 0 through 2, recorded here so the answers are not
+lost: EDC's policy engine API (2.1, read from source); that a custom
+constraint function can be registered and observed evaluating during a real
+two-connector negotiation (phase 0 gate); that the CouchDB query server
+supports typed arrays, so E1's signature-verifying arm is feasible, and
+rejects object spread (2.1); that a bound but unregistered left operand is
+rejected at policy creation rather than filtered out of scope, and that
+numeric right operands must be strings (4.5.1); and that the
+`participantContextId` EDC passes to the identity service equals
+`edc.participant.id`, so flat configuration keys resolve.

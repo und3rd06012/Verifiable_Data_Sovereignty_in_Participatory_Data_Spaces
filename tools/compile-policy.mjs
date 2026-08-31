@@ -35,32 +35,8 @@ if (!grants) {
 const policy = compilePolicy(grants, {
   releaseRequestId: 'rr-' + name,
   quorum: 2,
-  kAnonymity: 5,
-  epsilon: 0.5,
   at: AT
 });
-
-// benefits:kAnonymity and benefits:epsilonBudget have no constraint function yet: they belong to
-// the privacy pipeline in a later phase. EDC 0.18.0 does not ignore an unbound left operand, it
-// rejects the whole policy definition with "not bound to any scopes" and "not bound to any
-// functions", so the consent suite drops the two constraints before publishing. The compiler still
-// emits them, unchanged. Delete this filter as soon as their functions are registered.
-const UNIMPLEMENTED = ['benefits:kAnonymity', 'benefits:epsilonBudget'];
-for (const permission of policy.permission) {
-  permission.constraint = permission.constraint.filter((c) => !UNIMPLEMENTED.includes(c.leftOperand));
-}
-
-// EDC 0.18.0's management API validator reads odrl:rightOperand as a JsonString and throws a
-// ClassCastException on a JSON number, so numeric right operands compiled by consent-odrl are
-// rendered as strings before publication. Only the JSON type changes, never the value, and the
-// constraint functions already parse their right operand from a string.
-for (const permission of policy.permission) {
-  for (const constraint of permission.constraint) {
-    if (typeof constraint.rightOperand === 'number') {
-      constraint.rightOperand = String(constraint.rightOperand);
-    }
-  }
-}
 
 process.stdout.write(JSON.stringify({
   '@context': { '@vocab': 'https://w3id.org/edc/v0.0.1/ns/' },

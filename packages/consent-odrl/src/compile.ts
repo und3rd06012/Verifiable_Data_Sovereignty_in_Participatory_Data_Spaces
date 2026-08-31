@@ -5,8 +5,6 @@ export const BENEFITS_NS = 'https://w3id.org/benefits/v1/ns/';
 export interface CompileOptions {
   releaseRequestId: string;
   quorum: number;
-  kAnonymity: number;
-  epsilon: number;
   /** The instant the policy is compiled at. Grants already expired are excluded. */
   at: string;
 }
@@ -61,12 +59,20 @@ export function compilePolicy(all: ConsentGrant[], options: CompileOptions) {
         action: 'use',
         constraint: [
           constraint('benefits:releaseRequest', 'eq', options.releaseRequestId),
-          constraint('benefits:stewardQuorum', 'gteq', options.quorum),
+          // EDC's management API validator reads odrl:rightOperand as a JSON string and throws
+          // ClassCastException on a JSON number, so a numeric right operand is emitted in its
+          // string form. The value never changes, only its JSON type, and the connector's
+          // stewardQuorum function parses the integer back out of the string.
+          constraint('benefits:stewardQuorum', 'gteq', String(options.quorum)),
           constraint('benefits:purpose', 'eq', purposes[0]),
           constraint('benefits:recipientClass', 'eq', recipientClasses[0]),
-          constraint('benefits:fieldSet', 'isPartOf', unique(grants.map((g) => g.field))),
-          constraint('benefits:kAnonymity', 'gteq', options.kAnonymity),
-          constraint('benefits:epsilonBudget', 'lteq', options.epsilon)
+          constraint('benefits:fieldSet', 'isPartOf', unique(grants.map((g) => g.field)))
+          // benefits:kAnonymity and benefits:epsilonBudget used to be emitted here. They are not,
+          // because EDC does not ignore a constraint whose left operand has no registered function:
+          // it refuses to create the policy definition at all, with HTTP 400 "is not bound to any
+          // scopes" and "is not bound to any functions". A later phase must add the constraint
+          // functions, the compile options and the emission together, in that order, never the
+          // emission alone.
         ]
       }
     ],

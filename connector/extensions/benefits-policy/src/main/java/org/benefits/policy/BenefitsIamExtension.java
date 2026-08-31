@@ -21,6 +21,9 @@ public class BenefitsIamExtension implements ServiceExtension {
     private ParticipantContextConfig contextConfig;
     @Inject
     private TypeManager typeManager;
+    // Never read directly: this @Inject forces BenefitsIamExtension to load after EDC's mock IAM
+    // so that this extension's @Provider IdentityService wins the override. Removing it would
+    // silently revert to mock identity, with only a log warning to notice.
     @Inject
     private AudienceResolver audienceResolver;
 
@@ -48,7 +51,8 @@ public class BenefitsIamExtension implements ServiceExtension {
             var token = Map.of(
                     "client_id", contextConfig.getString(participantContextId, "edc.participant.id"),
                     "purpose", contextConfig.getString(participantContextId, "benefits.requester.purpose", ""),
-                    "recipientClass", contextConfig.getString(participantContextId, "benefits.requester.recipientClass", "")
+                    "recipientClass", contextConfig.getString(participantContextId, "benefits.requester.recipientClass", ""),
+                    "requestedFields", contextConfig.getString(participantContextId, "benefits.requester.fields", "")
             );
             return Result.success(TokenRepresentation.Builder.newInstance()
                     .token(typeManager.writeValueAsString(token))
@@ -63,6 +67,7 @@ public class BenefitsIamExtension implements ServiceExtension {
                     .claim("client_id", token.get("client_id"))
                     .claim("purpose", token.get("purpose"))
                     .claim("recipientClass", token.get("recipientClass"))
+                    .claim("requestedFields", token.get("requestedFields"))
                     .build());
         }
     }

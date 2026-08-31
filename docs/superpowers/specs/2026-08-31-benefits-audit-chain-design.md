@@ -64,14 +64,18 @@ claim true.
 
 ## 3. Hash construction
 
-### 3.1 Domain-separated Merkle tree (RFC 6962 shape)
+### 3.1 Domain-separated Merkle tree
 
 A naive Merkle tree that hashes leaves and internal nodes the same way
 lets an attacker present an internal node's hash as if it were a leaf's
 (a second-preimage forgery), and duplicating a lone leaf to balance an odd
 level reintroduces the duplicate-transaction ambiguity CVE-2012-2459
-documented against early Bitcoin. Phase 4 avoids both, following the
-Certificate Transparency construction:
+documented against early Bitcoin. Phase 4 avoids both by borrowing
+Certificate Transparency's domain-separation trick (RFC 6962) — a leaf
+hash and an internal-node hash can never be mistaken for one another —
+without adopting RFC 6962's specific recursive tree shape, which exists
+to support consistency proofs across a growing tree that this design does
+not need:
 
 ```
 leafHash(entry)      = SHA-256(0x00 || canonicalBytes(entry))
@@ -81,9 +85,10 @@ nodeHash(left, right) = SHA-256(0x01 || left || right)
 An odd node at any level is promoted to the next level unhashed rather than
 duplicated. `MerkleTree.root(leaves)` and
 `MerkleTree.proof(leaves, index)` return the root and an inclusion proof
-(ordered sibling hashes plus a left/right bit per level); the standalone
-`MerkleTree.verify(leafHash, index, proof, root)` function performs no I/O
-and is the one both the Java sealing code and the TypeScript participant
+(an ordered list of sibling hashes, each tagged with which side the
+sibling sits on so a verifier need not know the tree's shape); the
+standalone `MerkleTree.verify(leafHash, proof, root)` function performs no
+I/O and is the one both the Java sealing code and the TypeScript participant
 verifier must agree with byte-for-byte, so it is the subject of a
 cross-language conformance vector exactly as `ConsentEvaluator` was in
 phase 0 (conformance/README.md).

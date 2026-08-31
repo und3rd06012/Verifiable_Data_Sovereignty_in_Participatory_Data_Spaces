@@ -43,6 +43,12 @@ if case == 'quorum-met':
     require(negotiation.get('state') == 'FINALIZED', 'negotiation finalized')
     require(bool(quorum) and quorum.groups() == ('2', '2'),
             'quorum satisfied, provider logged signed=2 required=2')
+    require(int(artifact['computedK']) >= int(constraints['benefits:kAnonymity']),
+            'artifact computed k %s meets policy threshold %s, so k is not the cause' % (
+                artifact['computedK'], constraints['benefits:kAnonymity']))
+    require(float(artifact['epsilonCharged']) <= float(constraints['benefits:epsilonBudget']),
+            'artifact charged epsilon %s within policy cap %s, so budget is not the cause' % (
+                artifact['epsilonCharged'], constraints['benefits:epsilonBudget']))
 else:
     require(refused, 'refused by policy evaluation in scope contract.negotiation')
 
@@ -50,9 +56,21 @@ if case == 'quorum-missing':
     require(quorum is None,
             'quorum function returned before its check log, the store held no authorization for rr-quorum-missing')
     require('steward authorizations' not in log, 'no steward authorization was seeded')
+    require(int(artifact['computedK']) >= int(constraints['benefits:kAnonymity']),
+            'artifact computed k %s meets policy threshold %s, so k is not the cause' % (
+                artifact['computedK'], constraints['benefits:kAnonymity']))
+    require(float(artifact['epsilonCharged']) <= float(constraints['benefits:epsilonBudget']),
+            'artifact charged epsilon %s within policy cap %s, so budget is not the cause' % (
+                artifact['epsilonCharged'], constraints['benefits:epsilonBudget']))
 elif case == 'quorum-one-steward-twice':
     require(bool(quorum) and quorum.groups() == ('1', '2'),
             'two signatures from one steward counted as signed=1 required=2')
+    require(int(artifact['computedK']) >= int(constraints['benefits:kAnonymity']),
+            'artifact computed k %s meets policy threshold %s, so k is not the cause' % (
+                artifact['computedK'], constraints['benefits:kAnonymity']))
+    require(float(artifact['epsilonCharged']) <= float(constraints['benefits:epsilonBudget']),
+            'artifact charged epsilon %s within policy cap %s, so budget is not the cause' % (
+                artifact['epsilonCharged'], constraints['benefits:epsilonBudget']))
 elif case == 'purpose-mismatch':
     require(bool(quorum) and quorum.groups() == ('2', '2'), 'quorum satisfied, signed=2 required=2')
     require(properties['benefits.requester.purpose'] != constraints['benefits:purpose'],
@@ -61,6 +79,12 @@ elif case == 'purpose-mismatch':
     require(properties['benefits.requester.recipientClass'] == constraints['benefits:recipientClass'],
             'recipient class matches, so purpose is the only failing claim')
     require(set(requested) <= set(granted), 'requested fields are granted, so purpose is isolated')
+    require(int(artifact['computedK']) >= int(constraints['benefits:kAnonymity']),
+            'artifact computed k %s meets policy threshold %s, so k is not the cause' % (
+                artifact['computedK'], constraints['benefits:kAnonymity']))
+    require(float(artifact['epsilonCharged']) <= float(constraints['benefits:epsilonBudget']),
+            'artifact charged epsilon %s within policy cap %s, so budget is not the cause' % (
+                artifact['epsilonCharged'], constraints['benefits:epsilonBudget']))
 elif case == 'recipient-class-mismatch':
     require(bool(quorum) and quorum.groups() == ('2', '2'), 'quorum satisfied, signed=2 required=2')
     require(properties['benefits.requester.recipientClass'] != constraints['benefits:recipientClass'],
@@ -69,6 +93,12 @@ elif case == 'recipient-class-mismatch':
     require(properties['benefits.requester.purpose'] == constraints['benefits:purpose'],
             'purpose matches, so recipient class is the only failing claim')
     require(set(requested) <= set(granted), 'requested fields are granted, so recipient class is isolated')
+    require(int(artifact['computedK']) >= int(constraints['benefits:kAnonymity']),
+            'artifact computed k %s meets policy threshold %s, so k is not the cause' % (
+                artifact['computedK'], constraints['benefits:kAnonymity']))
+    require(float(artifact['epsilonCharged']) <= float(constraints['benefits:epsilonBudget']),
+            'artifact charged epsilon %s within policy cap %s, so budget is not the cause' % (
+                artifact['epsilonCharged'], constraints['benefits:epsilonBudget']))
 elif case in ('field-outside-grant', 'expired-grant-field-excluded'):
     require(bool(quorum) and quorum.groups() == ('2', '2'), 'quorum satisfied, signed=2 required=2')
     require(properties['benefits.requester.purpose'] == constraints['benefits:purpose'],
@@ -80,6 +110,12 @@ elif case in ('field-outside-grant', 'expired-grant-field-excluded'):
     if case == 'expired-grant-field-excluded':
         require('health.condition' not in granted,
                 'the expired health.condition grant was excluded from the compiled policy')
+    require(int(artifact['computedK']) >= int(constraints['benefits:kAnonymity']),
+            'artifact computed k %s meets policy threshold %s, so k is not the cause' % (
+                artifact['computedK'], constraints['benefits:kAnonymity']))
+    require(float(artifact['epsilonCharged']) <= float(constraints['benefits:epsilonBudget']),
+            'artifact charged epsilon %s within policy cap %s, so budget is not the cause' % (
+                artifact['epsilonCharged'], constraints['benefits:epsilonBudget']))
 elif case == 'k-below-threshold':
     require(bool(quorum) and quorum.groups() == ('2', '2'), 'quorum satisfied, signed=2 required=2')
     require(properties['benefits.requester.purpose'] == constraints['benefits:purpose'],

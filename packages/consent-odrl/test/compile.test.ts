@@ -43,8 +43,13 @@ describe('compilePolicy', () => {
     });
   });
 
-  it('derives the purpose set from the grants', () => {
-    expect(constraintFor(policy, 'benefits:purpose').rightOperand).toEqual(['service-improvement']);
+  it('emits the purpose constraint as a scalar with eq', () => {
+    expect(constraintFor(policy, 'benefits:purpose')).toEqual({
+      '@type': 'AtomicConstraint',
+      leftOperand: 'benefits:purpose',
+      operator: 'eq',
+      rightOperand: 'service-improvement'
+    });
   });
 
   it('derives the field set from the grants, sorted', () => {
@@ -61,6 +66,12 @@ describe('compilePolicy', () => {
     const mixed = [...grants, { ...grants[0], recipientClass: 'provider' as const }];
     expect(() => compilePolicy(mixed, { releaseRequestId: 'rr-1', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT }))
       .toThrowError(/single recipient class/);
+  });
+
+  it('rejects grants spanning more than one purpose under a uniform recipient class, since that would silently overgrant a purpose/field combination nobody consented to', () => {
+    const mixedPurpose = [...grants, { ...grants[0], purpose: 'fraud-detection' }];
+    expect(() => compilePolicy(mixedPurpose, { releaseRequestId: 'rr-1', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT }))
+      .toThrowError(/single purpose/);
   });
 
   it('excludes a grant that has already expired at the compile instant', () => {
@@ -97,7 +108,7 @@ describe('compilePolicy', () => {
     expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand)
       .toEqual(['service.satisfaction', 'service.waitTime']);
     expect(constraintFor(compiled, 'benefits:purpose').rightOperand)
-      .toEqual(['service-improvement']);
+      .toEqual('service-improvement');
   });
 
   it('deduplicates fieldSet when two distinct grants share a field but differ in nothing else', () => {
@@ -107,6 +118,6 @@ describe('compilePolicy', () => {
     ];
     const compiled = compilePolicy(sharedField, { releaseRequestId: 'rr-13', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
     expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand).toEqual(['service.satisfaction']);
-    expect(constraintFor(compiled, 'benefits:purpose').rightOperand).toEqual(['service-improvement']);
+    expect(constraintFor(compiled, 'benefits:purpose').rightOperand).toEqual('service-improvement');
   });
 });

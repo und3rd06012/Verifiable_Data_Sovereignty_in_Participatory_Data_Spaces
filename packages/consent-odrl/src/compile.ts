@@ -46,6 +46,13 @@ export function compilePolicy(all: ConsentGrant[], options: CompileOptions) {
     );
   }
 
+  const purposes = unique(grants.map((g) => g.purpose));
+  if (purposes.length !== 1) {
+    throw new Error(
+      'a release policy must target a single purpose, got: ' + purposes.join(', ')
+    );
+  }
+
   return {
     '@context': ['http://www.w3.org/ns/odrl.jsonld', { benefits: BENEFITS_NS }],
     '@type': 'Set',
@@ -55,7 +62,7 @@ export function compilePolicy(all: ConsentGrant[], options: CompileOptions) {
         constraint: [
           constraint('benefits:releaseRequest', 'eq', options.releaseRequestId),
           constraint('benefits:stewardQuorum', 'gteq', options.quorum),
-          constraint('benefits:purpose', 'isPartOf', unique(grants.map((g) => g.purpose))),
+          constraint('benefits:purpose', 'eq', purposes[0]),
           constraint('benefits:recipientClass', 'eq', recipientClasses[0]),
           constraint('benefits:fieldSet', 'isPartOf', unique(grants.map((g) => g.field))),
           constraint('benefits:kAnonymity', 'gteq', options.kAnonymity),

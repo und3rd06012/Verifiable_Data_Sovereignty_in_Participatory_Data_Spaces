@@ -1,0 +1,21 @@
+{
+  "id": "v012-null-grants",
+  "description": "a consent object whose grants value is null is a missing consent assertion",
+  "now": "2026-08-30T12:00:00.000Z",
+  "record": {
+    "type": "contribution",
+    "participantRef": "p-001",
+    "siteId": "athens",
+    "collectedAt": "2026-08-30T11:00:00.000Z",
+    "channel": "app",
+    "declaredPurpose": "service-improvement",
+    "declaredRecipientClass": "statistics",
+    "fields": { "service.satisfaction": 4 },
+    "consent": {
+      "participantRef": "p-001",
+      "assertedAt": "2026-08-01T00:00:00.000Z",
+      "grants": null
+    }
+  },
+  "expected": { "allowed": false, "reason": "missing-consent-assertion" }
+}

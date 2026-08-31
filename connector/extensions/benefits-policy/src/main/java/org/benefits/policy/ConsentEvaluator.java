@@ -17,7 +17,7 @@ public final class ConsentEvaluator {
         }
 
         JsonNode consent = record.get("consent");
-        if (consent == null || consent.isNull() || !consent.has("grants")) {
+        if (consent == null || consent.isNull() || !consent.has("grants") || consent.get("grants").isNull()) {
             return "missing-consent-assertion";
         }
 

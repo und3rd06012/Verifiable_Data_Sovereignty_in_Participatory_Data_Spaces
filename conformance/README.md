@@ -20,9 +20,15 @@ Reason codes are part of the contract, not diagnostics. The closed set is:
 
     ok                      the record is fully consented
     not-a-contribution      type is not "contribution", so S1 does not apply
-    missing-consent-assertion
+    missing-consent-assertion  no consent object at all, or consent.grants
+                                is absent or null
     participant-mismatch    consent.participantRef differs from record.participantRef
     no-grant:<fieldId>      no matching unexpired grant for that field
+
+An empty `grants` array is not a missing consent assertion. It is a present
+assertion that grants nothing, so a record carrying fields under it yields
+`no-grant:<fieldId>` for the alphabetically first uncovered field, not
+`missing-consent-assertion`.
 
 All timestamps are ISO 8601 UTC with millisecond precision and a trailing Z.
 Expiry comparison is lexicographic string comparison, which is only correct

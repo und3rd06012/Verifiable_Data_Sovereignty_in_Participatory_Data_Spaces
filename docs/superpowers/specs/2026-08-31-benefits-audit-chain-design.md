@@ -188,15 +188,44 @@ Merkle and sealing logic is verified without a database — the same seam
 
 ## 6. Event to entry mapping
 
-Confirmed in gate 0, not assumed here: which accessor on each of the four
-event types yields `actor` (the counter-party id), `datasetRef` (the asset
-id), and enough of the negotiated policy to render `statedPurpose` and a
-human-readable `plainLanguage` summary. The parent spec's compiler already
-emits `benefits:purpose` as a scalar constraint (phase 2, ruling R25), so
-`statedPurpose` is that value read back off the negotiation's agreed
-policy where the event carries one, and the string literal `"refused"` /
-`"transfer failed"` for the two failure event types, which carry no agreed
-policy to read a purpose from.
+Read from EDC 0.18.0's compiled classes directly (`javap` against
+`contract-spi` and `transfer-spi`), not assumed:
+
+`Event`, the common base class, carries no timestamp accessor — `timestamp`
+is therefore stamped by the listener itself, `Instant.now()` at the moment
+the event is received, not read off the event.
+
+`ContractNegotiationFinalized` and `ContractNegotiationTerminated` both
+extend `ContractNegotiationEvent`, which declares `getCounterPartyId()`
+directly — that is `actor` for both. `Finalized` additionally exposes
+`getContractAgreement()`, guaranteed present, whose `getAssetId()` and
+`getPolicy()` give `datasetRef` and the policy to read `statedPurpose`
+from. `Terminated` has no agreement (negotiation never completed), so it
+reads the same two values off `getLastContractOffer()` instead, which
+`ContractNegotiationEvent` also declares directly — this accessor exists
+on the base class specifically so a Terminated event still has something
+to read. `statedPurpose` in both cases is the value of the scalar
+`benefits:purpose` constraint on that policy's permission (phase 2, ruling
+R25 fixed this to a scalar `eq`, so there is exactly one value to read,
+never a set).
+
+`TransferProcessCompleted` and `TransferProcessTerminated` extend
+`TransferProcessEvent`, which declares `getAssetId()` (`datasetRef`) but
+carries no counter-party or policy accessor at all — only
+`getContractId()`, the agreement id. Rather than add a second EDC store
+dependency to look the agreement back up, the listener correlates: it
+looks up the `actor` and `statedPurpose` already recorded for the prior
+`AuditEntry` whose `datasetRef` matches, from the negotiation that must
+have preceded any transfer of that asset. If no such entry exists (an
+ordering EDC does not appear to allow but that gate 0 should try to
+provoke), the listener writes `actor = event.getParticipantContextId()`
+and `statedPurpose = "unknown (no prior negotiation entry for asset)"`
+rather than fail the transfer.
+
+`plainLanguage` is a short, fixed-format sentence per event type, built
+from the fields above (for example, `"release request approved for asset
+<id>, purpose <purpose>"` for a finalized negotiation), never displaying a
+raw EDC identifier alone.
 
 ## 7. Participant proof API
 
@@ -284,14 +313,14 @@ integrity with no other input.
 1. Whether `EventRouter` dispatch is single-threaded per subscriber.
    Section 4.2 makes the sealing design correct either way, but the answer
    still needs recording. Settled by gate 0.
-2. Exact accessor names on `ContractNegotiationFinalized`,
-   `ContractNegotiationTerminated`, `TransferProcessCompleted`, and
-   `TransferProcessTerminated` for counter-party id, asset id, and the
-   agreed policy. Settled by gate 0.
-3. Whether a JAX-RS resource can be registered against EDC's `WebService`
+2. Whether a JAX-RS resource can be registered against EDC's `WebService`
    SPI from an extension outside EDC's own management-api module, or
    whether that registration point is management-api-internal. Settled by
    gate 0; fallback recorded in gate 0's description above.
+3. Whether EDC ever fires a transfer event for an asset with no preceding
+   negotiation entry in the audit store (section 6's correlation fallback
+   exists for this case; gate 0 should try to provoke it rather than
+   assume it cannot happen).
 
 ## 11. Out of scope
 

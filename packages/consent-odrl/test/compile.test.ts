@@ -14,7 +14,7 @@ function constraintFor(policy: any, leftOperand: string) {
 }
 
 describe('compilePolicy', () => {
-  const policy = compilePolicy(grants, { releaseRequestId: 'rr-42', quorum: 2, at: AT });
+  const policy = compilePolicy(grants, { releaseRequestId: 'rr-42', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
 
   it('declares the benefits prefix in the context', () => {
     expect(policy['@context']).toContainEqual({ benefits: 'https://w3id.org/benefits/v1/ns/' });
@@ -43,16 +43,19 @@ describe('compilePolicy', () => {
     });
   });
 
-  it('emits no kAnonymity or epsilonBudget constraint, because EDC refuses to create a policy definition whose left operand has no registered constraint function rather than ignoring it', () => {
-    expect(constraintFor(policy, 'benefits:kAnonymity')).toBeUndefined();
-    expect(constraintFor(policy, 'benefits:epsilonBudget')).toBeUndefined();
-    expect(policy.permission[0].constraint.map((c: any) => c.leftOperand)).toEqual([
-      'benefits:releaseRequest',
-      'benefits:stewardQuorum',
-      'benefits:purpose',
-      'benefits:recipientClass',
-      'benefits:fieldSet'
-    ]);
+  it('emits kAnonymity and epsilonBudget as strings, because EDC rejects numeric right operands', () => {
+    expect(constraintFor(policy, 'benefits:kAnonymity')).toEqual({
+      '@type': 'AtomicConstraint',
+      leftOperand: 'benefits:kAnonymity',
+      operator: 'gteq',
+      rightOperand: '5'
+    });
+    expect(constraintFor(policy, 'benefits:epsilonBudget')).toEqual({
+      '@type': 'AtomicConstraint',
+      leftOperand: 'benefits:epsilonBudget',
+      operator: 'lteq',
+      rightOperand: '0.5'
+    });
   });
 
   it('emits the purpose constraint as a scalar with eq', () => {
@@ -70,19 +73,19 @@ describe('compilePolicy', () => {
   });
 
   it('rejects an empty grant set rather than emitting an unconstrained policy', () => {
-    expect(() => compilePolicy([], { releaseRequestId: 'rr-1', quorum: 2, at: AT }))
+    expect(() => compilePolicy([], { releaseRequestId: 'rr-1', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT }))
       .toThrowError(/empty consent/);
   });
 
   it('rejects grants spanning more than one recipient class', () => {
     const mixed = [...grants, { ...grants[0], recipientClass: 'provider' as const }];
-    expect(() => compilePolicy(mixed, { releaseRequestId: 'rr-1', quorum: 2, at: AT }))
+    expect(() => compilePolicy(mixed, { releaseRequestId: 'rr-1', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT }))
       .toThrowError(/single recipient class/);
   });
 
   it('rejects grants spanning more than one purpose under a uniform recipient class, since that would silently overgrant a purpose/field combination nobody consented to', () => {
     const mixedPurpose = [...grants, { ...grants[0], purpose: 'fraud-detection' }];
-    expect(() => compilePolicy(mixedPurpose, { releaseRequestId: 'rr-1', quorum: 2, at: AT }))
+    expect(() => compilePolicy(mixedPurpose, { releaseRequestId: 'rr-1', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT }))
       .toThrowError(/single purpose/);
   });
 
@@ -94,19 +97,19 @@ describe('compilePolicy', () => {
       grantedAt: '2026-08-01T00:00:00.000Z',
       expiresAt: '2026-08-15T00:00:00.000Z'
     }];
-    const compiled = compilePolicy(withExpired, { releaseRequestId: 'rr-9', quorum: 2, at: AT });
+    const compiled = compilePolicy(withExpired, { releaseRequestId: 'rr-9', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
     expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand).not.toContain('health.condition');
   });
 
   it('keeps a grant expiring one millisecond after the compile instant', () => {
     const withFuture = [{ ...grants[0], expiresAt: '2026-08-30T12:00:00.001Z' }];
-    const compiled = compilePolicy(withFuture, { releaseRequestId: 'rr-10', quorum: 2, at: AT });
+    const compiled = compilePolicy(withFuture, { releaseRequestId: 'rr-10', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
     expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand).toEqual(['service.satisfaction']);
   });
 
   it('rejects a rule set whose every grant has expired', () => {
     const allExpired = grants.map((g) => ({ ...g, expiresAt: '2026-08-15T00:00:00.000Z' }));
-    expect(() => compilePolicy(allExpired, { releaseRequestId: 'rr-11', quorum: 2, at: AT }))
+    expect(() => compilePolicy(allExpired, { releaseRequestId: 'rr-11', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT }))
       .toThrowError(/empty consent/);
   });
 
@@ -116,7 +119,7 @@ describe('compilePolicy', () => {
       grants[0],
       { ...grants[1] }
     ];
-    const compiled = compilePolicy(duplicated, { releaseRequestId: 'rr-12', quorum: 2, at: AT });
+    const compiled = compilePolicy(duplicated, { releaseRequestId: 'rr-12', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
     expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand)
       .toEqual(['service.satisfaction', 'service.waitTime']);
     expect(constraintFor(compiled, 'benefits:purpose').rightOperand)
@@ -128,7 +131,7 @@ describe('compilePolicy', () => {
       { field: 'service.satisfaction', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null },
       { field: 'service.satisfaction', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null }
     ];
-    const compiled = compilePolicy(sharedField, { releaseRequestId: 'rr-13', quorum: 2, at: AT });
+    const compiled = compilePolicy(sharedField, { releaseRequestId: 'rr-13', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
     expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand).toEqual(['service.satisfaction']);
     expect(constraintFor(compiled, 'benefits:purpose').rightOperand).toEqual('service-improvement');
   });

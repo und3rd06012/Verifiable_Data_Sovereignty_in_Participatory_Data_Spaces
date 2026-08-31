@@ -10,6 +10,8 @@ public final class BenefitsNamespace {
     public static final String PURPOSE_KEY = BENEFITS_NAMESPACE + "purpose";
     public static final String RECIPIENT_CLASS_KEY = BENEFITS_NAMESPACE + "recipientClass";
     public static final String FIELD_SET_KEY = BENEFITS_NAMESPACE + "fieldSet";
+    public static final String K_ANONYMITY_KEY = BENEFITS_NAMESPACE + "kAnonymity";
+    public static final String EPSILON_BUDGET_KEY = BENEFITS_NAMESPACE + "epsilonBudget";
 
     private BenefitsNamespace() {
     }

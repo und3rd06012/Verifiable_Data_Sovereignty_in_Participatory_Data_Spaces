@@ -5,6 +5,8 @@ export const BENEFITS_NS = 'https://w3id.org/benefits/v1/ns/';
 export interface CompileOptions {
   releaseRequestId: string;
   quorum: number;
+  kAnonymity: number;
+  epsilon: number;
   /** The instant the policy is compiled at. Grants already expired are excluded. */
   at: string;
 }
@@ -66,13 +68,12 @@ export function compilePolicy(all: ConsentGrant[], options: CompileOptions) {
           constraint('benefits:stewardQuorum', 'gteq', String(options.quorum)),
           constraint('benefits:purpose', 'eq', purposes[0]),
           constraint('benefits:recipientClass', 'eq', recipientClasses[0]),
-          constraint('benefits:fieldSet', 'isPartOf', unique(grants.map((g) => g.field)))
-          // benefits:kAnonymity and benefits:epsilonBudget used to be emitted here. They are not,
-          // because EDC does not ignore a constraint whose left operand has no registered function:
-          // it refuses to create the policy definition at all, with HTTP 400 "is not bound to any
-          // scopes" and "is not bound to any functions". A later phase must add the constraint
-          // functions, the compile options and the emission together, in that order, never the
-          // emission alone.
+          constraint('benefits:fieldSet', 'isPartOf', unique(grants.map((g) => g.field))),
+          // benefits:kAnonymity and benefits:epsilonBudget are emitted here because the connector
+          // now has registered constraint functions for both, with scope bindings, so EDC accepts
+          // the policy definition instead of rejecting it with HTTP 400.
+          constraint('benefits:kAnonymity', 'gteq', String(options.kAnonymity)),
+          constraint('benefits:epsilonBudget', 'lteq', String(options.epsilon))
         ]
       }
     ],

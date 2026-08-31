@@ -35,6 +35,8 @@ if (!grants) {
 const policy = compilePolicy(grants, {
   releaseRequestId: 'rr-' + name,
   quorum: 2,
+  kAnonymity: 5,
+  epsilon: 0.5,
   at: AT
 });
 

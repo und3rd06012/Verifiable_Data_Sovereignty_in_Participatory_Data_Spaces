@@ -101,6 +101,7 @@ negotiate() {
   local neg neg_id state=""
   neg=$(curl -sf -H "$KEY" -H "$JSON" -X POST "$CONSUMER_MGMT/v3/contractnegotiations" -d @/tmp/contract-request.json)
   neg_id=$(echo "$neg" | python3 -c 'import json,sys; print(json.load(sys.stdin)["@id"])')
+  echo "$neg_id" > /tmp/negotiation-id.txt
 
   for _ in $(seq 1 60); do
     curl -sf -H "$KEY" "$CONSUMER_MGMT/v3/contractnegotiations/$neg_id" > /tmp/negotiation.json

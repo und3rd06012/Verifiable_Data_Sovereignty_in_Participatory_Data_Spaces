@@ -27,7 +27,6 @@ export function buildDesignDoc(): DesignDoc {
 
   const validate = [
     'function(newDoc, oldDoc, userCtx, secObj) {',
-    '  var ConsentCore;',
     '  ' + bundle.split('\n').join('\n  '),
     '  if (newDoc._deleted) { return; }',
     '  var decision = ConsentCore.evaluateRecord(newDoc, new Date().toISOString());',

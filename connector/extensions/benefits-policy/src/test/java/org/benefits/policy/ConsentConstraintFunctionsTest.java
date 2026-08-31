@@ -92,6 +92,33 @@ class ConsentConstraintFunctionsTest {
         assertThat(fn.evaluate(Operator.IN, List.of("service.satisfaction", "service.waitTime"), anyRule, ctx)).isTrue();
     }
 
+    // JSON-LD expansion collapses a single-element array into a bare scalar, so the
+    // common case of granting exactly one field arrives as a String, not a List. This is
+    // deliberate accommodation of that expansion behaviour, not a redundant fallback:
+    // without it, every single-field grant would be misread as a type mismatch and the
+    // negotiation would fail as if consent had been refused.
+    @Test
+    void fieldSetAllowsAScalarGrantedOperandMatchingTheRequestedField() {
+        var fn = new FieldSetFunction();
+        var ctx = contextWith(Map.of("requestedFields", "service.satisfaction"));
+        assertThat(fn.evaluate(Operator.IN, "service.satisfaction", anyRule, ctx)).isTrue();
+    }
+
+    @Test
+    void fieldSetRefusesAScalarGrantedOperandNotCoveringTheRequestedField() {
+        var fn = new FieldSetFunction();
+        var ctx = contextWith(Map.of("requestedFields", "health.condition"));
+        assertThat(fn.evaluate(Operator.IN, "service.satisfaction", anyRule, ctx)).isFalse();
+    }
+
+    @Test
+    void fieldSetRefusesAndReportsAMalformedGrantedOperand() {
+        var fn = new FieldSetFunction();
+        var ctx = contextWith(Map.of("requestedFields", "service.satisfaction"));
+        assertThat(fn.evaluate(Operator.IN, 42, anyRule, ctx)).isFalse();
+        assertThat(ctx.getProblems()).isNotEmpty();
+    }
+
     @Test
     void fieldSetRefusesWhenTheClaimIsAbsent() {
         var fn = new FieldSetFunction();

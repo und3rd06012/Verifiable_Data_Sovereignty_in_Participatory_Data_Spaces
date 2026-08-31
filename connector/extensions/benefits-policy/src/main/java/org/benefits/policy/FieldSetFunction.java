@@ -27,10 +27,25 @@ public class FieldSetFunction implements AtomicConstraintRuleFunction<Permission
             context.reportProblem("fieldSet does not support operator: " + operator);
             return false;
         }
-        if (!(rightValue instanceof Collection<?> granted)) {
-            context.reportProblem("fieldSet right operand is not a collection: " + rightValue);
+
+        // JSON-LD expansion collapses a single-element array into a bare scalar, so a
+        // one-field grant (the common case) arrives here as a String, not a Collection.
+        // Accepting the scalar and normalising it to a one-element set is deliberate
+        // accommodation of that expansion behaviour, not an oversight: without it, every
+        // single-field grant would be rejected as a type mismatch and misread as a
+        // consent refusal. Elements of a genuine collection are also normalised with
+        // String.valueOf, since expansion does not guarantee they are String instances
+        // either.
+        List<String> granted;
+        if (rightValue instanceof Collection<?> c) {
+            granted = c.stream().map(String::valueOf).toList();
+        } else if (rightValue instanceof String s) {
+            granted = List.of(s);
+        } else {
+            context.reportProblem("fieldSet right operand is neither a collection nor a string: " + rightValue);
             return false;
         }
+
         return granted.containsAll(requested);
     }
 }

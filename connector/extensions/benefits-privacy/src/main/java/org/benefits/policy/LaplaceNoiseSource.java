@@ -11,6 +11,11 @@ import java.util.Random;
  * <p>
  * Floating point side channels in this mechanism are out of scope for this
  * reference implementation, per the design spec.
+ * <p>
+ * Reproducibility from a seed requires either single-threaded use or one instance
+ * per thread: a single instance shared across concurrent callers makes draw order
+ * scheduling-dependent, which would silently break the seeded determinism this
+ * class exists to provide.
  */
 public class LaplaceNoiseSource implements NoiseSource {
 
@@ -26,7 +31,14 @@ public class LaplaceNoiseSource implements NoiseSource {
             throw new IllegalArgumentException("epsilon must be positive, got: " + epsilon);
         }
         var scale = 1.0 / epsilon;
-        var u = random.nextDouble() - 0.5;
+        // nextDouble() can legitimately return exactly 0.0, which would make
+        // 1 - 2|u| zero and the logarithm infinite, so that one point is
+        // resampled. Resampling a single point of a continuous distribution
+        // does not change it.
+        double u;
+        do {
+            u = random.nextDouble() - 0.5;
+        } while (u == -0.5);
         return -scale * Math.signum(u) * Math.log(1 - 2 * Math.abs(u));
     }
 }

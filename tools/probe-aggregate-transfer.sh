@@ -92,6 +92,10 @@ start_sink() {
     port_free 4000 || break
     sleep 1
   done
+  if port_free 4000; then
+    echo "sink failed to bind port 4000 (sink working directory: $dir)" >&2
+    exit 1
+  fi
 }
 
 stop_sink() {
@@ -157,6 +161,12 @@ run_transfer() {
     sleep 1
   done
   echo "transfer into $dir: $tstate"
+  TRANSFER_TP_ID="$tp_id"
+
+  case "$tstate" in
+    COMPLETED|STARTED) ;;
+    *) echo "transfer process $tp_id ended in state '$tstate' (expected COMPLETED or STARTED)" >&2; exit 1 ;;
+  esac
 
   # The control-plane's transfer process reaches STARTED as soon as the flow is
   # dispatched, but the data plane's own push (the actual DataSourceFactory call and
@@ -180,15 +190,55 @@ run_transfer() {
 }
 
 run_transfer "$WORK/first"
+FIRST_TP_ID="$TRANSFER_TP_ID"
 run_transfer "$WORK/second"
+SECOND_TP_ID="$TRANSFER_TP_ID"
 
 FIRST="$WORK/first/received.data"
 SECOND="$WORK/second/received.data"
 [ -f "$FIRST" ] && [ -f "$SECOND" ] || { echo "a transfer delivered nothing" >&2; exit 1; }
 
+# Prove not just that the two delivered files match each other, but that each one
+# matches the payload that was actually seeded. Two empty files, or two files that
+# both received the same wrong content, would otherwise pass the mutual comparison.
+python3 -c "
+import json
+with open('$WORK/artifacts.json') as f:
+    seeded = json.load(f)[0]
+with open('$WORK/expected.data', 'w') as out:
+    out.write(seeded['payload'])
+"
+
+if [ ! -s "$FIRST" ] || [ ! -s "$SECOND" ]; then
+  echo "at least one transfer delivered an empty file:" >&2
+  echo "  first:  $(wc -c < "$FIRST" 2>/dev/null || echo 'missing') bytes at $FIRST" >&2
+  echo "  second: $(wc -c < "$SECOND" 2>/dev/null || echo 'missing') bytes at $SECOND" >&2
+  exit 1
+fi
+
+if ! cmp -s "$FIRST" "$WORK/expected.data"; then
+  echo "first transfer delivered bytes that do not match the seeded artifact" >&2
+  echo "  expected:  $(cat "$WORK/expected.data")" >&2
+  echo "  delivered: $(cat "$FIRST")" >&2
+  exit 1
+fi
+
+if ! cmp -s "$SECOND" "$WORK/expected.data"; then
+  echo "second transfer delivered bytes that do not match the seeded artifact" >&2
+  echo "  expected:  $(cat "$WORK/expected.data")" >&2
+  echo "  delivered: $(cat "$SECOND")" >&2
+  exit 1
+fi
+
 if cmp -s "$FIRST" "$SECOND"; then
   echo "BYTE-IDENTICAL ACROSS TRANSFERS"
 else
   echo "DIFFERENT BYTES ACROSS TRANSFERS: noise was redrawn, which is a defect" >&2
+  echo "  first:  $FIRST (transfer $FIRST_TP_ID)" >&2
+  echo "  second: $SECOND (transfer $SECOND_TP_ID)" >&2
+  echo "  first sha256:  $(sha256sum "$FIRST" | awk '{print $1}')" >&2
+  echo "  second sha256: $(sha256sum "$SECOND" | awk '{print $1}')" >&2
+  echo "  first content:  $(cat "$FIRST")" >&2
+  echo "  second content: $(cat "$SECOND")" >&2
   exit 1
 fi

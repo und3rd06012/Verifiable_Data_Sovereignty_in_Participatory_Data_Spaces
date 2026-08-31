@@ -1,7 +1,7 @@
 # BENEFITS Reference Implementation: Design
 
 Date: 2026-08-30
-Status: approved in brainstorming, pending spec review
+Status: approved 2026-08-30
 
 ## 1. Purpose
 
@@ -73,6 +73,22 @@ claim, and replaced role based with scope based authorization.
 The build pins EDC to **0.18.0** exactly, vendors the Gradle wrapper,
 and records the pin in the manuscript's reproducibility section.
 
+The CouchDB image is pinned for the same reason and with more force: the
+query server engine determines whether the signature verifying validator
+arm of E1 can run at all, since typed array support inside
+`validate_doc_update` is the gate. The engine in use is probed and
+recorded in phase 0 rather than assumed from documentation, so E1's
+result is attributable to a known engine.
+
+The EDC extension APIs used by this design were read from the 0.18.0
+source rather than from documentation, because the 0.18.0 release changed
+authorization and signaling defaults. Confirmed shapes:
+`policyEngine.registerFunction(ContractNegotiationPolicyContext.class,
+Permission.class, key, function)`, constraint functions implementing
+`AtomicConstraintRuleFunction<Permission, ContractNegotiationPolicyContext>`,
+scope binding through `RuleBindingRegistry.bind(key, NEGOTIATION_SCOPE)`,
+and event subscription through `EventRouter.register(Class, EventSubscriber)`.
+
 ### 2.2 Verified host toolchain
 
 Docker 29.1.3 with a reachable daemon, Docker Compose v2.30.3, Node
@@ -108,6 +124,13 @@ TIER 3  community connector           Java, EDC 0.18.0
         audit chain fed by EDC events
         steward portal against the Management API
 ```
+
+Identity uses EDC's mock IAM (`org.eclipse.edc:iam-mock`) rather than
+IdentityHub with DIDs and verifiable credentials. Real decentralised
+identity is weeks of infrastructure that changes none of the claims this
+paper makes, since every claim concerns what happens after a participant
+is identified. This is a deliberate choice and a stated limitation in the
+manuscript, not an oversight.
 
 ### 3.1 The three publishable ideas
 
@@ -240,6 +263,16 @@ provenance, a published decision rubric, 2 of 3 quorum with single
 steward veto, and a challenge path to a cross site review panel with all
 challenge records in the audit log.
 
+**How the constraint function finds the token.** EDC's
+`PolicyContextImpl` carries no general purpose data map, so the quorum
+function cannot read arbitrary state off the evaluation context. Instead
+the generated policy carries a sibling constraint
+`benefits:releaseRequest eq <id>` on the same permission. The quorum
+function receives the `Permission` rule, reads `rule.getConstraints()`,
+extracts that id, and looks the authorization up in an injected
+`StewardAuthorizationStore`. This is deterministic and unit testable
+without a running connector.
+
 ### 4.7 Audit structure
 
 A pure hash chain forces a verifying participant to hold every entry,
@@ -310,7 +343,11 @@ useful figure.
 
 **C1. Enforcement correctness suite.** Every attempted violation must be
 refused at contract negotiation: missing quorum, expired grant, purpose
-mismatch, budget exceeded, k below threshold. Reported as a table, one
+mismatch, budget exceeded, k below threshold. The suite spans two phases,
+because the budget and k constraints do not exist until the privacy
+pipeline does. Phase 2 must pass the consent derived cases (missing
+quorum, expired grant, purpose mismatch, recipient class mismatch) and
+phase 3 adds the two privacy cases. Reported as a table, one
 line each. Connector negotiation latency is reported here rather than as
 a headline result.
 
@@ -403,19 +440,22 @@ through 5 are test first: the conformance vectors, tamper cases, and
 violation suite are specifications before they are code, which suits
 this system because the correctness claims are the contribution.
 
-This is more work than one implementation plan should carry. The plan
-that follows this spec covers **phases 0 through 5**, which together
-produce a working, tested system with no user interface. Phases 6 and 7
-get a second plan once phase 5's gate passes, and phase 8 is a separate
-piece of work driven by the ARS academic-paper skills rather than by an
-implementation plan at all.
+This is more work than one implementation plan should carry. Plan 1
+covers **phases 0 through 2**, ending at the point where approach C is
+either proven or disproven: a connector that refuses release without a
+steward quorum, and an edge filter that refuses unconsented writes. That
+is working, testable software on its own, and writing phases 3 through 5
+in detail before phase 2's gate passes would be speculative, since those
+phases build on interfaces phase 2 settles. Plan 2 covers phases 3
+through 5, plan 3 covers phases 6 and 7, and phase 8 is driven by the ARS
+academic-paper skills rather than by an implementation plan at all.
 
 | # | Phase | Gate |
 |---|---|---|
-| 0 | Skeleton, pinned EDC, compose stack | `./gradlew build` green, Management API answers, CouchDB reachable |
+| 0 | Skeleton, pinned EDC, compose stack | `./gradlew build` green, Management API answers, CouchDB reachable, one trivial constraint function observed evaluating during a real negotiation, query server engine probed and recorded |
 | 1 | consent-core, conformance vectors, design doc generation | vectors pass, real CouchDB rejects unconsented writes |
-| 2 | consent-odrl, benefits-policy, steward-quorum | C1 passes, negotiation refused without quorum |
-| 3 | privacy-pipeline | known answer tests, budget exhaustion refuses |
+| 2 | consent-odrl, benefits-policy, steward-quorum | C1 consent cases pass, negotiation refused without quorum |
+| 3 | privacy-pipeline | known answer tests, C1 privacy cases pass, budget exhaustion refuses |
 | 4 | audit-chain, audit-verify | E3 tamper detection at 100% |
 | 5 | device-sim fleet | E2 revocation under partition, zero leaked records |
 | 6 | participant-web, steward-portal | manual click through, paper screenshots |
@@ -431,7 +471,8 @@ phase's gate rather than by guessing now.
 
 1. Whether EDC 0.18.0's scope based authorization changes how the
    steward portal authenticates against the Management API. Settled in
-   phase 0.
+   phase 0. The policy engine API itself is already settled, having been
+   read from the 0.18.0 source (2.1).
 2. Whether pure JavaScript Ed25519 verification inside the CouchDB
    query server is fast enough to be viable at any batch size, or fails
    outright. Settled by E1 in phase 1.

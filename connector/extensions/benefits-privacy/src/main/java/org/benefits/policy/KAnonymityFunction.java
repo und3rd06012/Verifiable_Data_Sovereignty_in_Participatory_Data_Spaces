@@ -4,6 +4,7 @@ import org.eclipse.edc.connector.controlplane.contract.spi.policy.ContractNegoti
 import org.eclipse.edc.policy.engine.spi.AtomicConstraintRuleFunction;
 import org.eclipse.edc.policy.model.Operator;
 import org.eclipse.edc.policy.model.Permission;
+import org.eclipse.edc.spi.monitor.Monitor;
 
 import static org.benefits.policy.BenefitsNamespace.RELEASE_REQUEST_KEY;
 
@@ -17,9 +18,11 @@ import static org.benefits.policy.BenefitsNamespace.RELEASE_REQUEST_KEY;
 public class KAnonymityFunction implements AtomicConstraintRuleFunction<Permission, ContractNegotiationPolicyContext> {
 
     private final ReleaseArtifactStore store;
+    private final Monitor monitor;
 
-    public KAnonymityFunction(ReleaseArtifactStore store) {
+    public KAnonymityFunction(ReleaseArtifactStore store, Monitor monitor) {
         this.store = store;
+        this.monitor = monitor;
     }
 
     @Override
@@ -46,6 +49,8 @@ public class KAnonymityFunction implements AtomicConstraintRuleFunction<Permissi
             context.reportProblem("no release artifact for release request " + releaseRequestId);
             return false;
         }
+
+        monitor.info("kAnonymity check releaseRequest=" + releaseRequestId + " computedK=" + artifact.computedK() + " required=" + required);
 
         return artifact.computedK() >= required;
     }

@@ -135,4 +135,17 @@ describe('compilePolicy', () => {
     expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand).toEqual(['service.satisfaction']);
     expect(constraintFor(compiled, 'benefits:purpose').rightOperand).toEqual('service-improvement');
   });
+
+  it('emits constraints in the exact order: releaseRequest, stewardQuorum, purpose, recipientClass, fieldSet, kAnonymity, epsilonBudget', () => {
+    const leftOperands = policy.permission[0].constraint.map((c: any) => c.leftOperand);
+    expect(leftOperands).toEqual([
+      'benefits:releaseRequest',
+      'benefits:stewardQuorum',
+      'benefits:purpose',
+      'benefits:recipientClass',
+      'benefits:fieldSet',
+      'benefits:kAnonymity',
+      'benefits:epsilonBudget'
+    ]);
+  });
 });

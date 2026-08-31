@@ -6,6 +6,7 @@ import org.eclipse.edc.policy.model.AtomicConstraint;
 import org.eclipse.edc.policy.model.LiteralExpression;
 import org.eclipse.edc.policy.model.Operator;
 import org.eclipse.edc.policy.model.Permission;
+import org.eclipse.edc.spi.monitor.ConsoleMonitor;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -40,28 +41,28 @@ class PrivacyConstraintFunctionsTest {
     @Test
     void kAnonymityAllowsWhenComputedKMeetsTheThreshold() {
         store("rr-1", 6, 0.5);
-        var fn = new KAnonymityFunction(store);
+        var fn = new KAnonymityFunction(store, new ConsoleMonitor());
         assertThat(fn.evaluate(Operator.GEQ, "5", ruleFor("rr-1"), context())).isTrue();
     }
 
     @Test
     void kAnonymityAllowsAtExactlyTheThreshold() {
         store("rr-2", 5, 0.5);
-        var fn = new KAnonymityFunction(store);
+        var fn = new KAnonymityFunction(store, new ConsoleMonitor());
         assertThat(fn.evaluate(Operator.GEQ, "5", ruleFor("rr-2"), context())).isTrue();
     }
 
     @Test
     void kAnonymityRefusesBelowTheThreshold() {
         store("rr-3", 4, 0.5);
-        var fn = new KAnonymityFunction(store);
+        var fn = new KAnonymityFunction(store, new ConsoleMonitor());
         assertThat(fn.evaluate(Operator.GEQ, "5", ruleFor("rr-3"), context())).isFalse();
     }
 
     @Test
     void kAnonymityRefusesWhenTheArtifactIsMissing() {
         var ctx = context();
-        var fn = new KAnonymityFunction(store);
+        var fn = new KAnonymityFunction(store, new ConsoleMonitor());
         assertThat(fn.evaluate(Operator.GEQ, "5", ruleFor("rr-absent"), ctx)).isFalse();
         assertThat(ctx.getProblems()).isNotEmpty();
     }
@@ -70,7 +71,7 @@ class PrivacyConstraintFunctionsTest {
     void kAnonymityRefusesAndReportsAnUnsupportedOperator() {
         store("rr-4", 6, 0.5);
         var ctx = context();
-        var fn = new KAnonymityFunction(store);
+        var fn = new KAnonymityFunction(store, new ConsoleMonitor());
         assertThat(fn.evaluate(Operator.EQ, "5", ruleFor("rr-4"), ctx)).isFalse();
         assertThat(ctx.getProblems()).isNotEmpty();
     }
@@ -79,7 +80,7 @@ class PrivacyConstraintFunctionsTest {
     void kAnonymityRefusesANonNumericRightOperand() {
         store("rr-5", 6, 0.5);
         var ctx = context();
-        var fn = new KAnonymityFunction(store);
+        var fn = new KAnonymityFunction(store, new ConsoleMonitor());
         assertThat(fn.evaluate(Operator.GEQ, "five", ruleFor("rr-5"), ctx)).isFalse();
         assertThat(ctx.getProblems()).isNotEmpty();
     }
@@ -87,21 +88,21 @@ class PrivacyConstraintFunctionsTest {
     @Test
     void epsilonAllowsWhenChargedIsWithinTheCap() {
         store("rr-6", 6, 0.5);
-        var fn = new EpsilonBudgetFunction(store);
+        var fn = new EpsilonBudgetFunction(store, new ConsoleMonitor());
         assertThat(fn.evaluate(Operator.LEQ, "0.5", ruleFor("rr-6"), context())).isTrue();
     }
 
     @Test
     void epsilonRefusesWhenChargedExceedsTheCap() {
         store("rr-7", 6, 0.9);
-        var fn = new EpsilonBudgetFunction(store);
+        var fn = new EpsilonBudgetFunction(store, new ConsoleMonitor());
         assertThat(fn.evaluate(Operator.LEQ, "0.5", ruleFor("rr-7"), context())).isFalse();
     }
 
     @Test
     void epsilonRefusesWhenTheArtifactIsMissing() {
         var ctx = context();
-        var fn = new EpsilonBudgetFunction(store);
+        var fn = new EpsilonBudgetFunction(store, new ConsoleMonitor());
         assertThat(fn.evaluate(Operator.LEQ, "0.5", ruleFor("rr-absent"), ctx)).isFalse();
         assertThat(ctx.getProblems()).isNotEmpty();
     }
@@ -111,8 +112,8 @@ class PrivacyConstraintFunctionsTest {
         var bare = Permission.Builder.newInstance().build();
         var kctx = context();
         var ectx = context();
-        assertThat(new KAnonymityFunction(store).evaluate(Operator.GEQ, "5", bare, kctx)).isFalse();
-        assertThat(new EpsilonBudgetFunction(store).evaluate(Operator.LEQ, "0.5", bare, ectx)).isFalse();
+        assertThat(new KAnonymityFunction(store, new ConsoleMonitor()).evaluate(Operator.GEQ, "5", bare, kctx)).isFalse();
+        assertThat(new EpsilonBudgetFunction(store, new ConsoleMonitor()).evaluate(Operator.LEQ, "0.5", bare, ectx)).isFalse();
         assertThat(kctx.getProblems()).isNotEmpty();
         assertThat(ectx.getProblems()).isNotEmpty();
     }

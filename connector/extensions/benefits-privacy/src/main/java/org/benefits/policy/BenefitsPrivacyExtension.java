@@ -37,15 +37,16 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
 
     @Override
     public void initialize(ServiceExtensionContext context) {
+        var monitor = context.getMonitor();
         pipelineService.registerFactory(new ProbeDataSourceFactory());
 
         ruleBindingRegistry.bind(K_ANONYMITY_KEY, NEGOTIATION_SCOPE);
         ruleBindingRegistry.bind(EPSILON_BUDGET_KEY, NEGOTIATION_SCOPE);
         policyEngine.registerFunction(ContractNegotiationPolicyContext.class, Permission.class,
-                K_ANONYMITY_KEY, new KAnonymityFunction(artifactStore));
+                K_ANONYMITY_KEY, new KAnonymityFunction(artifactStore, monitor));
         policyEngine.registerFunction(ContractNegotiationPolicyContext.class, Permission.class,
-                EPSILON_BUDGET_KEY, new EpsilonBudgetFunction(artifactStore));
+                EPSILON_BUDGET_KEY, new EpsilonBudgetFunction(artifactStore, monitor));
 
-        context.getMonitor().info("BENEFITS privacy pipeline registered");
+        monitor.info("BENEFITS privacy pipeline registered");
     }
 }

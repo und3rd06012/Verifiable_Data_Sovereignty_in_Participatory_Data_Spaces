@@ -4,6 +4,7 @@ import org.eclipse.edc.connector.controlplane.contract.spi.policy.ContractNegoti
 import org.eclipse.edc.policy.engine.spi.AtomicConstraintRuleFunction;
 import org.eclipse.edc.policy.model.Operator;
 import org.eclipse.edc.policy.model.Permission;
+import org.eclipse.edc.spi.monitor.Monitor;
 
 import static org.benefits.policy.BenefitsNamespace.RELEASE_REQUEST_KEY;
 
@@ -14,9 +15,11 @@ import static org.benefits.policy.BenefitsNamespace.RELEASE_REQUEST_KEY;
 public class EpsilonBudgetFunction implements AtomicConstraintRuleFunction<Permission, ContractNegotiationPolicyContext> {
 
     private final ReleaseArtifactStore store;
+    private final Monitor monitor;
 
-    public EpsilonBudgetFunction(ReleaseArtifactStore store) {
+    public EpsilonBudgetFunction(ReleaseArtifactStore store, Monitor monitor) {
         this.store = store;
+        this.monitor = monitor;
     }
 
     @Override
@@ -43,6 +46,8 @@ public class EpsilonBudgetFunction implements AtomicConstraintRuleFunction<Permi
             context.reportProblem("no release artifact for release request " + releaseRequestId);
             return false;
         }
+
+        monitor.info("epsilonBudget check releaseRequest=" + releaseRequestId + " charged=" + artifact.epsilonCharged() + " cap=" + cap);
 
         return artifact.epsilonCharged() <= cap;
     }

@@ -20,6 +20,14 @@ import java.io.ByteArrayInputStream;
  * <p>
  * Because this is the only source registered for the BenefitsAggregate type, raw
  * contributions cannot leave through the release path.
+ * <p>
+ * This factory's artifact validation occurs in validateRequest, which Eclipse
+ * Dataspace Components only calls for PUSH-type transfers. PULL-type transfers
+ * bypass that check at the framework level; if this asset is ever transferred via
+ * PULL, createSource can reach a missing artifact and throw an uncaught
+ * IllegalStateException. Every transfer in this project uses HttpData-PUSH, so
+ * this path is not currently reachable. A future phase adding PULL support for
+ * this asset type must provide its own validation.
  */
 public class BenefitsAggregateDataSourceFactory implements DataSourceFactory {
 

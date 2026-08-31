@@ -5,3 +5,4 @@ dist/
 experiments/results/*.csv
 __pycache__/
 .venv/
+.superpowers/

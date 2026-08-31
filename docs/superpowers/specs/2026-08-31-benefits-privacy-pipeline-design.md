@@ -138,7 +138,27 @@ closed with a reported problem on every uncertain path.
 Both right operands are emitted as strings, per ruling R40: EDC's management API
 validator rejects numeric right operands with a ClassCastException.
 
-### 5.1 These land as one change
+### 5.1 The asset and the policy must name the same release request
+
+`KAnonymityFunction` and `EpsilonBudgetFunction` resolve the release request id
+from the sibling `benefits:releaseRequest` constraint on the policy and use it
+to look up the stored `ReleaseArtifact`. `BenefitsAggregateDataSourceFactory`,
+on the data plane side, resolves the release request id independently, from
+the transferred asset's `DataAddress` property, and uses it to look up the
+same store. These two lookups must resolve to the same release request or a
+negotiation could be evaluated against one release request's constraints
+while the data plane serves a different release request's bytes. Nothing at
+the EDC framework level enforces that the two ids agree; `DataFlowStartMessage`
+does not carry the negotiated contract's policy, so there is no framework hook
+where a cross-check could run. As a safeguard, the test tooling asserts the
+invariant itself wherever both ids are set: `tools/probe-aggregate-transfer.sh`
+asserts the asset's `dataAddress.releaseRequestId` matches the seeded
+artifact's `releaseRequestId` before starting the connectors, and
+`tools/run-case.sh` asserts the compiled policy's `benefits:releaseRequest`
+constraint matches the seeded artifact's `releaseRequestId` for the same
+reason, even though that script never runs a data plane transfer.
+
+### 5.2 These land as one change
 
 Ruling R39 recorded that EDC rejects an entire policy at definition-creation
 time, with HTTP 400, when a left operand has no registered function. Phase 3
@@ -194,6 +214,22 @@ which is section 2.1's claim under test.
 Floating-point side channels in the Laplace mechanism, per the parent spec.
 Means and sums, per section 3.1. The audit chain (phase 4), the simulated device
 fleet (phase 5), and the interfaces (phase 6).
+
+### 8.1 Wiring the pipeline into a live release-request-creation path
+
+Gate 3 proves the two constraint functions correctly compare a stored
+`ReleaseArtifact` against policy. It does not prove that the artifact they
+compare against was itself produced by a live `PrivacyPipeline.compute` run:
+the C1 suite's `k-below-threshold` and `budget-exceeded` cases seed
+`computedK` and `epsilonCharged` directly into the artifact store through test
+tooling (`tools/run-case.sh`), because no task in this phase creates a
+release request by actually invoking the pipeline against real contributions
+at negotiation time. The pipeline's own correctness is proven independently,
+by `PrivacyPipelineTest`, `KAnonymityTest` and `LaplaceNoiseSourceTest`, and
+the accountant's atomicity by `InMemoryBudgetAccountantTest`. Connecting the
+two, so a real release request causes a real pipeline run whose output is
+what the constraint functions then evaluate, is out of scope for this phase
+and is a natural next step.
 
 ## 9. Open questions
 

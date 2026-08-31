@@ -6,6 +6,34 @@ against the connector, not a unit test.
 A negotiation can terminate for many reasons, so every row also carries the evidence
 that the outcome came from the constraint this case exists to test.
 
+## Scope of the two privacy cases
+
+The `k-below-threshold` and `budget-exceeded` cases exercise `KAnonymityFunction` and
+`EpsilonBudgetFunction` against a directly-seeded `ReleaseArtifact`, not one produced by
+a live `PrivacyPipeline` run. `tools/run-case.sh` seeds `computedK` and `epsilonCharged`
+values straight into the artifact store; the payload it seeds alongside them
+(`{"groups":[]}`) is not a value `PrivacyPipeline` could itself produce for those numbers.
+The evidence strings below say "artifact seeded with computed k" and "artifact seeded
+with epsilon charge" rather than "artifact computed k" or "artifact charged epsilon" for
+this reason.
+
+This is a real gap in coverage, not an error in the two cases themselves: the
+connector-side enforcement point (the constraint functions reading a stored artifact and
+comparing it against policy) is proven correct here, on artifacts whose values are chosen
+to land on each side of the policy threshold. What is not yet proven end to end is that a
+live `PrivacyPipeline.compute` run, wired into a real release-request-creation path, would
+itself produce an artifact whose `computedK` and `epsilonCharged` match what the pipeline
+actually computed from real contributions. That path does not exist yet in this phase.
+
+The pipeline's own correctness is proven separately, by code that does run it:
+`PrivacyPipelineTest` exercises `PrivacyPipeline.compute` end to end; `KAnonymityTest`
+proves the grouping and suppression behaviour `PrivacyPipeline` composes; and
+`LaplaceNoiseSourceTest` proves the noise source it composes. `InMemoryBudgetAccountantTest`
+proves the budget accountant's reservation is atomic. Wiring `PrivacyPipeline` into a live
+release-request-creation path, so the connector's negotiation-time enforcement operates on
+artifacts the pipeline actually computed rather than ones seeded by test tooling, is not
+done in this phase and is a natural next step.
+
 | Case | Expected | Observed | Pass | Evidence |
 |---|---|---|---|---|
 | quorum-met | FINALIZED | FINALIZED | yes | negotiation finalized; quorum satisfied, provider logged signed=2 required=2 |
@@ -15,5 +43,5 @@ that the outcome came from the constraint this case exists to test.
 | recipient-class-mismatch | TERMINATED | TERMINATED | yes | refused by policy evaluation in scope contract.negotiation; quorum satisfied, signed=2 required=2; requester recipient class provider against policy recipient class statistics; purpose matches, so recipient class is the only failing claim; requested fields are granted, so recipient class is isolated |
 | field-outside-grant | TERMINATED | TERMINATED | yes | refused by policy evaluation in scope contract.negotiation; quorum satisfied, signed=2 required=2; purpose matches; recipient class matches; requested service.satisfaction,health.condition outside granted service.satisfaction |
 | expired-grant-field-excluded | TERMINATED | TERMINATED | yes | refused by policy evaluation in scope contract.negotiation; quorum satisfied, signed=2 required=2; purpose matches; recipient class matches; requested health.condition outside granted service.satisfaction; the expired health.condition grant was excluded from the compiled policy |
-| k-below-threshold | TERMINATED | TERMINATED | yes | refused by policy evaluation in scope contract.negotiation; quorum satisfied, signed=2 required=2; purpose matches; recipient class matches; requested fields are granted; epsilon charged 0.5 within policy cap 0.5, so budget is not the cause; artifact computed k 4 below policy threshold 5, so k is the only failing constraint; KAnonymityFunction logged computedK=4 required=5 |
-| budget-exceeded | TERMINATED | TERMINATED | yes | refused by policy evaluation in scope contract.negotiation; quorum satisfied, signed=2 required=2; purpose matches; recipient class matches; requested fields are granted; artifact computed k 6 meets policy threshold 5, so k is not the cause; artifact charged epsilon 0.9 above policy cap 0.5, so budget is the only failing constraint; EpsilonBudgetFunction logged charged=0.9 cap=0.5 |
+| k-below-threshold | TERMINATED | TERMINATED | yes | refused by policy evaluation in scope contract.negotiation; quorum satisfied, signed=2 required=2; purpose matches; recipient class matches; requested fields are granted; artifact seeded with epsilon charge 0.5 within policy cap 0.5, so budget is not the cause; artifact seeded with computed k 4 below policy threshold 5, so k is the only failing constraint; KAnonymityFunction logged computedK=4 required=5 |
+| budget-exceeded | TERMINATED | TERMINATED | yes | refused by policy evaluation in scope contract.negotiation; quorum satisfied, signed=2 required=2; purpose matches; recipient class matches; requested fields are granted; artifact seeded with computed k 6 meets policy threshold 5, so k is not the cause; artifact seeded with epsilon charge 0.9 above policy cap 0.5, so budget is the only failing constraint; EpsilonBudgetFunction logged charged=0.9 cap=0.5 |

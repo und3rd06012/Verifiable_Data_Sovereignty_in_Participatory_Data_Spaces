@@ -88,6 +88,23 @@ class CouchDbContributionSourceIntegrationTest {
     }
 
     @Test
+    void skipsADocumentWhoseChannelIsAJsonObjectRatherThanAString() throws Exception {
+        send("POST", "/" + DB, """
+                {"type":"contribution","participantRef":"p-nested","siteId":"chania",
+                 "channel":{"unexpected":"object"},"fields":{"service.satisfaction":1}}""");
+        send("POST", "/" + DB, """
+                {"type":"contribution","participantRef":"p-chania","siteId":"chania",
+                 "channel":"app","fields":{"service.satisfaction":4}}""");
+
+        var source = new CouchDbContributionSource(BASE, DB, "admin", "benefits", new ObjectMapper());
+        var results = source.contributionsFor("chania");
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).participantRef()).isEqualTo("p-chania");
+        assertThat(results.get(0).attribute("channel")).isEqualTo("app");
+    }
+
+    @Test
     void skipsADocumentMissingParticipantRef() throws Exception {
         send("POST", "/" + DB, """
                 {"type":"contribution","siteId":"corfu",

@@ -27,7 +27,7 @@ public class CouchDbContributionSource implements ContributionSource {
 
     private static final Logger LOGGER = Logger.getLogger(CouchDbContributionSource.class.getName());
 
-    private static final List<String> QUASI_IDENTIFIERS = List.of("channel", "service");
+    private static final List<String> QUASI_IDENTIFIERS = List.of("channel");
     private static final int MAX_RESULTS = 100_000;
 
     private final String baseUrl;
@@ -95,10 +95,22 @@ public class CouchDbContributionSource implements ContributionSource {
             var participantRef = doc.get("participantRef").asText();
 
             Map<String, String> attributes = new HashMap<>();
+            var nonScalar = false;
             for (var name : QUASI_IDENTIFIERS) {
                 if (doc.hasNonNull(name)) {
-                    attributes.put(name, doc.get(name).asText());
+                    var value = doc.get(name);
+                    if (value.isObject() || value.isArray()) {
+                        var docId = doc.hasNonNull("_id") ? doc.get("_id").asText() : "none";
+                        LOGGER.warning("skipping contribution document with non-scalar " + name
+                                + ", _id=" + docId);
+                        nonScalar = true;
+                        break;
+                    }
+                    attributes.put(name, value.asText());
                 }
+            }
+            if (nonScalar) {
+                continue;
             }
             for (Iterator<String> it = doc.path("fields").fieldNames(); it.hasNext(); ) {
                 var field = it.next();

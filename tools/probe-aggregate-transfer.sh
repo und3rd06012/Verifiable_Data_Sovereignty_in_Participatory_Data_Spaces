@@ -109,17 +109,33 @@ stop_sink() {
 
 trap 'stop_sink; stop_all' EXIT
 
+cat > "$WORK/asset.json" <<'JSON'
+{
+  "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
+  "@id": "benefits-aggregate",
+  "properties": { "name": "aggregate" },
+  "dataAddress": { "type": "BenefitsAggregate", "releaseRequestId": "rr-e2e" }
+}
+JSON
+
+# Nothing at the EDC framework level checks that the release request id the constraint
+# functions look up (from the seeded ReleaseArtifact) is the same id the DataSource will
+# actually serve (from the asset's DataAddress). A misconfigured asset could be negotiated
+# against one release request's constraints and serve a different release request's bytes.
+# This script only ever uses one release request id, so assert the two sources agree.
+ASSET_RR=$(python3 -c "import json; print(json.load(open('$WORK/asset.json'))['dataAddress']['releaseRequestId'])")
+ARTIFACT_RR=$(python3 -c "import json; print(json.load(open('$WORK/artifacts.json'))[0]['releaseRequestId'])")
+if [ "$ASSET_RR" != "$ARTIFACT_RR" ]; then
+  echo "release request id mismatch: asset dataAddress.releaseRequestId=$ASSET_RR seeded artifact releaseRequestId=$ARTIFACT_RR" >&2
+  exit 1
+fi
+
 stop_all
 start_connector provider "$ROOT/connector/runtime/provider.properties" 19193 \
   -Dbenefits.seed.artifacts="$WORK/artifacts.json"
 start_connector consumer "$ROOT/connector/runtime/consumer.properties" 29193
 
-curl -sf -H "$KEY" -H "$JSON" -X POST "$PROVIDER_MGMT/v3/assets" -d '{
-  "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
-  "@id": "benefits-aggregate",
-  "properties": { "name": "aggregate" },
-  "dataAddress": { "type": "BenefitsAggregate", "releaseRequestId": "rr-e2e" }
-}' >/dev/null
+curl -sf -H "$KEY" -H "$JSON" -X POST "$PROVIDER_MGMT/v3/assets" -d @"$WORK/asset.json" >/dev/null
 curl -sf -H "$KEY" -H "$JSON" -X POST "$PROVIDER_MGMT/v3/policydefinitions" -d @"$WORK/policy.json" >/dev/null
 curl -sf -H "$KEY" -H "$JSON" -X POST "$PROVIDER_MGMT/v3/contractdefinitions" -d '{
   "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
@@ -204,7 +220,7 @@ SECOND="$WORK/second/received.data"
 python3 -c "
 import json
 with open('$WORK/artifacts.json') as f:
-    seeded = json.load(f)[0]
+    seeded = next(a for a in json.load(f) if a['releaseRequestId'] == 'rr-e2e')
 with open('$WORK/expected.data', 'w') as out:
     out.write(seeded['payload'])
 "

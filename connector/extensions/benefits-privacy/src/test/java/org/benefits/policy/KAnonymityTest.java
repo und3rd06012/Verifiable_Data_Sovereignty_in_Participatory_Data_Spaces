@@ -89,6 +89,17 @@ class KAnonymityTest {
     }
 
     @Test
+    void doesNotCollideAnAbsentAttributeWithAnExplicitEmptyValue() {
+        // A missing "channel" field and an explicit "channel": "" must not merge into
+        // the same group: each is below k alone, and a merge that clears k would leak
+        // that two distinct sub-k populations exist and can be recovered by differencing.
+        var absent = new Contribution("p-1", "athens", Map.of());
+        var empty = new Contribution("p-2", "athens", Map.of("channel", ""));
+        var result = KAnonymity.aggregate(List.of(absent, empty), byChannel, 2);
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void doesNotCollideGroupsWhoseValuesContainTheSeparator() {
         // "x|y" + "z" and "x" + "y|z" would join to the same key without escaping.
         // Merging them would let two sub-k groups clear k together and be released.

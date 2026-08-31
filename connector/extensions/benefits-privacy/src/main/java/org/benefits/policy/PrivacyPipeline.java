@@ -36,10 +36,42 @@ public class PrivacyPipeline {
         var json = new StringJoiner(",", "{\"groups\":[", "]}");
         for (var group : groups) {
             var noised = group.count() + noise.noise(epsilon);
-            json.add("{\"group\":\"" + group.groupKey() + "\",\"count\":" + noised + "}");
+            json.add("{\"group\":\"" + jsonEscape(group.groupKey()) + "\",\"count\":" + noised + "}");
         }
 
         return Optional.of(new ReleaseArtifact(releaseRequestId,
                 json.toString().getBytes(StandardCharsets.UTF_8), computedK, epsilon));
+    }
+
+    /**
+     * Escapes a string for embedding in a JSON string literal.
+     * <p>
+     * The group key already carries this pipeline's own separator escaping, which uses
+     * backslashes. Those are not valid JSON escapes on their own, so writing a key into
+     * the document unescaped can produce an unparseable document, or one a parser silently
+     * reinterprets.
+     */
+    private static String jsonEscape(String value) {
+        var out = new StringBuilder(value.length() + 8);
+        for (var i = 0; i < value.length(); i++) {
+            var c = value.charAt(i);
+            switch (c) {
+                case '"' -> out.append("\\\"");
+                case '\\' -> out.append("\\\\");
+                case '\b' -> out.append("\\b");
+                case '\f' -> out.append("\\f");
+                case '\n' -> out.append("\\n");
+                case '\r' -> out.append("\\r");
+                case '\t' -> out.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        out.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        out.append(c);
+                    }
+                }
+            }
+        }
+        return out.toString();
     }
 }

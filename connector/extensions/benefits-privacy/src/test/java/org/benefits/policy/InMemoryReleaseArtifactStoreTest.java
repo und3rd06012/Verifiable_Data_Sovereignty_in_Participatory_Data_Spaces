@@ -42,4 +42,12 @@ class InMemoryReleaseArtifactStoreTest {
         first[0] = (byte) 'X';
         assertThat(store.findByReleaseRequestId("rr-1").bytes()[0]).isEqualTo((byte) '{');
     }
+
+    @Test
+    void mutatingTheArrayPassedIntoConstructionDoesNotChangeTheStoredArtifact() {
+        var original = "{}".getBytes(StandardCharsets.UTF_8);
+        store.save(new ReleaseArtifact("rr-1", original, 6, 0.5));
+        original[0] = (byte) 'X';
+        assertThat(store.findByReleaseRequestId("rr-1").bytes()[0]).isEqualTo((byte) '{');
+    }
 }

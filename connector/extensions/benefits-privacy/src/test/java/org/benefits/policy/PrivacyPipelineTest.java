@@ -1,5 +1,6 @@
 package org.benefits.policy;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -78,12 +79,51 @@ class PrivacyPipelineTest {
     }
 
     @Test
-    void addsNoiseSoTheOutputIsNotTheTrueCount() {
+    void addsNoiseSoTheOutputIsNotTheTrueCount() throws Exception {
         var artifact = pipeline(participants("app", 6, "a"), new InMemoryBudgetAccountant(2.0), 42)
                 .compute("rr-1", byChannel, 5, 0.5).orElseThrow();
         var text = new String(artifact.bytes(), StandardCharsets.UTF_8);
         assertThat(text).contains("app");
-        // the noised value is a double, not the bare integer 6
-        assertThat(text).doesNotContain("\"count\":6,");
+
+        var mapper = new ObjectMapper();
+        var root = mapper.readTree(artifact.bytes());
+        var count = root.get("groups").get(0).get("count").asDouble();
+        assertThat(count).isNotEqualTo(6.0);
+    }
+
+    @Test
+    void jsonEscapesAGroupKeyContainingThePipeSeparator() throws Exception {
+        var rows = participants("a|b", 6, "a");
+        var artifact = pipeline(rows, new InMemoryBudgetAccountant(2.0), 42)
+                .compute("rr-1", byChannel, 5, 0.5).orElseThrow();
+        var expectedGroupKey = KAnonymity.aggregate(rows, byChannel, 5).get(0).groupKey();
+
+        var mapper = new ObjectMapper();
+        var root = mapper.readTree(artifact.bytes());
+        assertThat(root.get("groups").get(0).get("group").asText()).isEqualTo(expectedGroupKey);
+    }
+
+    @Test
+    void jsonEscapesAGroupKeyContainingAQuote() throws Exception {
+        var rows = participants("a\"b", 6, "a");
+        var artifact = pipeline(rows, new InMemoryBudgetAccountant(2.0), 42)
+                .compute("rr-1", byChannel, 5, 0.5).orElseThrow();
+        var expectedGroupKey = KAnonymity.aggregate(rows, byChannel, 5).get(0).groupKey();
+
+        var mapper = new ObjectMapper();
+        var root = mapper.readTree(artifact.bytes());
+        assertThat(root.get("groups").get(0).get("group").asText()).isEqualTo(expectedGroupKey);
+    }
+
+    @Test
+    void jsonEscapesAGroupKeyContainingABackslash() throws Exception {
+        var rows = participants("a\\b", 6, "a");
+        var artifact = pipeline(rows, new InMemoryBudgetAccountant(2.0), 42)
+                .compute("rr-1", byChannel, 5, 0.5).orElseThrow();
+        var expectedGroupKey = KAnonymity.aggregate(rows, byChannel, 5).get(0).groupKey();
+
+        var mapper = new ObjectMapper();
+        var root = mapper.readTree(artifact.bytes());
+        assertThat(root.get("groups").get(0).get("group").asText()).isEqualTo(expectedGroupKey);
     }
 }

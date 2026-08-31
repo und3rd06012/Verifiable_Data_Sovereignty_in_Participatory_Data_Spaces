@@ -45,8 +45,14 @@ class KAnonymityTest {
     @Test
     void countsDistinctParticipantsNotRows() {
         // one participant contributing three rows must count once, or the
-        // sensitivity-of-1 assumption the noise calibration rests on is false
-        var repeated = List.of(c("p-1", "app"), c("p-1", "app"), c("p-1", "app"),
+        // sensitivity-of-1 assumption the noise calibration rests on is false.
+        // The three p-1 rows vary in "service", an attribute not in groupBy, so a
+        // whole-row dedup would still see three distinct rows and this test would
+        // only pass against an implementation that dedups by participant.
+        var repeated = List.of(
+                new Contribution("p-1", "athens", Map.of("channel", "app", "service", "housing")),
+                new Contribution("p-1", "athens", Map.of("channel", "app", "service", "food")),
+                new Contribution("p-1", "athens", Map.of("channel", "app", "service", "transit")),
                 c("p-2", "app"), c("p-3", "app"), c("p-4", "app"), c("p-5", "app"));
         var result = KAnonymity.aggregate(repeated, byChannel, 5);
         assertThat(result).hasSize(1);
@@ -80,5 +86,22 @@ class KAnonymityTest {
         mixed.addAll(many("alpha", 5, "a"));
         var result = KAnonymity.aggregate(mixed, byChannel, 5);
         assertThat(result).extracting(GroupedCount::groupKey).containsExactly("alpha", "zeta");
+    }
+
+    @Test
+    void doesNotCollideGroupsWhoseValuesContainTheSeparator() {
+        // "x|y" + "z" and "x" + "y|z" would join to the same key without escaping.
+        // Merging them would let two sub-k groups clear k together and be released.
+        var spec = new QuerySpec("athens", List.of("channel", "service"));
+        var rows = new java.util.ArrayList<Contribution>();
+        for (var i = 0; i < 5; i++) {
+            rows.add(new Contribution("a" + i, "athens", Map.of("channel", "x|y", "service", "z")));
+        }
+        for (var i = 0; i < 5; i++) {
+            rows.add(new Contribution("b" + i, "athens", Map.of("channel", "x", "service", "y|z")));
+        }
+        var result = KAnonymity.aggregate(rows, spec, 5);
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(GroupedCount::count).containsExactly(5, 5);
     }
 }

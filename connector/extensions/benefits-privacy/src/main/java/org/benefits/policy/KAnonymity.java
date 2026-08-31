@@ -24,8 +24,22 @@ import java.util.Set;
 public final class KAnonymity {
 
     private static final String KEY_SEPARATOR = "|";
+    private static final String KEY_ESCAPE = "\\";
 
     private KAnonymity() {
+    }
+
+    /**
+     * Escapes a value so that the joined group key is injective.
+     * <p>
+     * Without this, a value containing the separator would collide two distinct groups
+     * into one key. That is a privacy failure rather than a correctness one: two groups
+     * each below k, merged, can clear k and be released, and an adversary who can bound
+     * one component recovers the other by subtraction.
+     */
+    private static String escape(String value) {
+        return value.replace(KEY_ESCAPE, KEY_ESCAPE + KEY_ESCAPE)
+                .replace(KEY_SEPARATOR, KEY_ESCAPE + KEY_SEPARATOR);
     }
 
     public static List<GroupedCount> aggregate(List<Contribution> contributions, QuerySpec query, int k) {
@@ -51,6 +65,6 @@ public final class KAnonymity {
 
     private static String groupKey(Contribution contribution, QuerySpec query) {
         return String.join(KEY_SEPARATOR,
-                query.groupBy().stream().map(contribution::attribute).toList());
+                query.groupBy().stream().map(contribution::attribute).map(KAnonymity::escape).toList());
     }
 }

@@ -125,6 +125,9 @@ public class StewardResource {
         if (steward == null) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
+        if (body == null) {
+            return Response.status(400).entity(new ErrorBody("request body is required")).build();
+        }
         try {
             authorizationStore.appendAppeal(requestId, new StewardAppeal(steward, body.reason(), body.vetoStewardId(), Instant.now()));
         } catch (EdcException e) {

@@ -8,10 +8,16 @@ public record StewardAuthorization(
         String releaseRequestId,
         String datasetHash,
         List<StewardSignature> signatures,
+        List<StewardReview> reviews,
+        List<StewardVeto> vetoes,
+        List<StewardAppeal> appeals,
         Instant issuedAt) {
 
     public StewardAuthorization {
         signatures = List.copyOf(signatures);
+        reviews = List.copyOf(reviews);
+        vetoes = List.copyOf(vetoes);
+        appeals = List.copyOf(appeals);
     }
 
     public int distinctStewardCount() {

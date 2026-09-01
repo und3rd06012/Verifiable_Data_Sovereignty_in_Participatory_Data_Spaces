@@ -45,7 +45,7 @@ class StewardQuorumFunctionTest {
         var signatures = java.util.Arrays.stream(stewardIds)
                 .map(id -> new StewardSignature(id, "sig-" + id, Instant.parse("2026-08-30T12:00:00Z")))
                 .toList();
-        store.save(new StewardAuthorization(releaseRequestId, "hash", List.copyOf(signatures),
+        store.save(new StewardAuthorization(releaseRequestId, "hash", List.copyOf(signatures), List.of(), List.of(), List.of(),
                 Instant.parse("2026-08-30T12:00:00Z")));
     }
 

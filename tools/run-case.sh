@@ -41,7 +41,10 @@ json.dump([{
     "signatures": [
         {"stewardId": s, "signature": "sig-" + s + "-" + str(i), "signedAt": "2026-08-30T12:00:00Z"}
         for i, s in enumerate(stewards)
-    ]
+    ],
+    "reviews": [],
+    "vetoes": [],
+    "appeals": []
 }], open(out, "w"))
 PY
   SEED_ARG=(-Dbenefits.seed.authorizations="$WORK/seed.json")

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@benefits/consent-core": "0.1.0",
+    "events": "3.3.0",
     "pouchdb-core": "9.0.0",
     "pouchdb-adapter-idb": "9.0.0",
     "pouchdb-adapter-http": "9.0.0",

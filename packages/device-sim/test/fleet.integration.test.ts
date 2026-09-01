@@ -3,6 +3,7 @@ import { Device } from '../src/device';
 import { DutyCycle } from '../src/dutyCycle';
 import { syncDevice, injectConflict, resolveConflicts } from '../src/sync';
 import { createRemoteDb } from '../src/pouchdb';
+import { buildDesignDoc } from '@benefits/consent-couchdb';
 
 const DB_NAME = 'benefits-device-sim-fleet-test';
 const REMOTE_URL = `http://admin:benefits@localhost:5984/${DB_NAME}`;
@@ -27,6 +28,12 @@ beforeAll(async () => {
     const authHeader = { authorization: 'Basic ' + Buffer.from('admin:benefits').toString('base64') };
     await fetch(`http://localhost:5984/${DB_NAME}`, { method: 'DELETE', headers: authHeader });
     await fetch(`http://localhost:5984/${DB_NAME}`, { method: 'PUT', headers: authHeader });
+    const dd = buildDesignDoc();
+    await fetch(`http://localhost:5984/${DB_NAME}/${dd._id}`, {
+      method: 'PUT',
+      headers: { ...authHeader, 'content-type': 'application/json' },
+      body: JSON.stringify(dd)
+    });
   }
 }, 30000);
 

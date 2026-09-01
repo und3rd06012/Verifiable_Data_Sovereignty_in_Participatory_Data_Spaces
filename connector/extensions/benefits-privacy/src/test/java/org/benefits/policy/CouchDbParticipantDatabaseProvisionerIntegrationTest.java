@@ -45,6 +45,14 @@ class CouchDbParticipantDatabaseProvisionerIntegrationTest {
                 .header("authorization", otherAuth).GET().build(), HttpResponse.BodyHandlers.ofString());
         assertThat(otherRead.statusCode()).isEqualTo(403);
 
+        // Nor can the participant read the shared "benefits" database -- the exact
+        // property this plan exists to guarantee. The "benefits" database already exists
+        // on the CouchDB instance these tests run against (created by tools/lib.sh's
+        // bootstrap, which every test in this module already assumes is in place).
+        var sharedRead = http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/benefits"))
+                .header("authorization", ownAuth).GET().build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(sharedRead.statusCode()).isEqualTo(403);
+
         // Re-provisioning the same participant is idempotent.
         var second = provisioner.provision(participantRef);
         assertThat(second).isEqualTo(CouchDbParticipantDatabaseProvisioner.Outcome.ALREADY_EXISTS);

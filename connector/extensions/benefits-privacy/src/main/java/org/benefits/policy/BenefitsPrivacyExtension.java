@@ -23,7 +23,7 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
     @Inject
     private PolicyEngine policyEngine;
 
-    private final ReleaseArtifactStore artifactStore = new InMemoryReleaseArtifactStore();
+    private ReleaseArtifactStore artifactStore;
 
     @Override
     public String name() {
@@ -38,6 +38,7 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
     @Override
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
+        artifactStore = buildArtifactStore(context);
         pipelineService.registerFactory(new ProbeDataSourceFactory());
         pipelineService.registerFactory(new BenefitsAggregateDataSourceFactory(artifactStore));
 
@@ -51,6 +52,17 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
         monitor.info("BENEFITS privacy pipeline registered");
 
         seed(context);
+    }
+
+    private ReleaseArtifactStore buildArtifactStore(ServiceExtensionContext context) {
+        if (!Boolean.parseBoolean(context.getSetting("benefits.privacy.persistence.enabled", "false"))) {
+            return new InMemoryReleaseArtifactStore();
+        }
+        var url = context.getSetting("benefits.couchdb.url", "http://localhost:5984");
+        var database = context.getSetting("benefits.couchdb.database", "benefits") + "-artifacts";
+        var user = context.getSetting("benefits.couchdb.user", "admin");
+        var password = context.getSetting("benefits.couchdb.password", "");
+        return new CouchDbReleaseArtifactStore(url, database, user, password, new com.fasterxml.jackson.databind.ObjectMapper());
     }
 
     private void seed(ServiceExtensionContext context) {

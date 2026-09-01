@@ -22,12 +22,12 @@ export function ConsentCards({ session }: { session: Session }) {
       field, purpose, recipientClass,
       grantedAt: new Date().toISOString(), expiresAt: null, revokedAt: null
     });
-    setGrants(client.grants());
+    setGrants([...client.grants()]);
   }
 
   async function revoke(field: string, purpose: string, recipientClass: string) {
     const { sweptCount } = await client.revoke(field, purpose, recipientClass, new Date().toISOString());
-    setGrants(client.grants());
+    setGrants([...client.grants()]);
     setStatus(`revoked (swept ${sweptCount} queued record${sweptCount === 1 ? '' : 's'} from the outbox)`);
   }
 

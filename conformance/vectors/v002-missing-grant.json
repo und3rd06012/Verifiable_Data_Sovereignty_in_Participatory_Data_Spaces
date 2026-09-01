@@ -10,7 +10,10 @@
     "channel": "app",
     "declaredPurpose": "service-improvement",
     "declaredRecipientClass": "statistics",
-    "fields": { "service.satisfaction": 4, "health.condition": "asthma" },
+    "fields": {
+      "service.satisfaction": 4,
+      "health.condition": "asthma"
+    },
     "consent": {
       "participantRef": "p-001",
       "assertedAt": "2026-08-01T00:00:00.000Z",
@@ -20,10 +23,14 @@
           "purpose": "service-improvement",
           "recipientClass": "statistics",
           "grantedAt": "2026-08-01T00:00:00.000Z",
-          "expiresAt": null
+          "expiresAt": null,
+          "revokedAt": null
         }
       ]
     }
   },
-  "expected": { "allowed": false, "reason": "no-grant:health.condition" }
+  "expected": {
+    "allowed": false,
+    "reason": "no-grant:health.condition"
+  }
 }

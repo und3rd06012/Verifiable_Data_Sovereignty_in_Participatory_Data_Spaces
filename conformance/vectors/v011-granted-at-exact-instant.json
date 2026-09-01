@@ -10,7 +10,9 @@
     "channel": "app",
     "declaredPurpose": "service-improvement",
     "declaredRecipientClass": "statistics",
-    "fields": { "service.satisfaction": 4 },
+    "fields": {
+      "service.satisfaction": 4
+    },
     "consent": {
       "participantRef": "p-001",
       "assertedAt": "2026-08-01T00:00:00.000Z",
@@ -20,10 +22,14 @@
           "purpose": "service-improvement",
           "recipientClass": "statistics",
           "grantedAt": "2026-08-30T12:00:00.000Z",
-          "expiresAt": null
+          "expiresAt": null,
+          "revokedAt": null
         }
       ]
     }
   },
-  "expected": { "allowed": true, "reason": "ok" }
+  "expected": {
+    "allowed": true,
+    "reason": "ok"
+  }
 }

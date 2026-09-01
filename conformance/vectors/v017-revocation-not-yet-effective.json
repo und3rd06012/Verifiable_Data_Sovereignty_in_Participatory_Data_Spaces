@@ -1,0 +1,30 @@
+{
+  "id": "v017-revocation-not-yet-effective",
+  "description": "a revocation timestamped after the evaluation instant has not taken effect yet",
+  "now": "2026-08-30T12:00:00.000Z",
+  "record": {
+    "type": "contribution",
+    "participantRef": "p-001",
+    "siteId": "athens",
+    "collectedAt": "2026-08-30T11:00:00.000Z",
+    "channel": "app",
+    "declaredPurpose": "service-improvement",
+    "declaredRecipientClass": "statistics",
+    "fields": { "service.satisfaction": 4 },
+    "consent": {
+      "participantRef": "p-001",
+      "assertedAt": "2026-08-01T00:00:00.000Z",
+      "grants": [
+        {
+          "field": "service.satisfaction",
+          "purpose": "service-improvement",
+          "recipientClass": "statistics",
+          "grantedAt": "2026-08-01T00:00:00.000Z",
+          "expiresAt": null,
+          "revokedAt": "2100-01-01T00:00:00.000Z"
+        }
+      ]
+    }
+  },
+  "expected": { "allowed": true, "reason": "ok" }
+}

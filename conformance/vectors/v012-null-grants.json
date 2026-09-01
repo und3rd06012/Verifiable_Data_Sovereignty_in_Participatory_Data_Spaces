@@ -10,12 +10,17 @@
     "channel": "app",
     "declaredPurpose": "service-improvement",
     "declaredRecipientClass": "statistics",
-    "fields": { "service.satisfaction": 4 },
+    "fields": {
+      "service.satisfaction": 4
+    },
     "consent": {
       "participantRef": "p-001",
       "assertedAt": "2026-08-01T00:00:00.000Z",
       "grants": null
     }
   },
-  "expected": { "allowed": false, "reason": "missing-consent-assertion" }
+  "expected": {
+    "allowed": false,
+    "reason": "missing-consent-assertion"
+  }
 }

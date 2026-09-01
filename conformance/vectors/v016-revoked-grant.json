@@ -1,0 +1,30 @@
+{
+  "id": "v016-revoked-grant",
+  "description": "a grant revoked before the record's evaluation instant is inactive",
+  "now": "2026-08-30T12:00:00.000Z",
+  "record": {
+    "type": "contribution",
+    "participantRef": "p-001",
+    "siteId": "athens",
+    "collectedAt": "2026-08-30T11:00:00.000Z",
+    "channel": "app",
+    "declaredPurpose": "service-improvement",
+    "declaredRecipientClass": "statistics",
+    "fields": { "service.satisfaction": 4 },
+    "consent": {
+      "participantRef": "p-001",
+      "assertedAt": "2026-08-01T00:00:00.000Z",
+      "grants": [
+        {
+          "field": "service.satisfaction",
+          "purpose": "service-improvement",
+          "recipientClass": "statistics",
+          "grantedAt": "2026-08-01T00:00:00.000Z",
+          "expiresAt": null,
+          "revokedAt": "2026-08-15T00:00:00.000Z"
+        }
+      ]
+    }
+  },
+  "expected": { "allowed": false, "reason": "no-grant:service.satisfaction" }
+}

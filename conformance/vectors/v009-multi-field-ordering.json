@@ -10,12 +10,18 @@
     "channel": "app",
     "declaredPurpose": "service-improvement",
     "declaredRecipientClass": "statistics",
-    "fields": { "z.field": 1, "a.field": 2 },
+    "fields": {
+      "z.field": 1,
+      "a.field": 2
+    },
     "consent": {
       "participantRef": "p-001",
       "assertedAt": "2026-08-01T00:00:00.000Z",
       "grants": []
     }
   },
-  "expected": { "allowed": false, "reason": "no-grant:a.field" }
+  "expected": {
+    "allowed": false,
+    "reason": "no-grant:a.field"
+  }
 }

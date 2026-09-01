@@ -3,13 +3,12 @@ import { ParticipantClient } from '@benefits/consent-web-client';
 import type { ConsentGrant } from '@benefits/consent-core';
 import type { Session } from './App';
 
-export function PrivacyDashboard({ session }: { session: Session }) {
+export function PrivacyDashboard({ session, client }: { session: Session; client: ParticipantClient }) {
   const [grants, setGrants] = useState<ConsentGrant[]>([]);
 
   useEffect(() => {
-    const client = new ParticipantClient(session.participantRef);
-    setGrants(client.grants());
-  }, [session.participantRef]);
+    setGrants([...client.grants()]);
+  }, [client]);
 
   const active = grants.filter((g) => !g.revokedAt && (!g.expiresAt || g.expiresAt > new Date().toISOString()));
 

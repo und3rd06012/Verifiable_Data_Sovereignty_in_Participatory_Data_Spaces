@@ -4,8 +4,7 @@ import type { ConsentGrant } from '@benefits/consent-core';
 import { COUCHDB_BASE_URL } from './config';
 import type { Session } from './App';
 
-export function ConsentCards({ session }: { session: Session }) {
-  const [client] = useState(() => new ParticipantClient(session.participantRef));
+export function ConsentCards({ session, client }: { session: Session; client: ParticipantClient }) {
   const [grants, setGrants] = useState<ConsentGrant[]>([]);
   const [status, setStatus] = useState('');
 
@@ -38,12 +37,32 @@ export function ConsentCards({ session }: { session: Session }) {
     setStatus(`pushed ${pushed} record${pushed === 1 ? '' : 's'}, resolved ${resolvedCount} conflict${resolvedCount === 1 ? '' : 's'}`);
   }
 
+  async function contribute() {
+    await client.contribute({
+      type: 'contribution',
+      participantRef: session.participantRef,
+      siteId: 'site-participant-web',
+      collectedAt: new Date().toISOString(),
+      channel: 'app',
+      declaredPurpose: 'service-improvement',
+      declaredRecipientClass: 'statistics',
+      fields: { 'service.satisfaction': 4 },
+      consent: {
+        participantRef: session.participantRef,
+        grants: client.grants(),
+        assertedAt: new Date().toISOString(),
+      },
+    });
+    setStatus('contribution queued');
+  }
+
   return (
     <div>
       <h2>Consent</h2>
       <button onClick={() => grant('service.satisfaction', 'service-improvement', 'statistics')}>
         Grant: satisfaction data for service improvement (statistics)
       </button>
+      <button onClick={contribute}>Contribute: satisfaction data</button>
       <ul>
         {grants.map((g, i) => (
           <li key={i}>

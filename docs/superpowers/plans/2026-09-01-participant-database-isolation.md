@@ -577,19 +577,29 @@ Replace `provisionParticipant`'s body:
             return Response.status(400).entity(new ErrorBody(
                     "participantRef must start with a lowercase letter and contain only lowercase letters, digits, '-', or '_'")).build();
         }
+        // Database/security/design-doc/replication first, the CouchDB user (and its
+        // freshly generated password) last. CouchDB's _security document accepts a
+        // username that doesn't exist yet -- it's just a string checked against the
+        // authenticated caller at request time -- so this ordering is safe, and it means
+        // a failure before the user is created leaves nothing irrecoverable to retry: no
+        // password was ever generated, so a retry simply starts over. The reverse order
+        // would risk creating the user (with a password only this response would ever
+        // carry), then losing that password forever if the database step failed after --
+        // a retry's re-PUT to the same _users document would 409 and change nothing, per
+        // CouchDbUserProvisioner's own documented behavior.
+        try {
+            databaseProvisioner.provision(participantRef);
+            replicationProvisioner.ensureReplication(databaseProvisioner.databaseNameFor(participantRef), "benefits");
+        } catch (EdcException e) {
+            return Response.status(502).entity(new ErrorBody("failed to provision participant database: " + e.getMessage())).build();
+        }
         var password = generatePassword();
         CouchDbUserProvisioner.Outcome userOutcome;
         try {
             userOutcome = userProvisioner.provision(participantRef, password, List.of());
         } catch (EdcException e) {
-            return Response.status(502).entity(new ErrorBody("failed to provision CouchDB user: " + e.getMessage())).build();
-        }
-        try {
-            databaseProvisioner.provision(participantRef);
-            replicationProvisioner.ensureReplication(databaseProvisioner.databaseNameFor(participantRef), "benefits");
-        } catch (EdcException e) {
             return Response.status(502).entity(new ErrorBody(
-                    "CouchDB user provisioned but database/replication setup failed: " + e.getMessage())).build();
+                    "participant database provisioned but CouchDB user creation failed: " + e.getMessage())).build();
         }
         if (userOutcome == CouchDbUserProvisioner.Outcome.ALREADY_EXISTS) {
             return Response.status(200).entity(new ProvisionStatus(participantRef,

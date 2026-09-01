@@ -39,6 +39,40 @@ class CouchDbReplicationProvisionerIntegrationTest {
     }
 
     @Test
+    void aDesignDocumentWrittenToTheSourceDoesNotReplicate() throws Exception {
+        var suffix = System.nanoTime();
+        var sourceDb = "replicate-source-design-" + suffix;
+        var targetDb = "replicate-target-design-" + suffix;
+        createDatabase(sourceDb);
+        createDatabase(targetDb);
+
+        new CouchDbReplicationProvisioner(BASE_URL, "admin", "benefits", mapper).ensureReplication(sourceDb, targetDb);
+
+        // A normal document still replicates (same as the unfiltered case above)...
+        var docId = "doc-" + suffix;
+        var body = mapper.createObjectNode().put("marker", "replication-test");
+        http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + sourceDb + "/" + docId))
+                .header("authorization", adminAuth()).header("content-type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body))).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertReplicatedWithin(targetDb, docId, 30);
+
+        // ...but a _design/* document (written here as admin, for test purposes -- a
+        // participant can never write one) does not.
+        var designBody = mapper.createObjectNode();
+        designBody.putObject("views");
+        http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + sourceDb + "/_design/consent"))
+                .header("authorization", adminAuth()).header("content-type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(designBody))).build(),
+                HttpResponse.BodyHandlers.ofString());
+
+        Thread.sleep(3000);
+        var get = http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + targetDb + "/_design/consent"))
+                .header("authorization", adminAuth()).GET().build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(get.statusCode()).isEqualTo(404);
+    }
+
+    @Test
     void ensuringReplicationTwiceIsIdempotent() throws Exception {
         var suffix = System.nanoTime();
         var sourceDb = "replicate-source-idem-" + suffix;

@@ -49,6 +49,15 @@ public class CouchDbReplicationProvisioner {
         target.putObject("headers").put("Authorization", adminAuthHeader);
         body.put("continuous", true);
         body.put("owner", "admin");
+        // Excludes design documents from replication -- otherwise a participant's copy of
+        // _design/consent (installed idempotently and never re-applied once a database is
+        // provisioned, per CouchDbParticipantDatabaseProvisioner) could overwrite the shared
+        // database's copy on the next edit to consent-design-doc.json, turning validation
+        // logic into a race between whichever participant databases replicate first. Verified
+        // live against CouchDB 3.5.2: a Mango `selector` on the _replicator job document is
+        // evaluated per document, so a non-design document still replicates while a
+        // `_design/*` document does not.
+        body.putObject("selector").putObject("_id").put("$regex", "^(?!_design/)");
         try {
             var request = HttpRequest.newBuilder(URI.create(baseUrl + "/_replicator/" + jobId))
                     .header("authorization", adminAuthHeader).header("content-type", "application/json")

@@ -58,7 +58,6 @@ class EpochSealerTest {
             sealer.record(entry("actor-" + i));
         }
         var epoch = store.epochChain().get(0);
-        var sealedEntries = store.entriesFor("actor-0");
         var leafHashes = new java.util.ArrayList<String>();
         for (var i = 0; i < 4; i++) {
             leafHashes.add(AuditHashing.leafHash(store.entriesFor("actor-" + i).get(0)));

@@ -196,17 +196,16 @@ public class CouchDbAuditStore implements AuditStore {
     @Override
     public List<Epoch> epochChain() {
         var docs = find("{\"selector\":{\"type\":\"auditEpoch\"},\"limit\":" + MAX_RESULTS + "}");
-        List<Epoch> result = new ArrayList<>();
-        for (var doc : docs.path("docs")) {
-            result.add(new Epoch(doc.get("epochId").asText(), doc.get("merkleRoot").asText(),
-                    doc.get("prevEpochHash").asText(), doc.get("sealedAt").asText()));
+        record WithFirstSeq(Epoch epoch, long firstSeq) {
         }
-        result.sort((a, b) -> Long.compare(sealedAtOrdinal(a), sealedAtOrdinal(b)));
-        return result;
-    }
-
-    private long sealedAtOrdinal(Epoch epoch) {
-        return java.time.Instant.parse(epoch.sealedAt()).toEpochMilli();
+        List<WithFirstSeq> result = new ArrayList<>();
+        for (var doc : docs.path("docs")) {
+            var epoch = new Epoch(doc.get("epochId").asText(), doc.get("merkleRoot").asText(),
+                    doc.get("prevEpochHash").asText(), doc.get("sealedAt").asText());
+            result.add(new WithFirstSeq(epoch, doc.get("firstSeq").asLong()));
+        }
+        result.sort((a, b) -> Long.compare(a.firstSeq(), b.firstSeq()));
+        return result.stream().map(WithFirstSeq::epoch).toList();
     }
 
     private long loadMaxSeq() {

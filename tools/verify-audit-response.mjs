@@ -41,8 +41,8 @@ for (const entry of body.entries) {
   }
 }
 
-if (sealedCount === 0) {
-  console.error('no sealed entries were returned; nothing was actually verified');
+if (sealedCount !== 2) {
+  console.error(`expected exactly 2 sealed entries, got ${sealedCount}`);
   process.exit(1);
 }
 

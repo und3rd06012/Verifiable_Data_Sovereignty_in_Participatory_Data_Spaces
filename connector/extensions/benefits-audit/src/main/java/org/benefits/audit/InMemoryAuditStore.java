@@ -46,9 +46,6 @@ public class InMemoryAuditStore implements AuditStore {
             var member = entries.stream().filter(e -> epoch.epochId().equals(e.epoch())).toList();
             var stillNull = entries.stream()
                     .anyMatch(e -> e.epoch() == null && belongsToRange(e, epoch, member));
-            // InMemoryAuditStore never crashes mid-seal, so this always reports none;
-            // it exists so EpochSealerTest can exercise the resume path by calling
-            // sealEpoch and incompleteEpochs directly without a real crash.
             if (stillNull) {
                 result.add(new UnsealedRange(epoch, 0, 0));
             }
@@ -56,6 +53,11 @@ public class InMemoryAuditStore implements AuditStore {
         return result;
     }
 
+    // InMemoryAuditStore.sealEpoch is a single, atomic, in-process operation: there is
+    // no crash window between writing the epoch and stamping its entries, unlike
+    // CouchDbAuditStore's two-phase HTTP-based persistence. So incompleteEpochs()
+    // always correctly returns empty for this fake, and belongsToRange returning false
+    // unconditionally is the true, complete behavior, not a stub.
     private boolean belongsToRange(AuditEntry e, Epoch epoch, List<AuditEntry> member) {
         return false;
     }

@@ -13,9 +13,20 @@ cat > "$WORK/policy.json" <<'JSON'
   "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
   "@id": "benefits-policy",
   "policy": {
-    "@context": [ "http://www.w3.org/ns/odrl.jsonld" ],
+    "@context": [
+      "http://www.w3.org/ns/odrl.jsonld",
+      { "benefits": "https://w3id.org/benefits/v1/ns/" }
+    ],
     "@type": "Set",
-    "permission": [ { "action": "use" } ],
+    "permission": [ {
+      "action": "use",
+      "constraint": {
+        "@type": "AtomicConstraint",
+        "leftOperand": "benefits:purpose",
+        "operator": "eq",
+        "rightOperand": "service-improvement"
+      }
+    } ],
     "prohibition": [], "obligation": []
   }
 }
@@ -161,13 +172,40 @@ echo "transfer: $TSTATE"
 [ "$TSTATE" = "COMPLETED" ] || { echo "transfer did not reach COMPLETED (state=$TSTATE)" >&2; exit 1; }
 
 # Both the negotiation-finalized and transfer-completed events fire asynchronously
-# relative to their respective management-API state reaching a terminal value, so
-# give the audit extension a moment to record and seal both epochs before querying.
-sleep 2
+# relative to their respective management-API state reaching a terminal value, and
+# EpochSealer's entry-stamping step is a second write after the entry itself, so a
+# fixed sleep is a flakiness risk on a slower run. Poll CouchDB directly instead,
+# bounded to ~30 seconds, the same pattern tools/probe-audit-events.sh's
+# wait_for_audit_entry uses.
+AUDIT_DB_URL="http://admin:benefits@localhost:5984/benefits-audit"
+wait_for_two_sealed_entries() {
+  for _ in $(seq 1 30); do
+    if curl -sf -H "$JSON" -X POST "$AUDIT_DB_URL/_find" \
+         -d '{"selector":{"type":"auditEntry","actor":"consumer","epoch":{"$exists":true}},"limit":10}' \
+         | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if len(d.get("docs", [])) == 2 else 1)' 2>/dev/null; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+wait_for_two_sealed_entries \
+  || { echo "did not observe exactly 2 sealed audit entries for consumer within the timeout" >&2; exit 1; }
 
 echo "--- fetching audit response for consumer ---"
 curl -sf "http://localhost:19197/audit/consumer" | tee "$WORK/response.json"
 echo
+
+python3 -c '
+import json, sys
+body = json.load(open(sys.argv[1]))
+purposes = {e["statedPurpose"] for e in body["entries"] if e["epoch"] is not None}
+if purposes != {"service-improvement"}:
+    sys.stderr.write("expected statedPurpose=service-improvement for both sealed entries, got: "
+                      + repr(purposes) + "\n")
+    sys.exit(1)
+' "$WORK/response.json" \
+  || { echo "purpose extraction did not work end to end" >&2; exit 1; }
 
 (cd "$ROOT/packages/audit-verify" && npm run build >/dev/null)
 node "$ROOT/tools/verify-audit-response.mjs" "http://localhost:19197/audit" consumer

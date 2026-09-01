@@ -2172,6 +2172,22 @@ In `CouchDbAuditStore.java`, add (reuses the same `dynamicSelector` helper `entr
 
 Then in `AuditResource.java`, replace the two calls to `store.entriesFor(epochId, true)` (in `leafHashesFor` and `indexOfSeq`) with `store.entriesInEpoch(epochId)`.
 
+Add one integration test to `CouchDbAuditStoreIntegrationTest.java` (Task 5), alongside its existing `sealEpochPersistsTheEpochAndStampsMemberEntries` test — `entriesInEpoch` is new production code on the path Task 6 already wires into a live connector, and `entriesFor`'s equivalent CouchDB behavior already has integration coverage in that same file, so this method should too rather than being verified only against `InMemoryAuditStore`:
+
+```java
+    @Test
+    void entriesInEpochReturnsSealedMembersInSeqOrder() {
+        store.append(new AuditEntry(1L, null, "t", "type", "b", "asset", "purpose", "plain"));
+        store.append(new AuditEntry(2L, null, "t", "type", "a", "asset", "purpose", "plain"));
+        var epoch = new Epoch("epoch-inEpoch-test", "root-value", AuditHashing.GENESIS_PREV_EPOCH_HASH, "t");
+        store.sealEpoch(epoch, 1L, 2L);
+
+        var members = store.entriesInEpoch("epoch-inEpoch-test");
+        assertThat(members).extracting(AuditEntry::seq).containsExactly(1L, 2L);
+        assertThat(members).allMatch(e -> "epoch-inEpoch-test".equals(e.epoch()));
+    }
+```
+
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests AuditResourceTest`

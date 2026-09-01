@@ -19,9 +19,12 @@ class StewardResourceProvisioningIntegrationTest {
     @Test
     void reProvisioningAnExistingParticipantDoesNotClaimAFalsePassword() {
         var participantRef = "p-provision-test-" + System.nanoTime();
-        var provisioner = new CouchDbUserProvisioner("http://localhost:5984", "admin", "benefits", new ObjectMapper());
+        var mapper = new ObjectMapper();
+        var userProvisioner = new CouchDbUserProvisioner("http://localhost:5984", "admin", "benefits", mapper);
+        var databaseProvisioner = new CouchDbParticipantDatabaseProvisioner("http://localhost:5984", "admin", "benefits", mapper);
+        var replicationProvisioner = new CouchDbReplicationProvisioner("http://localhost:5984", "admin", "benefits", mapper);
         var resource = new StewardResource(new InMemoryStewardAuthorizationStore(), new InMemoryReleaseRequestStore(),
-                ALWAYS_STEWARD_S1, provisioner);
+                ALWAYS_STEWARD_S1, userProvisioner, databaseProvisioner, replicationProvisioner);
 
         var first = resource.provisionParticipant(participantRef, "Basic irrelevant");
         assertThat(first.getStatus()).isEqualTo(201);

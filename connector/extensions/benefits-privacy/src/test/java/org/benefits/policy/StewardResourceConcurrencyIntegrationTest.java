@@ -29,8 +29,8 @@ class StewardResourceConcurrencyIntegrationTest {
         var requestStore = new InMemoryReleaseRequestStore();
         StewardAuthenticator authenticatorS1 = header -> "s-1";
         StewardAuthenticator authenticatorS2 = header -> "s-2";
-        var resourceAsS1 = new StewardResource(authorizationStore, requestStore, authenticatorS1, null);
-        var resourceAsS2 = new StewardResource(authorizationStore, requestStore, authenticatorS2, null);
+        var resourceAsS1 = new StewardResource(authorizationStore, requestStore, authenticatorS1, null, null, null);
+        var resourceAsS2 = new StewardResource(authorizationStore, requestStore, authenticatorS2, null, null, null);
 
         var pool = Executors.newFixedThreadPool(2);
         var go = new CountDownLatch(1);

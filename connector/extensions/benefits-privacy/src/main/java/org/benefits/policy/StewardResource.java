@@ -20,19 +20,29 @@ import java.util.regex.Pattern;
 @Path("/")
 public class StewardResource {
 
-    private static final Pattern SAFE_PARTICIPANT_REF = Pattern.compile("^[a-zA-Z0-9_.@-]+$");
+    // Tightened to a safe subset of CouchDB's own database-name rules
+    // (^[a-z][a-z0-9_$()+/-]*$) now that provisioning always creates a
+    // "participant-<ref>" database -- a ref that fails this check could
+    // never be provisioned successfully.
+    private static final Pattern SAFE_PARTICIPANT_REF = Pattern.compile("^[a-z][a-z0-9_-]*$");
 
     private final StewardAuthorizationStore authorizationStore;
     private final ReleaseRequestStore requestStore;
     private final StewardAuthenticator authenticator;
-    private final CouchDbUserProvisioner provisioner;
+    private final CouchDbUserProvisioner userProvisioner;
+    private final CouchDbParticipantDatabaseProvisioner databaseProvisioner;
+    private final CouchDbReplicationProvisioner replicationProvisioner;
 
     public StewardResource(StewardAuthorizationStore authorizationStore, ReleaseRequestStore requestStore,
-                            StewardAuthenticator authenticator, CouchDbUserProvisioner provisioner) {
+                            StewardAuthenticator authenticator, CouchDbUserProvisioner userProvisioner,
+                            CouchDbParticipantDatabaseProvisioner databaseProvisioner,
+                            CouchDbReplicationProvisioner replicationProvisioner) {
         this.authorizationStore = authorizationStore;
         this.requestStore = requestStore;
         this.authenticator = authenticator;
-        this.provisioner = provisioner;
+        this.userProvisioner = userProvisioner;
+        this.databaseProvisioner = databaseProvisioner;
+        this.replicationProvisioner = replicationProvisioner;
     }
 
     @GET
@@ -146,11 +156,34 @@ public class StewardResource {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
         if (!SAFE_PARTICIPANT_REF.matcher(participantRef).matches()) {
-            return Response.status(400).entity(new ErrorBody("participantRef contains unsafe characters")).build();
+            return Response.status(400).entity(new ErrorBody(
+                    "participantRef must start with a lowercase letter and contain only lowercase letters, digits, '-', or '_'")).build();
+        }
+        // Database/security/design-doc/replication first, the CouchDB user (and its
+        // freshly generated password) last. CouchDB's _security document accepts a
+        // username that doesn't exist yet -- it's just a string checked against the
+        // authenticated caller at request time -- so this ordering is safe, and it means
+        // a failure before the user is created leaves nothing irrecoverable to retry: no
+        // password was ever generated, so a retry simply starts over. The reverse order
+        // would risk creating the user (with a password only this response would ever
+        // carry), then losing that password forever if the database step failed after --
+        // a retry's re-PUT to the same _users document would 409 and change nothing, per
+        // CouchDbUserProvisioner's own documented behavior.
+        try {
+            databaseProvisioner.provision(participantRef);
+            replicationProvisioner.ensureReplication(databaseProvisioner.databaseNameFor(participantRef), "benefits");
+        } catch (EdcException e) {
+            return Response.status(502).entity(new ErrorBody("failed to provision participant database: " + e.getMessage())).build();
         }
         var password = generatePassword();
-        var outcome = provisioner.provision(participantRef, password, List.of());
-        if (outcome == CouchDbUserProvisioner.Outcome.ALREADY_EXISTS) {
+        CouchDbUserProvisioner.Outcome userOutcome;
+        try {
+            userOutcome = userProvisioner.provision(participantRef, password, List.of());
+        } catch (EdcException e) {
+            return Response.status(502).entity(new ErrorBody(
+                    "participant database provisioned but CouchDB user creation failed: " + e.getMessage())).build();
+        }
+        if (userOutcome == CouchDbUserProvisioner.Outcome.ALREADY_EXISTS) {
             return Response.status(200).entity(new ProvisionStatus(participantRef,
                     "participant is already provisioned; no new password was issued")).build();
         }

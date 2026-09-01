@@ -21,7 +21,7 @@ class StewardResourceTest {
     void setUp() {
         authorizationStore = new InMemoryStewardAuthorizationStore();
         requestStore = new InMemoryReleaseRequestStore();
-        resource = new StewardResource(authorizationStore, requestStore, ALWAYS_STEWARD_S1, null);
+        resource = new StewardResource(authorizationStore, requestStore, ALWAYS_STEWARD_S1, null, null, null);
         requestStore.save(new ReleaseRequest("rr-1", "service-improvement", "statistics",
                 List.of("service.satisfaction"), "athens", Instant.parse("2026-09-01T00:00:00Z")));
     }
@@ -43,7 +43,7 @@ class StewardResourceTest {
 
     @Test
     void queueRejectsAnUnauthenticatedCaller() {
-        var unauthenticated = new StewardResource(authorizationStore, requestStore, ALWAYS_UNAUTHENTICATED, null);
+        var unauthenticated = new StewardResource(authorizationStore, requestStore, ALWAYS_UNAUTHENTICATED, null, null, null);
         var response = unauthenticated.queue("Basic irrelevant");
         assertThat(response.getStatus()).isEqualTo(403);
     }

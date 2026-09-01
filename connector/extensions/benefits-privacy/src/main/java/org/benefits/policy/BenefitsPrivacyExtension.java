@@ -83,10 +83,14 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
             var couchUser = context.getSetting("benefits.couchdb.user", "admin");
             var couchPassword = context.getSetting("benefits.couchdb.password", "");
             var stewardAuthenticator = new CouchDbStewardAuthenticator(couchdbUrl, new com.fasterxml.jackson.databind.ObjectMapper());
-            var provisioner = new CouchDbUserProvisioner(couchdbUrl, couchUser, couchPassword,
+            var userProvisioner = new CouchDbUserProvisioner(couchdbUrl, couchUser, couchPassword,
+                    new com.fasterxml.jackson.databind.ObjectMapper());
+            var databaseProvisioner = new CouchDbParticipantDatabaseProvisioner(couchdbUrl, couchUser, couchPassword,
+                    new com.fasterxml.jackson.databind.ObjectMapper());
+            var replicationProvisioner = new CouchDbReplicationProvisioner(couchdbUrl, couchUser, couchPassword,
                     new com.fasterxml.jackson.databind.ObjectMapper());
             var stewardResource = new StewardResource(stewardAuthorizationStore, releaseRequestStore,
-                    stewardAuthenticator, provisioner);
+                    stewardAuthenticator, userProvisioner, databaseProvisioner, replicationProvisioner);
 
             var stewardPort = context.getSetting("web.http.steward.port", 19199);
             var stewardPath = context.getSetting("web.http.steward.path", "/steward");

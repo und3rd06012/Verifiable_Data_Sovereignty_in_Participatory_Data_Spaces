@@ -1093,6 +1093,7 @@ Create `connector/extensions/benefits-audit/src/test/java/org/benefits/audit/Cou
 package org.benefits.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -1117,17 +1118,34 @@ class CouchDbAuditStoreIntegrationTest {
     private static final String BASE_URL = "http://localhost:5984";
     private final String database = "benefits-audit-test-" + UUID.randomUUID();
     private final ObjectMapper mapper = new ObjectMapper();
+    private HttpClient client;
+    private String auth;
     private CouchDbAuditStore store;
+    private boolean created;
 
     @BeforeEach
     void setUp() throws Exception {
         assumeTrue(couchDbReachable(), "CouchDB not reachable at " + BASE_URL);
-        var client = HttpClient.newHttpClient();
-        var auth = "Basic " + Base64.getEncoder().encodeToString("admin:benefits".getBytes());
+        client = HttpClient.newHttpClient();
+        auth = "Basic " + Base64.getEncoder().encodeToString("admin:benefits".getBytes());
         client.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + database))
                 .header("authorization", auth).PUT(HttpRequest.BodyPublishers.noBody()).build(),
                 HttpResponse.BodyHandlers.discarding());
+        created = true;
         store = new CouchDbAuditStore(BASE_URL, database, "admin", "benefits", mapper);
+    }
+
+    // Each test creates its own randomly-named database (above) so tests never collide
+    // with each other, but a database this test creates is this test's to clean up —
+    // otherwise every run of this suite leaves a permanent, never-reclaimed database on
+    // whatever CouchDB instance it ran against.
+    @AfterEach
+    void tearDown() throws Exception {
+        if (!created) {
+            return;
+        }
+        client.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + database))
+                .header("authorization", auth).DELETE().build(), HttpResponse.BodyHandlers.discarding());
     }
 
     private boolean couchDbReachable() {
@@ -1205,6 +1223,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class CouchDbAuditStore implements AuditStore {
 
+    private static final int MAX_RESULTS = 100_000;
+
     private final String baseUrl;
     private final String database;
     private final String authorization;
@@ -1271,7 +1291,7 @@ public class CouchDbAuditStore implements AuditStore {
 
     @Override
     public List<AuditEntry> unsealedEntries() {
-        var docs = find("{\"selector\":{\"type\":\"auditEntry\",\"epoch\":{\"$exists\":false}},\"limit\":100000}");
+        var docs = find("{\"selector\":{\"type\":\"auditEntry\",\"epoch\":{\"$exists\":false}},\"limit\":" + MAX_RESULTS + "}");
         return parseEntries(docs).stream().sorted((a, b) -> Long.compare(a.seq(), b.seq())).toList();
     }
 
@@ -1297,7 +1317,7 @@ public class CouchDbAuditStore implements AuditStore {
     @Override
     public List<UnsealedRange> incompleteEpochs() {
         List<UnsealedRange> result = new ArrayList<>();
-        var epochDocs = find("{\"selector\":{\"type\":\"auditEpoch\"},\"limit\":100000}");
+        var epochDocs = find("{\"selector\":{\"type\":\"auditEpoch\"},\"limit\":" + MAX_RESULTS + "}");
         for (var doc : epochDocs.path("docs")) {
             var epoch = new Epoch(doc.get("epochId").asText(), doc.get("merkleRoot").asText(),
                     doc.get("prevEpochHash").asText(), doc.get("sealedAt").asText());
@@ -1320,14 +1340,35 @@ public class CouchDbAuditStore implements AuditStore {
 
     @Override
     public List<AuditEntry> entriesFor(String participantRef) {
-        var escaped = participantRef.replace("\"", "\\\"");
-        var docs = find("{\"selector\":{\"type\":\"auditEntry\",\"actor\":\"" + escaped + "\"},\"limit\":100000}");
+        var docs = find(dynamicSelector("actor", participantRef));
         return parseEntries(docs).stream().sorted((a, b) -> Long.compare(a.seq(), b.seq())).toList();
+    }
+
+    /**
+     * Every selector whose value comes from outside this class (a participant-supplied
+     * HTTP path parameter, an EDC-supplied asset id, a server-generated epoch id) is
+     * built here, through ObjectMapper, never through string interpolation — the exact
+     * defect class CouchDbContributionSource (phase 3) had to fix. A hand-rolled
+     * ".replace(\"\\\"\", \"\\\\\\\"\")" escape looks safe and is not: it only escapes
+     * quotes, not backslashes, so a value ending in a backslash or containing a
+     * backslash-quote sequence still breaks the surrounding JSON.
+     */
+    private String dynamicSelector(String field, String value) {
+        var selector = mapper.createObjectNode();
+        var criteria = selector.putObject("selector");
+        criteria.put("type", "auditEntry");
+        criteria.put(field, value);
+        selector.put("limit", MAX_RESULTS);
+        try {
+            return mapper.writeValueAsString(selector);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new EdcException("failed to serialize CouchDB selector", e);
+        }
     }
 
     @Override
     public List<Epoch> epochChain() {
-        var docs = find("{\"selector\":{\"type\":\"auditEpoch\"},\"limit\":100000}");
+        var docs = find("{\"selector\":{\"type\":\"auditEpoch\"},\"limit\":" + MAX_RESULTS + "}");
         List<Epoch> result = new ArrayList<>();
         for (var doc : docs.path("docs")) {
             result.add(new Epoch(doc.get("epochId").asText(), doc.get("merkleRoot").asText(),
@@ -1413,8 +1454,8 @@ public class CouchDbAuditStore implements AuditStore {
                 throw new EdcException("CouchDB query failed with status " + response.statusCode() + ": " + response.body());
             }
             var result = mapper.readTree(response.body());
-            if (result.path("docs").size() == 100000) {
-                throw new EdcException("CouchDB query may have been truncated at the limit of 100000 results");
+            if (result.path("docs").size() == MAX_RESULTS) {
+                throw new EdcException("CouchDB query may have been truncated at the limit of " + MAX_RESULTS + " results");
             }
             return result;
         } catch (IOException e) {
@@ -1742,13 +1783,12 @@ In `InMemoryAuditStore.java`, add:
     }
 ```
 
-In `CouchDbAuditStore.java`, add:
+In `CouchDbAuditStore.java`, add (this reuses the private `dynamicSelector(field, value)` helper Task 5 already added — build the selector through it, never through string concatenation, since a hand-rolled escape was a real Critical finding on this exact class of method):
 
 ```java
     @Override
     public List<AuditEntry> entriesForAsset(String datasetRef) {
-        var escaped = datasetRef.replace("\"", "\\\"");
-        var docs = find("{\"selector\":{\"type\":\"auditEntry\",\"datasetRef\":\"" + escaped + "\"},\"limit\":100000}");
+        var docs = find(dynamicSelector("datasetRef", datasetRef));
         return parseEntries(docs).stream().sorted((a, b) -> Long.compare(b.seq(), a.seq())).toList();
     }
 ```
@@ -2114,13 +2154,12 @@ In `InMemoryAuditStore.java`, add:
     }
 ```
 
-In `CouchDbAuditStore.java`, add:
+In `CouchDbAuditStore.java`, add (reuses the same `dynamicSelector` helper as `entriesForAsset`, for the same reason):
 
 ```java
     @Override
     public List<AuditEntry> entriesInEpoch(String epochId) {
-        var escaped = epochId.replace("\"", "\\\"");
-        var docs = find("{\"selector\":{\"type\":\"auditEntry\",\"epoch\":\"" + escaped + "\"},\"limit\":100000}");
+        var docs = find(dynamicSelector("epoch", epochId));
         return parseEntries(docs).stream().sorted((a, b) -> Long.compare(a.seq(), b.seq())).toList();
     }
 ```

@@ -78,12 +78,24 @@ public class CouchDbReleaseRequestStore implements ReleaseRequestStore {
 
     @Override
     public List<ReleaseRequest> all() {
-        var docs = find("{\"selector\":{\"type\":\"releaseRequest\"},\"limit\":" + MAX_RESULTS + "}");
+        var docs = find(buildSelector());
         List<ReleaseRequest> result = new ArrayList<>();
         for (var doc : docs.path("docs")) {
             result.add(toRequest(doc));
         }
         return result;
+    }
+
+    private String buildSelector() {
+        var selector = mapper.createObjectNode();
+        var criteria = selector.putObject("selector");
+        criteria.put("type", "releaseRequest");
+        selector.put("limit", MAX_RESULTS);
+        try {
+            return mapper.writeValueAsString(selector);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new EdcException("failed to serialize CouchDB selector", e);
+        }
     }
 
     private ReleaseRequest toRequest(JsonNode doc) {

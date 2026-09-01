@@ -58,7 +58,9 @@ public class BenefitsAuditExtension implements ServiceExtension {
         var port = context.getSetting("web.http.audit.port", 19197);
         var path = context.getSetting("web.http.audit.path", "/audit");
         portMappingRegistry.register(new PortMapping("audit", port, path));
-        webService.registerResource("audit", new AuditResource(store));
+        var couchdbUrl = context.getSetting("benefits.couchdb.url", "http://localhost:5984");
+        var authenticator = new CouchDbSessionAuthenticator(couchdbUrl, new ObjectMapper());
+        webService.registerResource("audit", new AuditResource(store, authenticator));
         monitor.info("BENEFITS audit chain registered, epochSize=" + epochSize);
     }
 

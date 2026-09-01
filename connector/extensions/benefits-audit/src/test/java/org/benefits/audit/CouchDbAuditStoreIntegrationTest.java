@@ -88,6 +88,18 @@ class CouchDbAuditStoreIntegrationTest {
     }
 
     @Test
+    void entriesInEpochReturnsSealedMembersInSeqOrder() {
+        store.append(new AuditEntry(1L, null, "t", "type", "b", "asset", "purpose", "plain"));
+        store.append(new AuditEntry(2L, null, "t", "type", "a", "asset", "purpose", "plain"));
+        var epoch = new Epoch("epoch-inEpoch-test", "root-value", AuditHashing.GENESIS_PREV_EPOCH_HASH, "t");
+        store.sealEpoch(epoch, 1L, 2L);
+
+        var members = store.entriesInEpoch("epoch-inEpoch-test");
+        assertThat(members).extracting(AuditEntry::seq).containsExactly(1L, 2L);
+        assertThat(members).allMatch(e -> "epoch-inEpoch-test".equals(e.epoch()));
+    }
+
+    @Test
     void nextSeqIsStrictlyIncreasing() {
         var first = store.nextSeq();
         var second = store.nextSeq();

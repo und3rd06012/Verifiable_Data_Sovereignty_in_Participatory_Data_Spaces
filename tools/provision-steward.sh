@@ -14,12 +14,13 @@ STATUS=$(curl -s -o /tmp/provision-steward-response.json -w "%{http_code}" \
   -H "content-type: application/json" \
   -d "{\"name\":\"$STEWARD_ID\",\"password\":\"$PASSWORD\",\"roles\":[\"steward\"],\"type\":\"user\"}")
 
-if [ "$STATUS" != "201" ] && [ "$STATUS" != "409" ]; then
+if [ "$STATUS" = "201" ]; then
+  echo "steward provisioned: $STEWARD_ID"
+  echo "password: $PASSWORD"
+elif [ "$STATUS" = "409" ]; then
+  echo "steward $STEWARD_ID already exists; password NOT changed (CouchDB requires the current _rev to update an existing user document -- re-run is not a rotation)"
+else
   echo "failed to provision steward $STEWARD_ID: HTTP $STATUS" >&2
   cat /tmp/provision-steward-response.json >&2
   exit 1
 fi
-
-echo "steward provisioned: $STEWARD_ID"
-echo "password: $PASSWORD"
-echo "(re-run with the same steward-id and an explicit password argument to rotate it; CouchDB's PUT overwrites the existing user document)"

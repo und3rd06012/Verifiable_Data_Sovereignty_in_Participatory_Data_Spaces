@@ -225,3 +225,16 @@ The implementation plan's final review confirmed this is not theoretical: crashe
 this exact failure mode already exist on this project's own development CouchDB instance.
 A real fix needs a steward-visible replication-health view, deliberately out of scope for
 this spec -- recorded here as known future work, not silently accepted.
+
+**Existing replication jobs don't pick up later changes to the job body.** `ensureReplication`
+is create-only: a repeat call for an already-provisioned participant is a 409-tolerated
+no-op, never an update. This plan's final review added a `selector` field to the job body
+(excluding `_design/*` documents from replication, see §5's amendment) after some jobs
+already existed without it; those pre-existing jobs keep replicating unfiltered indefinitely
+unless something explicitly deletes and recreates them (the two jobs this project's own
+development instance had accumulated during this plan's live verification were deleted by
+hand once this was found). The same applies to any future change to the job body. A real fix
+needs `ensureReplication` to diff and update rather than only create -- deliberately out of
+scope here for the same reason as the health-monitoring gap above: this is provisioning-time,
+low-frequency infrastructure, not a place to add update/migration machinery speculatively
+before a second real need for it appears.

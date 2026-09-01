@@ -21,9 +21,15 @@ import java.util.Base64;
  *
  * A PUT of a job document that already exists (same jobId, unchanged or not) is
  * rejected by CouchDB with 409 because no _rev was supplied -- that is treated as
- * "already provisioned", not a failure, making ensureReplication idempotent (unlike
- * CouchDbUserProvisioner's password case, a replication job's shape never varies
- * per call, so there is no distinct value at risk of being silently un-applied).
+ * "already provisioned", not a failure, making ensureReplication idempotent. Unlike
+ * CouchDbUserProvisioner's password case this is not consequence-free: the job body
+ * DOES change over time (the selector field below was added after some jobs already
+ * existed), and this 409-tolerant idempotency means an existing job never picks up
+ * such a change -- ensureReplication only ever creates, it does not update. A job
+ * created before a body change keeps its old shape indefinitely unless something
+ * explicitly deletes and recreates it. Known limitation, recorded in
+ * docs/superpowers/specs/2026-09-01-participant-database-isolation-design.md's
+ * "Known limitations" section rather than left implicit here alone.
  */
 public class CouchDbReplicationProvisioner {
 

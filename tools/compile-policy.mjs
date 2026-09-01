@@ -8,7 +8,8 @@ function grant(field, expiresAt = null) {
     purpose: 'service-improvement',
     recipientClass: 'statistics',
     grantedAt: '2026-08-01T00:00:00.000Z',
-    expiresAt
+    expiresAt,
+    revokedAt: null
   };
 }
 

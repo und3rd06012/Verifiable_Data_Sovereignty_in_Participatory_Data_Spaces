@@ -33,7 +33,9 @@ function unique(values: string[]): string[] {
 }
 
 export function compilePolicy(all: ConsentGrant[], options: CompileOptions) {
-  const grants = all.filter((g) => g.expiresAt === null || g.expiresAt > options.at);
+  const grants = all.filter((g) =>
+    (g.expiresAt === null || g.expiresAt > options.at) &&
+    (g.revokedAt == null || g.revokedAt > options.at));
 
   if (grants.length === 0) {
     throw new Error('cannot compile a policy from an empty consent rule set');

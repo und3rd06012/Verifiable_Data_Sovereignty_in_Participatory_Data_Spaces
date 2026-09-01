@@ -5,8 +5,8 @@ import { ConsentGrant } from '@benefits/consent-core';
 const AT = '2026-08-30T12:00:00.000Z';
 
 const grants: ConsentGrant[] = [
-  { field: 'service.satisfaction', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null },
-  { field: 'service.waitTime', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null }
+  { field: 'service.satisfaction', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null, revokedAt: null },
+  { field: 'service.waitTime', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null, revokedAt: null }
 ];
 
 function constraintFor(policy: any, leftOperand: string) {
@@ -95,7 +95,8 @@ describe('compilePolicy', () => {
       purpose: 'service-improvement',
       recipientClass: 'statistics' as const,
       grantedAt: '2026-08-01T00:00:00.000Z',
-      expiresAt: '2026-08-15T00:00:00.000Z'
+      expiresAt: '2026-08-15T00:00:00.000Z',
+      revokedAt: null
     }];
     const compiled = compilePolicy(withExpired, { releaseRequestId: 'rr-9', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
     expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand).not.toContain('health.condition');
@@ -110,6 +111,31 @@ describe('compilePolicy', () => {
   it('rejects a rule set whose every grant has expired', () => {
     const allExpired = grants.map((g) => ({ ...g, expiresAt: '2026-08-15T00:00:00.000Z' }));
     expect(() => compilePolicy(allExpired, { releaseRequestId: 'rr-11', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT }))
+      .toThrowError(/empty consent/);
+  });
+
+  it('excludes a grant that has already been revoked at the compile instant', () => {
+    const withRevoked = [...grants, {
+      field: 'health.condition',
+      purpose: 'service-improvement',
+      recipientClass: 'statistics' as const,
+      grantedAt: '2026-08-01T00:00:00.000Z',
+      expiresAt: null,
+      revokedAt: '2026-08-15T00:00:00.000Z'
+    }];
+    const compiled = compilePolicy(withRevoked, { releaseRequestId: 'rr-14', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
+    expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand).not.toContain('health.condition');
+  });
+
+  it('keeps a grant whose revocation takes effect one millisecond after the compile instant', () => {
+    const withFutureRevocation = [{ ...grants[0], revokedAt: '2026-08-30T12:00:00.001Z' }];
+    const compiled = compilePolicy(withFutureRevocation, { releaseRequestId: 'rr-15', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
+    expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand).toEqual(['service.satisfaction']);
+  });
+
+  it('rejects a rule set whose every grant has been revoked', () => {
+    const allRevoked = grants.map((g) => ({ ...g, revokedAt: '2026-08-15T00:00:00.000Z' }));
+    expect(() => compilePolicy(allRevoked, { releaseRequestId: 'rr-16', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT }))
       .toThrowError(/empty consent/);
   });
 
@@ -128,8 +154,8 @@ describe('compilePolicy', () => {
 
   it('deduplicates fieldSet when two distinct grants share a field but differ in nothing else', () => {
     const sharedField: ConsentGrant[] = [
-      { field: 'service.satisfaction', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null },
-      { field: 'service.satisfaction', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null }
+      { field: 'service.satisfaction', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null, revokedAt: null },
+      { field: 'service.satisfaction', purpose: 'service-improvement', recipientClass: 'statistics', grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null, revokedAt: null }
     ];
     const compiled = compilePolicy(sharedField, { releaseRequestId: 'rr-13', quorum: 2, kAnonymity: 5, epsilon: 0.5, at: AT });
     expect(constraintFor(compiled, 'benefits:fieldSet').rightOperand).toEqual(['service.satisfaction']);

@@ -112,14 +112,16 @@ onto the phases 0-5 machinery described above, instead of exercising it only
 through scripts and tests:
 
 - `apps/participant-web` (React): a participant grants and revokes consent,
-  contributes data, syncs their local PouchDB outbox to the shared CouchDB
-  database, and views their privacy dashboard and audit trail.
+  contributes data, syncs their local PouchDB outbox to their own private
+  CouchDB database, and views their privacy dashboard and audit trail.
 - `apps/participant-mobile` (Flutter): the same participant flows, on
   mobile, with an offline-first SQLite outbox that syncs when connectivity
   returns.
 - `apps/steward-portal` (React): a community steward views the
   release-request queue and can review, co-sign, veto, or appeal a veto on
-  each request, and provisions new participant CouchDB accounts.
+  each request, and provisions new participants (a CouchDB account plus
+  their own isolated database, replicated server-side into the shared
+  aggregate -- see `docs/superpowers/specs/2026-09-01-participant-database-isolation-design.md`).
 
 The connector gains two new HTTP ports for these apps to talk to: 19198
 (release requests) and 19199 (steward actions). Exercising the

@@ -65,6 +65,18 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
         return new CouchDbReleaseArtifactStore(url, database, user, password, new com.fasterxml.jackson.databind.ObjectMapper());
     }
 
+    BudgetAccountant buildBudgetAccountant(ServiceExtensionContext context) {
+        if (!Boolean.parseBoolean(context.getSetting("benefits.privacy.persistence.enabled", "false"))) {
+            return new InMemoryBudgetAccountant(Double.parseDouble(context.getSetting("benefits.privacy.budget.total", "1.0")));
+        }
+        var url = context.getSetting("benefits.couchdb.url", "http://localhost:5984");
+        var database = context.getSetting("benefits.couchdb.database", "benefits") + "-budget";
+        var user = context.getSetting("benefits.couchdb.user", "admin");
+        var password = context.getSetting("benefits.couchdb.password", "");
+        var total = Double.parseDouble(context.getSetting("benefits.privacy.budget.total", "1.0"));
+        return new CouchDbBudgetAccountant(url, database, user, password, new com.fasterxml.jackson.databind.ObjectMapper(), total);
+    }
+
     private void seed(ServiceExtensionContext context) {
         var path = context.getSetting("benefits.seed.artifacts", "");
         if (path.isBlank()) {

@@ -1,13 +1,16 @@
 package org.benefits.policy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,6 +19,21 @@ class CouchDbParticipantDatabaseProvisionerIntegrationTest {
     private static final String BASE_URL = "http://localhost:5984";
     private final HttpClient http = HttpClient.newHttpClient();
     private final ObjectMapper mapper = new ObjectMapper();
+    // Populated by each test as it provisions databases/users, deleted in cleanUp() below
+    // so repeated runs against the shared dev CouchDB instance don't accumulate leftovers.
+    private final List<String> createdDatabases = new ArrayList<>();
+    private final List<String> createdUsers = new ArrayList<>();
+
+    @AfterEach
+    void cleanUp() throws Exception {
+        for (var dbName : createdDatabases) {
+            http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + dbName))
+                    .header("authorization", adminAuth()).DELETE().build(), HttpResponse.BodyHandlers.ofString());
+        }
+        for (var name : createdUsers) {
+            deleteCouchDbUser(name);
+        }
+    }
 
     @Test
     void createsAnIsolatedDatabaseWithTheIdentityGateInstalled() throws Exception {
@@ -23,6 +41,7 @@ class CouchDbParticipantDatabaseProvisionerIntegrationTest {
         var provisioner = new CouchDbParticipantDatabaseProvisioner(BASE_URL, "admin", "benefits", mapper);
 
         var outcome = provisioner.provision(participantRef);
+        createdDatabases.add(provisioner.databaseNameFor(participantRef));
         assertThat(outcome).isEqualTo(CouchDbParticipantDatabaseProvisioner.Outcome.CREATED);
         // provision() only creates the database/_security/design-doc -- the CouchDB user
         // itself is CouchDbUserProvisioner's job (Task 4 wires both together). Provision
@@ -63,6 +82,7 @@ class CouchDbParticipantDatabaseProvisionerIntegrationTest {
         var participantRef = "p-forge-test-" + System.nanoTime();
         var provisioner = new CouchDbParticipantDatabaseProvisioner(BASE_URL, "admin", "benefits", mapper);
         provisioner.provision(participantRef);
+        createdDatabases.add(provisioner.databaseNameFor(participantRef));
         provisionCouchDbUser(participantRef, "pw-forge");
         var dbName = provisioner.databaseNameFor(participantRef);
         var ownAuth = "Basic " + Base64.getEncoder().encodeToString((participantRef + ":pw-forge").getBytes());
@@ -85,6 +105,19 @@ class CouchDbParticipantDatabaseProvisionerIntegrationTest {
                 .header("authorization", adminAuth()).header("content-type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body))).build(),
                 HttpResponse.BodyHandlers.ofString());
+        createdUsers.add(name);
+    }
+
+    private void deleteCouchDbUser(String name) throws Exception {
+        var docId = "org.couchdb.user:" + name;
+        var get = http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/_users/" + docId))
+                .header("authorization", adminAuth()).GET().build(), HttpResponse.BodyHandlers.ofString());
+        if (get.statusCode() != 200) {
+            return;
+        }
+        var rev = mapper.readTree(get.body()).get("_rev").asText();
+        http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/_users/" + docId + "?rev=" + rev))
+                .header("authorization", adminAuth()).DELETE().build(), HttpResponse.BodyHandlers.ofString());
     }
 
     private String adminAuth() {

@@ -216,14 +216,23 @@ accountant.
 2. If fewer than `EPOCH_SIZE` entries now have `epoch: null`, return.
 3. Otherwise: read exactly the oldest `EPOCH_SIZE` null-epoch entries,
    assign them the next `epochId`, compute the Merkle root and
-   `prevEpochHash` from the prior sealed epoch, write the `Epoch` document,
-   then update the entries' `epoch` field via one `_bulk_docs` call.
-4. If the process crashes between steps 3's `Epoch` write and its
-   `_bulk_docs` call, the next sealing attempt on restart detects an
-   `Epoch` document whose entries are still `epoch: null` and resumes at
-   the `_bulk_docs` step rather than recomputing the root — recomputing
-   after a partial crash could compute a different root if a new entry
-   arrived in between, orphaning the already-written `Epoch` document.
+   `prevEpochHash` from the prior sealed epoch, write the `Epoch` document
+   (carrying `firstSeq`/`lastSeq` internally, beyond the four public
+   fields, so a resumed seal — point 4 — and chain ordering — section
+   5 — both know exactly which entries and which epoch precede which),
+   then stamp each member entry's `epoch` field individually. This landed
+   as per-document PUTs rather than the single `_bulk_docs` call an
+   earlier draft of this section described, because per-document stamping
+   is naturally idempotent (re-stamping an already-stamped entry is a
+   harmless no-op) in a way `_bulk_docs` is not, and that idempotence is
+   exactly what makes point 4's resume correct without extra bookkeeping.
+4. If the process crashes between steps 3's `Epoch` write and the last of
+   its per-entry stamps, the next sealing attempt on restart detects an
+   `Epoch` document whose recorded `firstSeq`..`lastSeq` range still has
+   at least one unstamped entry and resumes at the stamping step rather
+   than recomputing the root — recomputing after a partial crash could
+   compute a different root if a new entry arrived in between, orphaning
+   the already-written `Epoch` document.
 
 ## 5. Storage
 
@@ -240,11 +249,24 @@ client pattern `CouchDbContributionSource` established in phase 3
 configuration, Jackson `ObjectMapper` for request bodies rather than string
 interpolation).
 
-An `AuditStore` interface (`append`, `unsealedEntries`, `sealEpoch`,
-`entriesFor(participantRef)`, `epochChain()`) separates this from the
+An `AuditStore` interface (`append`, `nextSeq`, `unsealedEntries`,
+`sealEpoch`, `incompleteEpochs`, `entriesFor(participantRef)`,
+`entriesInEpoch(epochId)`, `epochChain()`) separates this from the
 CouchDB-backed implementation, and tests inject an in-memory fake so the
 Merkle and sealing logic is verified without a database — the same seam
 `ContributionSource` provided in phase 3, for the same reason.
+`entriesInEpoch` exists so a proof can be rebuilt later from exactly the
+entries a given epoch was sealed over (`AuditResource`, section 7);
+`incompleteEpochs` exists for point 4 above.
+
+`epochChain()` returns epochs ordered by `firstSeq`, not by `sealedAt`.
+Two epochs sealed within the same millisecond would tie under
+timestamp ordering — silently, since nothing rejects the tie — which
+would corrupt both chain construction (`EpochSealer` reads the prior
+epoch to compute the next `prevEpochHash`) and verification (`verifyChain`
+would then reject an untampered chain). `firstSeq` is monotonic and
+collision-free by construction, so it is the only ordering key this
+matters for.
 
 ## 6. Event to entry mapping
 

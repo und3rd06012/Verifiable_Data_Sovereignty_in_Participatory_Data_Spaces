@@ -1,0 +1,8 @@
+{
+  "id": "av001-single-leaf",
+  "description": "a single-entry tree; the root is that entry's own leaf hash",
+  "entries": [
+    { "seq": 0, "epoch": "epoch-1", "timestamp": "t0", "eventType": "type", "actor": "actor-0", "datasetRef": "asset-0", "statedPurpose": "purpose", "plainLanguage": "plain-0" }
+  ],
+  "expected": { "firstLeafHash": "cd08154c3848a2b04e285200d29f5dae1fb576fe67fa3b765f0cd0f9c04bb043", "root": "cd08154c3848a2b04e285200d29f5dae1fb576fe67fa3b765f0cd0f9c04bb043" }
+}

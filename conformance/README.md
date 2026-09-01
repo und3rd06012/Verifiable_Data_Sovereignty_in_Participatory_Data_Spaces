@@ -101,3 +101,16 @@ still pass that test.
 The exact-instant boundary is genuinely proven, but only by the two suites
 that pass `now` explicitly: `packages/consent-core/test/conformance.test.ts`
 and `ConformanceVectorTest.java`.
+
+## Audit hashing vectors
+
+`conformance/audit-vectors/` is a second, independent conformance contract from the
+one above: it pins `AuditHashing.leafHash` and `MerkleTree.root`
+(`connector/extensions/benefits-audit`) against the equivalent TypeScript functions
+in `packages/audit-verify/src/hashing.ts`. These vectors have nothing to do with
+consent semantics; they exist because a participant's TypeScript verifier and the
+connector's Java sealer must compute byte-identical hashes for an inclusion proof to
+ever verify. Each vector fixes a small list of `AuditEntry` values and the expected
+leaf hash of the first entry plus the expected Merkle root over the whole list.
+`AuditConformanceVectorTest.java` and `packages/audit-verify/test/conformance.test.ts`
+both run every vector in this directory.

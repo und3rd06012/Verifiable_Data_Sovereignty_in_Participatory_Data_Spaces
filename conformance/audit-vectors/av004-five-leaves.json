@@ -1,0 +1,12 @@
+{
+  "id": "av004-five-leaves",
+  "description": "a larger odd-sized tree spanning two levels of promotion",
+  "entries": [
+    { "seq": 0, "epoch": "epoch-1", "timestamp": "t0", "eventType": "type", "actor": "actor-0", "datasetRef": "asset-0", "statedPurpose": "purpose", "plainLanguage": "plain-0" },
+    { "seq": 1, "epoch": "epoch-1", "timestamp": "t1", "eventType": "type", "actor": "actor-1", "datasetRef": "asset-1", "statedPurpose": "purpose", "plainLanguage": "plain-1" },
+    { "seq": 2, "epoch": "epoch-1", "timestamp": "t2", "eventType": "type", "actor": "actor-2", "datasetRef": "asset-2", "statedPurpose": "purpose", "plainLanguage": "plain-2" },
+    { "seq": 3, "epoch": "epoch-1", "timestamp": "t3", "eventType": "type", "actor": "actor-3", "datasetRef": "asset-3", "statedPurpose": "purpose", "plainLanguage": "plain-3" },
+    { "seq": 4, "epoch": "epoch-1", "timestamp": "t4", "eventType": "type", "actor": "actor-4", "datasetRef": "asset-4", "statedPurpose": "purpose", "plainLanguage": "plain-4" }
+  ],
+  "expected": { "firstLeafHash": "cd08154c3848a2b04e285200d29f5dae1fb576fe67fa3b765f0cd0f9c04bb043", "root": "f5ffdb2f88f58c43df4c104630978eebfd4ba00125db8c9f18b4d83bfc8013cc" }
+}

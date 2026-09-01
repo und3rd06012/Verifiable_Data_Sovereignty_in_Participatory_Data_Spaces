@@ -1,0 +1,9 @@
+{
+  "id": "av005-separator-in-plain-language",
+  "description": "a field value containing the raw separator character, proving both languages escape it identically",
+  "entries": [
+    { "seq": 0, "epoch": "epoch-1", "timestamp": "t0", "eventType": "type", "actor": "actor-0", "datasetRef": "asset-0", "statedPurpose": "purpose", "plainLanguage": "a|b|c" },
+    { "seq": 1, "epoch": "epoch-1", "timestamp": "t1", "eventType": "type", "actor": "actor-1", "datasetRef": "asset-1", "statedPurpose": "purpose", "plainLanguage": "plain-1" }
+  ],
+  "expected": { "firstLeafHash": "979e324e2eb36f60dee78fc38191860523933a9a3fe23d8d41da63d9e9dd2e80", "root": "9aac732441149f127f485e80786b934a64962840cd8d7a40a182d06536921776" }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "av006-backslash-in-actor",
+  "description": "a field value containing a raw backslash, proving both languages apply backslash-before-pipe escaping identically",
+  "entries": [
+    { "seq": 0, "epoch": "epoch-1", "timestamp": "t0", "eventType": "type", "actor": "actor\\with\\backslash", "datasetRef": "asset-0", "statedPurpose": "purpose", "plainLanguage": "plain-0" },
+    { "seq": 1, "epoch": "epoch-1", "timestamp": "t1", "eventType": "type", "actor": "actor-1", "datasetRef": "asset-1", "statedPurpose": "purpose", "plainLanguage": "plain-1" }
+  ],
+  "expected": { "firstLeafHash": "72cad63b8644a9c1b2a20015c236410538a4f467d512d39bdfc5105148094922", "root": "df8215aa85a71c1ce3bbfb903cc2c3de820f8d123afad67f61e37ee7550f2703" }
+}

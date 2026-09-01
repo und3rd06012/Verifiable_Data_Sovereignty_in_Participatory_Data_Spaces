@@ -1,0 +1,9 @@
+{
+  "id": "av002-two-leaves",
+  "description": "an even-sized tree, one pairing, no promotion",
+  "entries": [
+    { "seq": 0, "epoch": "epoch-1", "timestamp": "t0", "eventType": "type", "actor": "actor-0", "datasetRef": "asset-0", "statedPurpose": "purpose", "plainLanguage": "plain-0" },
+    { "seq": 1, "epoch": "epoch-1", "timestamp": "t1", "eventType": "type", "actor": "actor-1", "datasetRef": "asset-1", "statedPurpose": "purpose", "plainLanguage": "plain-1" }
+  ],
+  "expected": { "firstLeafHash": "cd08154c3848a2b04e285200d29f5dae1fb576fe67fa3b765f0cd0f9c04bb043", "root": "8eaef79ee818e79fb5f5e1b82849724ed17afdbd2ec8e1efe7111c4b5007a063" }
+}

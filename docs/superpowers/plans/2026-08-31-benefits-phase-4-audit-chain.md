@@ -1821,7 +1821,7 @@ Correlation is entirely internal to this class — an in-memory `Map` populated 
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests BenefitsAuditEventListenerTest`
-Expected: PASS, all 3 tests.
+Expected: PASS, all 4 tests (including `transferCorrelatesByItsOwnAgreementEvenWhenTheSameAssetWasNegotiatedTwice`, the regression test for the agreement-id correlation fix).
 
 - [ ] **Step 6: Wire the real listener into the extension and delete the probes**
 

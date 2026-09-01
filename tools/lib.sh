@@ -6,7 +6,7 @@ CONSUMER_MGMT=http://localhost:29193/management
 KEY="x-api-key: password"
 JSON="content-type: application/json"
 READY_BODY='{"@context":{"@vocab":"https://w3id.org/edc/v0.0.1/ns/"},"@type":"QuerySpec"}'
-PORTS="19191 19192 19193 19194 19195 19196 19197 19291 29191 29192 29193 29194 29195 29196 29291"
+PORTS="19191 19192 19193 19194 19195 19196 19197 19198 19291 29191 29192 29193 29194 29195 29196 29291"
 
 port_free() {
   ! (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null

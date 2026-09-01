@@ -9,6 +9,9 @@ import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
+import org.eclipse.edc.web.spi.WebService;
+import org.eclipse.edc.web.spi.configuration.PortMapping;
+import org.eclipse.edc.web.spi.configuration.PortMappingRegistry;
 
 import static org.benefits.policy.BenefitsNamespace.EPSILON_BUDGET_KEY;
 import static org.benefits.policy.BenefitsNamespace.K_ANONYMITY_KEY;
@@ -22,6 +25,10 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
     private RuleBindingRegistry ruleBindingRegistry;
     @Inject
     private PolicyEngine policyEngine;
+    @Inject
+    private WebService webService;
+    @Inject
+    private PortMappingRegistry portMappingRegistry;
 
     private ReleaseArtifactStore artifactStore;
 
@@ -51,7 +58,35 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
 
         monitor.info("BENEFITS privacy pipeline registered");
 
+        if (Boolean.parseBoolean(context.getSetting("benefits.releaseRequests.enabled", "false"))) {
+            var url = context.getSetting("benefits.couchdb.url", "http://localhost:5984");
+            var database = context.getSetting("benefits.couchdb.database", "benefits");
+            var user = context.getSetting("benefits.couchdb.user", "admin");
+            var password = context.getSetting("benefits.couchdb.password", "");
+            var contributions = new CouchDbContributionSource(url, database, user, password,
+                    new com.fasterxml.jackson.databind.ObjectMapper());
+            var releaseRequestStore = buildReleaseRequestStore(context);
+            var resource = new ReleaseRequestResource(contributions, releaseRequestStore, artifactStore,
+                    buildBudgetAccountant(context), new LaplaceNoiseSource(new java.security.SecureRandom()));
+
+            var port = context.getSetting("web.http.releaseRequests.port", 19198);
+            var path = context.getSetting("web.http.releaseRequests.path", "/release-requests");
+            portMappingRegistry.register(new PortMapping("releaseRequests", port, path));
+            webService.registerResource("releaseRequests", resource);
+        }
+
         seed(context);
+    }
+
+    private ReleaseRequestStore buildReleaseRequestStore(ServiceExtensionContext context) {
+        if (!Boolean.parseBoolean(context.getSetting("benefits.privacy.persistence.enabled", "false"))) {
+            return new InMemoryReleaseRequestStore();
+        }
+        var url = context.getSetting("benefits.couchdb.url", "http://localhost:5984");
+        var database = context.getSetting("benefits.couchdb.database", "benefits") + "-requests";
+        var user = context.getSetting("benefits.couchdb.user", "admin");
+        var password = context.getSetting("benefits.couchdb.password", "");
+        return new CouchDbReleaseRequestStore(url, database, user, password, new com.fasterxml.jackson.databind.ObjectMapper());
     }
 
     private ReleaseArtifactStore buildArtifactStore(ServiceExtensionContext context) {

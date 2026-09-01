@@ -26,7 +26,7 @@ public class BenefitsPolicyExtension implements ServiceExtension {
     @Inject
     private PolicyEngine policyEngine;
 
-    private final StewardAuthorizationStore store = new InMemoryStewardAuthorizationStore();
+    private StewardAuthorizationStore store;
 
     @Override
     public String name() {
@@ -41,6 +41,7 @@ public class BenefitsPolicyExtension implements ServiceExtension {
     @Override
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
+        store = buildStore(context);
 
         ruleBindingRegistry.bind(ODRL_USE_ACTION_ATTRIBUTE, ALL_SCOPES);
         for (var key : new String[]{PROBE_KEY, RELEASE_REQUEST_KEY, STEWARD_QUORUM_KEY, PURPOSE_KEY, RECIPIENT_CLASS_KEY, FIELD_SET_KEY}) {
@@ -66,6 +67,18 @@ public class BenefitsPolicyExtension implements ServiceExtension {
         monitor.info("BENEFITS policy functions registered");
 
         seed(context);
+    }
+
+    private StewardAuthorizationStore buildStore(ServiceExtensionContext context) {
+        if (!Boolean.parseBoolean(context.getSetting("benefits.steward.persistence.enabled", "false"))) {
+            return new InMemoryStewardAuthorizationStore();
+        }
+        var url = context.getSetting("benefits.couchdb.url", "http://localhost:5984");
+        var database = context.getSetting("benefits.couchdb.database", "benefits") + "-steward";
+        var user = context.getSetting("benefits.couchdb.user", "admin");
+        var password = context.getSetting("benefits.couchdb.password", "");
+        return new CouchDbStewardAuthorizationStore(url, database, user, password,
+                new com.fasterxml.jackson.databind.ObjectMapper());
     }
 
     private void seed(ServiceExtensionContext context) {

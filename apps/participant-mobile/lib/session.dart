@@ -18,5 +18,5 @@ class Session {
     return 'Basic ${base64Encode(utf8.encode(token))}';
   }
 
-  String get remoteDatabaseUrl => '$couchDbBaseUrl/benefits';
+  String get remoteDatabaseUrl => '$couchDbBaseUrl/participant-$participantRef';
 }

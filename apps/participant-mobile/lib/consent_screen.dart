@@ -26,13 +26,23 @@ class _ConsentScreenState extends State<ConsentScreen> {
   }
 
   Future<void> _contribute() async {
+    final now = DateTime.now().toUtc().toIso8601String();
     await widget.client.contribute(
       'contrib-${DateTime.now().microsecondsSinceEpoch}',
       {
         'type': 'contribution',
+        'participantRef': widget.session.participantRef,
+        'siteId': 'site-participant-mobile',
+        'collectedAt': now,
+        'channel': 'app',
         'declaredPurpose': 'service-improvement',
         'declaredRecipientClass': 'statistics',
         'fields': {'service.satisfaction': 4},
+        'consent': {
+          'participantRef': widget.session.participantRef,
+          'grants': widget.client.grants(),
+          'assertedAt': now,
+        },
       },
     );
     setState(() => _status = 'contribution queued');

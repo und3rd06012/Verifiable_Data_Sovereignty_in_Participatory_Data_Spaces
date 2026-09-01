@@ -1,6 +1,7 @@
 package org.benefits.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,17 +26,34 @@ class CouchDbAuditStoreIntegrationTest {
     private static final String BASE_URL = "http://localhost:5984";
     private final String database = "benefits-audit-test-" + UUID.randomUUID();
     private final ObjectMapper mapper = new ObjectMapper();
+    private HttpClient client;
+    private String auth;
     private CouchDbAuditStore store;
+    private boolean created;
 
     @BeforeEach
     void setUp() throws Exception {
         assumeTrue(couchDbReachable(), "CouchDB not reachable at " + BASE_URL);
-        var client = HttpClient.newHttpClient();
-        var auth = "Basic " + Base64.getEncoder().encodeToString("admin:benefits".getBytes());
+        client = HttpClient.newHttpClient();
+        auth = "Basic " + Base64.getEncoder().encodeToString("admin:benefits".getBytes());
         client.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + database))
                 .header("authorization", auth).PUT(HttpRequest.BodyPublishers.noBody()).build(),
                 HttpResponse.BodyHandlers.discarding());
+        created = true;
         store = new CouchDbAuditStore(BASE_URL, database, "admin", "benefits", mapper);
+    }
+
+    // Each test creates its own randomly-named database (above) so tests never collide
+    // with each other, but a database this test creates is this test's to clean up —
+    // otherwise every run of this suite leaves a permanent, never-reclaimed database on
+    // whatever CouchDB instance it ran against.
+    @AfterEach
+    void tearDown() throws Exception {
+        if (!created) {
+            return;
+        }
+        client.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + database))
+                .header("authorization", auth).DELETE().build(), HttpResponse.BodyHandlers.discarding());
     }
 
     private boolean couchDbReachable() {

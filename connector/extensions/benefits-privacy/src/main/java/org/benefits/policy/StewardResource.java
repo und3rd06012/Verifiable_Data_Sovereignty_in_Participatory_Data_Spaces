@@ -15,9 +15,12 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Path("/")
 public class StewardResource {
+
+    private static final Pattern SAFE_PARTICIPANT_REF = Pattern.compile("^[a-zA-Z0-9_.@-]+$");
 
     private final StewardAuthorizationStore authorizationStore;
     private final ReleaseRequestStore requestStore;
@@ -39,10 +42,14 @@ public class StewardResource {
         if (authenticator.authenticateSteward(authorizationHeader) == null) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
-        var entries = requestStore.all().stream()
-                .map(r -> new QueueEntry(r, authorizationStore.findByReleaseRequestId(r.releaseRequestId())))
-                .toList();
-        return Response.ok(entries).build();
+        try {
+            var entries = requestStore.all().stream()
+                    .map(r -> new QueueEntry(r, authorizationStore.findByReleaseRequestId(r.releaseRequestId())))
+                    .toList();
+            return Response.ok(entries).build();
+        } catch (EdcException e) {
+            return Response.status(502).entity(new ErrorBody(e.getMessage())).build();
+        }
     }
 
     @POST
@@ -54,8 +61,15 @@ public class StewardResource {
         if (steward == null) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
-        authorizationStore.appendReview(requestId, body.datasetHash(),
-                new StewardReview(steward, body.rubricScore(), body.notes(), Instant.now()));
+        if (body == null) {
+            return Response.status(400).entity(new ErrorBody("request body is required")).build();
+        }
+        try {
+            authorizationStore.appendReview(requestId, body.datasetHash(),
+                    new StewardReview(steward, body.rubricScore(), body.notes(), Instant.now()));
+        } catch (EdcException e) {
+            return Response.status(502).entity(new ErrorBody(e.getMessage())).build();
+        }
         return Response.status(201).build();
     }
 
@@ -68,8 +82,15 @@ public class StewardResource {
         if (steward == null) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
-        authorizationStore.appendSignature(requestId, body.datasetHash(),
-                new StewardSignature(steward, body.signature(), Instant.now()));
+        if (body == null) {
+            return Response.status(400).entity(new ErrorBody("request body is required")).build();
+        }
+        try {
+            authorizationStore.appendSignature(requestId, body.datasetHash(),
+                    new StewardSignature(steward, body.signature(), Instant.now()));
+        } catch (EdcException e) {
+            return Response.status(502).entity(new ErrorBody(e.getMessage())).build();
+        }
         return Response.status(201).build();
     }
 
@@ -82,8 +103,15 @@ public class StewardResource {
         if (steward == null) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
-        authorizationStore.appendVeto(requestId, body.datasetHash(),
-                new StewardVeto(steward, body.reason(), Instant.now()));
+        if (body == null) {
+            return Response.status(400).entity(new ErrorBody("request body is required")).build();
+        }
+        try {
+            authorizationStore.appendVeto(requestId, body.datasetHash(),
+                    new StewardVeto(steward, body.reason(), Instant.now()));
+        } catch (EdcException e) {
+            return Response.status(502).entity(new ErrorBody(e.getMessage())).build();
+        }
         return Response.status(201).build();
     }
 
@@ -114,8 +142,15 @@ public class StewardResource {
         if (steward == null) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
+        if (!SAFE_PARTICIPANT_REF.matcher(participantRef).matches()) {
+            return Response.status(400).entity(new ErrorBody("participantRef contains unsafe characters")).build();
+        }
         var password = generatePassword();
-        provisioner.provision(participantRef, password, List.of());
+        var outcome = provisioner.provision(participantRef, password, List.of());
+        if (outcome == CouchDbUserProvisioner.Outcome.ALREADY_EXISTS) {
+            return Response.status(200).entity(new ProvisionStatus(participantRef,
+                    "participant is already provisioned; no new password was issued")).build();
+        }
         return Response.status(201).entity(new ProvisionedCredentials(participantRef, password)).build();
     }
 
@@ -141,6 +176,9 @@ public class StewardResource {
     }
 
     public record ProvisionedCredentials(String participantRef, String password) {
+    }
+
+    public record ProvisionStatus(String participantRef, String message) {
     }
 
     public record ErrorBody(String error) {

@@ -73,4 +73,16 @@ class StewardResourceTest {
                 new StewardResource.AppealBody("no such veto", "s-nobody"));
         assertThat(response.getStatus()).isEqualTo(409);
     }
+
+    @Test
+    void coSignRejectsAMissingBodyWithBadRequestInsteadOfNpeing() {
+        var response = resource.coSign("rr-1", "Basic irrelevant", null);
+        assertThat(response.getStatus()).isEqualTo(400);
+    }
+
+    @Test
+    void provisionParticipantRejectsAnUnsafeParticipantRef() {
+        var response = resource.provisionParticipant("p1?admin=true", "Basic irrelevant");
+        assertThat(response.getStatus()).isEqualTo(400);
+    }
 }

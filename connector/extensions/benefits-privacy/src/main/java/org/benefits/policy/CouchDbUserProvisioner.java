@@ -13,12 +13,18 @@ import java.util.List;
 
 /**
  * Creates a CouchDB user via the standard /_users/org.couchdb.user:<name> PUT
- * convention, authenticated as a CouchDB admin. 201 (created) and 409 (already
- * exists, e.g. re-provisioning) are both treated as success -- provisioning is
- * idempotent by design, matching the reasoning in Task 1's ensureCouchDbUser test
- * helper.
+ * convention, authenticated as a CouchDB admin. A PUT to an already-existing user
+ * document without its current _rev is rejected by CouchDB with 409 and does NOT
+ * apply the given password -- so 201 and 409 are distinguished via the returned
+ * Outcome rather than collapsed into a single "success" (the caller must not claim
+ * a password was set when it wasn't).
  */
 public class CouchDbUserProvisioner {
+
+    public enum Outcome {
+        CREATED,
+        ALREADY_EXISTS
+    }
 
     private final String baseUrl;
     private final String adminAuthHeader;
@@ -31,7 +37,7 @@ public class CouchDbUserProvisioner {
         this.mapper = mapper;
     }
 
-    public void provision(String username, String password, List<String> roles) {
+    public Outcome provision(String username, String password, List<String> roles) {
         var body = mapper.createObjectNode();
         body.put("name", username);
         body.put("password", password);
@@ -43,10 +49,14 @@ public class CouchDbUserProvisioner {
                     .header("authorization", adminAuthHeader).header("content-type", "application/json")
                     .PUT(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body))).build();
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 201 && response.statusCode() != 409) {
-                throw new EdcException("failed to provision CouchDB user " + username + ": "
-                        + response.statusCode() + " " + response.body());
+            if (response.statusCode() == 201) {
+                return Outcome.CREATED;
             }
+            if (response.statusCode() == 409) {
+                return Outcome.ALREADY_EXISTS;
+            }
+            throw new EdcException("failed to provision CouchDB user " + username + ": "
+                    + response.statusCode() + " " + response.body());
         } catch (IOException e) {
             throw new EdcException("failed to provision CouchDB user " + username, e);
         } catch (InterruptedException e) {

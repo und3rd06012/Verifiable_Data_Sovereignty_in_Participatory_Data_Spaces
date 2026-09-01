@@ -33,17 +33,50 @@ cat > "$WORK/artifacts.json" <<'JSON'
 ]
 JSON
 
+# Task 6 replaced ProbeEventSubscriber/ProbeAuditResource (the gate 0 probe classes
+# this script originally asserted against) with the real BenefitsAuditEventListener
+# and CouchDbAuditStore. There is no more "/audit/probe" text response or
+# "AUDIT_PROBE" log line to check, so this script now confirms the same two
+# underlying facts Task 1 established (EventRouter delivers all four event classes,
+# and the "audit" web context is reachable) by querying the real CouchDB-backed
+# audit trail the real listener now writes, plus a plain HTTP reachability check
+# against the "audit" context.
+AUDIT_DB_URL="http://admin:benefits@localhost:5984/benefits-audit"
+
+# Waits for BenefitsAuditEventListener to have recorded at least one auditEntry of
+# the given eventType. Recording happens asynchronously relative to the management
+# API's own view of negotiation/transfer state, so this polls rather than checking
+# once.
+wait_for_audit_entry() {
+  local event_type=$1
+  for _ in $(seq 1 30); do
+    if curl -sf -H "$JSON" -X POST "$AUDIT_DB_URL/_find" \
+         -d "{\"selector\":{\"type\":\"auditEntry\",\"eventType\":\"$event_type\"},\"limit\":1}" \
+         | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get("docs") else 1)' 2>/dev/null; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 trap 'stop_all' EXIT
 stop_all
+ensure_couchdb || exit 1
+# Clean slate so this run's own audit trail is the only evidence wait_for_audit_entry
+# can find; must happen before the provider boots (CouchDbAuditStore creates the
+# database at construction time, and deleting it out from under a live store breaks
+# every subsequent write).
+curl -s -o /dev/null -X DELETE "$AUDIT_DB_URL"
 start_connector provider "$ROOT/connector/runtime/provider.properties" 19193 \
   -Dbenefits.seed.artifacts="$WORK/artifacts.json"
 start_connector consumer "$ROOT/connector/runtime/consumer.properties" 29193
 
 echo "--- probing audit web context ---"
-curl -sf "http://localhost:19197/audit/probe"
-echo
-[ "$(curl -sf "http://localhost:19197/audit/probe")" = "AUDIT_PROBE_OK" ] \
-  || { echo "audit probe resource unreachable" >&2; exit 1; }
+AUDIT_HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:19197/audit/")
+echo "audit web context responded with HTTP $AUDIT_HTTP_CODE"
+[ "$AUDIT_HTTP_CODE" != "000" ] \
+  || { echo "audit web context unreachable (PortMapping/WebService registration regression)" >&2; exit 1; }
 
 curl -sf -H "$KEY" -H "$JSON" -X POST "$PROVIDER_MGMT/v3/assets" -d '{
   "@context": { "@vocab": "https://w3id.org/edc/v0.0.1/ns/" },
@@ -64,8 +97,9 @@ STATE=$(negotiate "$WORK/policy.json")
 echo "negotiation: $STATE"
 [ "$STATE" = "FINALIZED" ] || { echo "negotiation did not finalize" >&2; exit 1; }
 
-echo "--- provider log lines mentioning AUDIT_PROBE ---"
-grep "AUDIT_PROBE" /tmp/provider.log || { echo "no AUDIT_PROBE lines found" >&2; exit 1; }
+echo "--- confirming BenefitsAuditEventListener recorded the finalized negotiation ---"
+wait_for_audit_entry negotiation-finalized \
+  || { echo "no negotiation-finalized audit entry recorded" >&2; exit 1; }
 echo "gate 0 probe passed"
 
 # -----------------------------------------------------------------------------------
@@ -325,9 +359,9 @@ echo "transfer (terminated case): $TSTATE"
 [ "$TSTATE" = "TERMINATED" ] || { echo "forced transfer termination did not reach TERMINATED (state=$TSTATE)" >&2; exit 1; }
 
 echo
-echo "--- provider log lines for all four named event classes ---"
-for cls in ContractNegotiationFinalized ContractNegotiationTerminated TransferProcessCompleted TransferProcessTerminated; do
-  grep "AUDIT_PROBE event=.*\.$cls " /tmp/provider.log \
-    || { echo "no AUDIT_PROBE line for $cls found" >&2; exit 1; }
+echo "--- confirming BenefitsAuditEventListener recorded all four event types ---"
+for event_type in negotiation-finalized negotiation-terminated transfer-completed transfer-terminated; do
+  wait_for_audit_entry "$event_type" \
+    || { echo "no $event_type audit entry recorded" >&2; exit 1; }
 done
-echo "gate 0 probe passed (extended: all four named event classes observed live)"
+echo "gate 0 probe passed (extended: all four event types recorded by the real listener)"

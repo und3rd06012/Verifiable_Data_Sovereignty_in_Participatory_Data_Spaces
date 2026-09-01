@@ -79,4 +79,13 @@ public class EpochSealer {
             lock.unlock();
         }
     }
+
+    public List<AuditEntry> entriesForAsset(String datasetRef) {
+        lock.lock();
+        try {
+            return store.entriesForAsset(datasetRef);
+        } finally {
+            lock.unlock();
+        }
+    }
 }

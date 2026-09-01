@@ -1,12 +1,21 @@
 package org.benefits.audit;
 
+import org.eclipse.edc.connector.controlplane.contract.spi.event.contractnegotiation.ContractNegotiationFinalized;
+import org.eclipse.edc.connector.controlplane.contract.spi.event.contractnegotiation.ContractNegotiationTerminated;
+import org.eclipse.edc.connector.controlplane.transfer.spi.event.TransferProcessCompleted;
+import org.eclipse.edc.connector.controlplane.transfer.spi.event.TransferProcessTerminated;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
+import org.eclipse.edc.spi.event.Event;
+import org.eclipse.edc.spi.event.EventEnvelope;
 import org.eclipse.edc.spi.event.EventRouter;
+import org.eclipse.edc.spi.event.EventSubscriber;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.web.spi.WebService;
 import org.eclipse.edc.web.spi.configuration.PortMapping;
 import org.eclipse.edc.web.spi.configuration.PortMappingRegistry;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class BenefitsAuditExtension implements ServiceExtension {
 
@@ -29,16 +38,50 @@ public class BenefitsAuditExtension implements ServiceExtension {
             monitor.info("BENEFITS audit chain disabled (benefits.audit.enabled not set) — skipping");
             return;
         }
-        eventRouter.register(org.eclipse.edc.spi.event.Event.class, new ProbeEventSubscriber(monitor));
+        var epochSize = Integer.parseInt(context.getSetting("benefits.audit.epochSize", "50"));
+        var store = buildStore(context);
+        var sealer = new EpochSealer(store, epochSize);
+        var listener = new BenefitsAuditEventListener(sealer);
 
-        // No existing extension registers a PortMapping for a brand-new context name like
-        // "audit" (unlike "management"/"protocol"/etc., each of which has its own
-        // configuration extension doing this) — JettyService.registerServlet fails with
-        // "No PortMapping for contextName 'audit' found" without this explicit call.
-        int port = context.getSetting("web.http.audit.port", 19197);
-        String path = context.getSetting("web.http.audit.path", "/audit");
+        eventRouter.register(ContractNegotiationFinalized.class, envelopeSubscriber(listener::onFinalized));
+        eventRouter.register(ContractNegotiationTerminated.class, envelopeSubscriber(listener::onTerminated));
+        eventRouter.register(TransferProcessCompleted.class, envelopeSubscriber(listener::onTransferCompleted));
+        eventRouter.register(TransferProcessTerminated.class, envelopeSubscriber(listener::onTransferTerminated));
+
+        // Task 1's gate 0 probe found this is required: JettyExtension only
+        // auto-registers the default (unnamed) web.http.port context. Every other
+        // named context (management, protocol, ...) has its own configuration
+        // extension elsewhere in the EDC BOM that does this same call before
+        // registerResource; "audit" is a brand-new context name with no such
+        // extension, so this extension must register its own PortMapping or the
+        // provider fails to boot with "No PortMapping for contextName 'audit' found".
+        var port = context.getSetting("web.http.audit.port", 19197);
+        var path = context.getSetting("web.http.audit.path", "/audit");
         portMappingRegistry.register(new PortMapping("audit", port, path));
-        webService.registerResource("audit", new ProbeAuditResource());
-        monitor.info("BENEFITS audit chain: gate 0 probes registered");
+        webService.registerResource("audit", new AuditResource(store));
+        monitor.info("BENEFITS audit chain registered, epochSize=" + epochSize);
+    }
+
+    private AuditStore buildStore(ServiceExtensionContext context) {
+        var url = context.getSetting("benefits.couchdb.url", "http://localhost:5984");
+        var database = context.getSetting("benefits.couchdb.database", "benefits") + "-audit";
+        var user = context.getSetting("benefits.couchdb.user", "admin");
+        var password = context.getSetting("benefits.couchdb.password", "");
+        return new CouchDbAuditStore(url, database, user, password, new ObjectMapper());
+    }
+
+    private <T extends Event> EventSubscriber envelopeSubscriber(java.util.function.Consumer<T> handler) {
+        // EventSubscriber.on is confirmed (Task 1's gate 0 report) to be a generic
+        // method — <E extends Event> void on(EventEnvelope<E>) — not a method taking
+        // a wildcarded parameter. A lambda expression cannot implement an interface
+        // method that declares its own type parameter (there is no lambda syntax for
+        // <E>), so this must be an anonymous class, not `envelope -> ...`.
+        return new EventSubscriber() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <E extends Event> void on(EventEnvelope<E> envelope) {
+                handler.accept((T) envelope.getPayload());
+            }
+        };
     }
 }

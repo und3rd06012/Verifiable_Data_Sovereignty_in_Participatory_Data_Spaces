@@ -41,7 +41,25 @@ stop_all() {
   done
 }
 
+# From benefits-audit onward, a booting connector needs CouchDB reachable
+# (CouchDbAuditStore connects at construction time). Every script that starts
+# a connector goes through start_connector below, so this lives here once
+# rather than being repeated in every script.
+ensure_couchdb() {
+  if curl -sf http://localhost:5984 >/dev/null 2>&1; then
+    return 0
+  fi
+  (cd "$ROOT" && docker compose -f deploy/docker-compose.yml up -d couchdb) >/dev/null
+  for _ in $(seq 1 30); do
+    curl -sf http://localhost:5984 >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+  echo "CouchDB did not become reachable at localhost:5984" >&2
+  return 1
+}
+
 start_connector() {
+  ensure_couchdb || return 1
   local name=$1 config=$2 mgmt_port=$3
   shift 3
   java "$@" -Dedc.fs.config="$config" -jar "$JAR" > "/tmp/$name.log" 2>&1 &

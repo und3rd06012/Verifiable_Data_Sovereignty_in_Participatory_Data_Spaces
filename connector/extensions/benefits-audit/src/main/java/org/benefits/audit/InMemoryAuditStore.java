@@ -66,12 +66,6 @@ public class InMemoryAuditStore implements AuditStore {
     }
 
     @Override
-    public synchronized List<AuditEntry> entriesForAsset(String datasetRef) {
-        return entries.stream().filter(e -> e.datasetRef().equals(datasetRef))
-                .sorted((a, b) -> Long.compare(b.seq(), a.seq())).toList();
-    }
-
-    @Override
     public synchronized List<Epoch> epochChain() {
         return List.copyOf(epochs);
     }

@@ -75,7 +75,7 @@ class BenefitsAuditEventListenerTest {
     }
 
     @Test
-    void transferCompletedCorrelatesActorAndPurposeFromThePriorNegotiationEntry() {
+    void transferCompletedCorrelatesActorAndPurposeByContractId() {
         var store = new InMemoryAuditStore();
         var sealer = new EpochSealer(store, 100);
         var listener = new BenefitsAuditEventListener(sealer);
@@ -100,5 +100,46 @@ class BenefitsAuditEventListenerTest {
         var transferEntry = entries.stream().filter(e -> "transfer-completed".equals(e.eventType())).findFirst().orElseThrow();
         assertThat(transferEntry.statedPurpose()).isEqualTo("statistics");
         assertThat(transferEntry.datasetRef()).isEqualTo("asset-3");
+    }
+
+    @Test
+    void transferCorrelatesByItsOwnAgreementEvenWhenTheSameAssetWasNegotiatedTwice() {
+        var store = new InMemoryAuditStore();
+        var sealer = new EpochSealer(store, 100);
+        var listener = new BenefitsAuditEventListener(sealer);
+
+        var firstAgreement = ContractAgreement.Builder.newInstance()
+                .id("agreement-first").providerId("provider").consumerId("consumer")
+                .assetId("shared-asset").policy(policyWithPurpose("advocacy"))
+                .build();
+        listener.onFinalized(ContractNegotiationFinalized.Builder.newInstance()
+                .contractNegotiationId("neg-first").counterPartyId("participant-first")
+                .counterPartyAddress("http://x").protocol("dataspace-protocol-http:2025-1")
+                .contractAgreement(firstAgreement).build());
+
+        var secondAgreement = ContractAgreement.Builder.newInstance()
+                .id("agreement-second").providerId("provider").consumerId("consumer")
+                .assetId("shared-asset").policy(policyWithPurpose("statistics"))
+                .build();
+        listener.onFinalized(ContractNegotiationFinalized.Builder.newInstance()
+                .contractNegotiationId("neg-second").counterPartyId("participant-second")
+                .counterPartyAddress("http://x").protocol("dataspace-protocol-http:2025-1")
+                .contractAgreement(secondAgreement).build());
+
+        // The transfer belongs to the FIRST negotiation's agreement, even though the
+        // SECOND negotiation (for the same asset) is more recent -- proving
+        // correlation is keyed by agreement id, not "most recent entry for this
+        // asset" (the bug Task 6's reviewer found in the original design).
+        var transferEvent = TransferProcessCompleted.Builder.newInstance()
+                .transferProcessId("tp-shared").assetId("shared-asset").type("PUSH").contractId("agreement-first")
+                .build();
+        listener.onTransferCompleted(transferEvent);
+
+        var transferEntry = store.entriesFor("participant-first").stream()
+                .filter(e -> "transfer-completed".equals(e.eventType())).findFirst().orElseThrow();
+        assertThat(transferEntry.actor()).isEqualTo("participant-first");
+        assertThat(transferEntry.statedPurpose()).isEqualTo("advocacy");
+        assertThat(store.entriesFor("participant-second"))
+                .noneMatch(e -> "transfer-completed".equals(e.eventType()));
     }
 }

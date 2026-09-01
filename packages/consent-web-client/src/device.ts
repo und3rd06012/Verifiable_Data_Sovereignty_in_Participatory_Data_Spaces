@@ -73,7 +73,15 @@ export class ParticipantClient {
   }
 
   async contribute(record: Omit<ContributionRecord, '_id'>): Promise<void> {
-    await this.db.put({ ...record, _id: `contribution-${Date.now()}-${Math.random().toString(36).slice(2)}` });
+    // Namespaced by participantRef so a document-id collision across different
+    // participants is structurally impossible: replication now fans every
+    // participant's writes into the shared "benefits" database, where an
+    // id collision would be a silent, invisible conflict rather than the loud
+    // 409 it used to be when everyone wrote to that database directly.
+    await this.db.put({
+      ...record,
+      _id: `contribution-${this.participantRef}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    });
   }
 
   async unsentRecords(): Promise<ContributionRecord[]> {

@@ -27,8 +27,10 @@ class _ConsentScreenState extends State<ConsentScreen> {
 
   Future<void> _contribute() async {
     final now = DateTime.now().toUtc().toIso8601String();
+    // Namespaced by participantRef so a document-id collision across different
+    // participants is structurally impossible -- see device.ts's contribute() for why.
     await widget.client.contribute(
-      'contrib-${DateTime.now().microsecondsSinceEpoch}',
+      'contrib-${widget.session.participantRef}-${DateTime.now().microsecondsSinceEpoch}',
       {
         'type': 'contribution',
         'participantRef': widget.session.participantRef,

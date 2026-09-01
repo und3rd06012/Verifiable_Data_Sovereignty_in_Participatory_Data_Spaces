@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { Device } from '../src/device';
 import { syncDevice, injectConflict, resolveConflicts } from '../src/sync';
 import { createRemoteDb } from '../src/pouchdb';
+import { buildDesignDoc } from '@benefits/consent-couchdb';
 
 const REMOTE_BASE = 'http://admin:benefits@localhost:5984';
 const DB_NAME = 'benefits-device-sim-sync-test';
@@ -34,6 +35,12 @@ beforeAll(async () => {
     const authHeader = { authorization: 'Basic ' + Buffer.from('admin:benefits').toString('base64') };
     await fetch(`http://localhost:5984/${DB_NAME}`, { method: 'DELETE', headers: authHeader });
     await fetch(`http://localhost:5984/${DB_NAME}`, { method: 'PUT', headers: authHeader });
+    const dd = buildDesignDoc();
+    await fetch(`http://localhost:5984/${DB_NAME}/${dd._id}`, {
+      method: 'PUT',
+      headers: { ...authHeader, 'content-type': 'application/json' },
+      body: JSON.stringify(dd)
+    });
   }
 }, 30000);
 
@@ -58,6 +65,32 @@ describe.skipIf(!couchDbReachable)('syncDevice', () => {
 
     const result = await syncDevice(device, REMOTE_URL);
     expect(result.pushed).toBe(1);
+  });
+
+  it('does not retroactively delete an already-synced record when a later revoke sweeps the outbox', async () => {
+    const device = new Device('p-no-retro-delete');
+    await device.grantConsent(grant('service.satisfaction'));
+    await device.contribute({
+      type: 'contribution', participantRef: 'p-no-retro-delete', siteId: 'athens',
+      collectedAt: '2026-08-30T11:00:00.000Z', channel: 'app',
+      declaredPurpose: 'service-improvement', declaredRecipientClass: 'statistics',
+      fields: { 'service.satisfaction': 4 },
+      consent: { participantRef: 'p-no-retro-delete', assertedAt: '2026-08-01T00:00:00.000Z', grants: [grant('service.satisfaction')] }
+    });
+
+    await syncDevice(device, REMOTE_URL);
+
+    const { sweptCount } = await device.revoke('service.satisfaction', 'service-improvement', 'statistics', '2026-08-30T12:00:00.000Z');
+    expect(sweptCount).toBe(0);
+
+    await syncDevice(device, REMOTE_URL);
+
+    const remote = createRemoteDb(REMOTE_URL);
+    const allDocs = await remote.allDocs({ include_docs: true });
+    const survivingRecord = allDocs.rows.find(
+      (row) => (row.doc as unknown as { participantRef?: string })?.participantRef === 'p-no-retro-delete'
+    );
+    expect(survivingRecord).toBeDefined();
   });
 
   it('resolveConflicts keeps the device\'s own local edit even when an injected rival claims a LATER edit time', async () => {

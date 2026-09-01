@@ -9,6 +9,7 @@ import { createLocalDb } from './pouchdb';
 export class Device {
   private readonly db: PouchDB.Database;
   private localGrants: ConsentGrant[] = [];
+  private sentIds = new Set<string>();
 
   constructor(private readonly participantRef: string) {
     this.db = createLocalDb(`device-${participantRef}-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -53,7 +54,13 @@ export class Device {
     const result = await this.db.allDocs({ include_docs: true });
     return result.rows
       .map((row) => row.doc as unknown as ContributionRecord)
-      .filter((doc) => doc.type === 'contribution');
+      .filter((doc) => doc.type === 'contribution' && !this.sentIds.has(doc._id!));
+  }
+
+  markSent(ids: string[]): void {
+    for (const id of ids) {
+      this.sentIds.add(id);
+    }
   }
 
   localDb(): PouchDB.Database {

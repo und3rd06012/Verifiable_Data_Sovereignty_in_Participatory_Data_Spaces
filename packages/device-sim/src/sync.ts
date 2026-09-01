@@ -5,9 +5,11 @@ export { injectConflict } from './conflictInjector';
 
 export async function syncDevice(device: Device, remoteUrl: string): Promise<{ pushed: number }> {
   const remote = createRemoteDb(remoteUrl);
+  const pending = await device.unsentRecords();
   const result = await new Promise<{ docs_written: number }>((resolve, reject) => {
     device.localDb().replicate.to(remote).on('complete', resolve).on('error', reject);
   });
+  device.markSent(pending.map((r) => r._id!));
   return { pushed: result.docs_written };
 }
 

@@ -35,7 +35,7 @@ describe('Device', () => {
     expect(unsent[0].fields['service.satisfaction']).toBe(4);
   });
 
-  it('revoke() adds a revokedAt-stamped grant that supersedes an existing one via meet semantics', async () => {
+  it('revoke() stamps revokedAt on the matching local grant', async () => {
     await device.grantConsent(grant('service.satisfaction'));
     await device.revoke('service.satisfaction', 'service-improvement', 'statistics', '2026-08-30T12:00:00.000Z');
     const revoked = device.grants().find((g) => g.field === 'service.satisfaction');

@@ -18,7 +18,7 @@
 - The in-memory PouchDB adapter (`pouchdb-adapter-memory`) is required for every simulated device — no LevelDB, no IndexedDB, no native dependency.
 - "Leaked record" is defined precisely (spec section 4): a record that was in a device's own outbox, unsent, at the moment of revocation, whose embedded consent covers the revoked grant, and that later reaches CouchDB anyway. Records already synced before revocation are never touched or re-checked.
 - Conflicts are produced only by harness-side direct writes to CouchDB (spec section 5) — never by simulating a second device per participant.
-- "User preference first" conflict resolution: the device's own most recent local edit wins outright, whole-document, tracked independently of PouchDB's own revision ordering.
+- "User preference first" conflict resolution: the device's own CURRENT local copy wins outright, whole-document, unconditionally, by identity — never by comparing timestamps against a rival, and never by trusting PouchDB's own revision ordering.
 - No comments beyond a non-obvious WHY.
 
 ---
@@ -846,7 +846,7 @@ git commit -m "Sweep unsent outbox records on revoke, closing the leak the phase
 - Consumes: `createRemoteDb` (Task 1); `Device.localDb`, `Device.unsentRecords` (Task 4/6).
 - Produces: `syncDevice(device: Device, remoteUrl: string): Promise<{ pushed: number }>`; `injectConflict(remoteUrl: string, docId: string, conflictingBody: object): Promise<void>`; `resolveConflicts(device: Device, remoteUrl: string): Promise<{ resolvedCount: number }>`. Task 8's end-to-end gate calls all three.
 
-**Read this before writing `resolveConflicts`:** spec section 5's rule is "the device's own most recent local edit wins outright, whole-document" — resolution must track the device's own last-local-edit timestamp independently of PouchDB's revision ordering (which is not guaranteed to agree with wall-clock recency across replicas), not just pick "the first" or "the alphabetically largest" revision, since neither of those is what "user preference" means here.
+**Read this before writing `resolveConflicts`:** spec section 5's rule, made precise there, is identity, not recency: the device's own CURRENT local copy of a conflicted document always wins, unconditionally — do not compare timestamps between the device's edit and a rival's, even though each document below carries a `localEditedAt` field. That field exists for realism (a real device would stamp one), not as an input to the resolution algorithm; a rival's self-reported `localEditedAt` cannot be trusted, which is exactly why "user preference first" is identity-based rather than last-write-wins. The test in Step 1 deliberately gives the injected rival a LATER `localEditedAt` than the device's own edit specifically to catch an implementation that compares timestamps instead of identity — do not adjust the test data to make a timestamp-comparison implementation pass.
 
 - [ ] **Step 1: Write the failing integration test**
 
@@ -902,7 +902,7 @@ describe.skipIf(!couchDbReachable)('syncDevice', () => {
     expect(result.pushed).toBe(1);
   });
 
-  it('resolveConflicts keeps the device\'s own local edit over an injected rival revision', async () => {
+  it('resolveConflicts keeps the device\'s own local edit even when an injected rival claims a LATER edit time', async () => {
     const device = new Device('p-sync-2');
     const docId = 'conflict-doc-1';
     await device.localDb().put({
@@ -913,13 +913,19 @@ describe.skipIf(!couchDbReachable)('syncDevice', () => {
       consent: { participantRef: 'p-sync-2', assertedAt: '2026-08-01T00:00:00.000Z', grants: [grant('service.satisfaction')] }
     });
 
-    // Simulate the partition: a rival revision lands on the server, timestamped
-    // earlier than the device's own local edit, before the device ever syncs.
+    // Simulate the partition: a rival revision lands on the server, claiming
+    // a LATER localEditedAt than the device's own edit -- deliberately, to
+    // prove resolution is identity-based, not a last-write-wins comparison.
+    // If this test used an earlier rival timestamp instead, it would pass
+    // under either algorithm and prove nothing about which one is actually
+    // implemented (spec section 5's precision note exists because an
+    // earlier draft's code did exactly that, undetected, until a task
+    // reviewer traced the discrepancy against the spec's prose).
     await injectConflict(REMOTE_URL, docId, {
       type: 'contribution', participantRef: 'p-sync-2', siteId: 'athens',
       collectedAt: '2026-08-30T11:00:00.000Z', channel: 'app',
       declaredPurpose: 'service-improvement', declaredRecipientClass: 'statistics',
-      fields: { 'service.satisfaction': 999 }, localEditedAt: '2026-08-30T10:00:00.000Z',
+      fields: { 'service.satisfaction': 999 }, localEditedAt: '2026-08-30T14:00:00.000Z',
       consent: { participantRef: 'p-sync-2', assertedAt: '2026-08-01T00:00:00.000Z', grants: [grant('service.satisfaction')] }
     });
 
@@ -960,38 +966,44 @@ export async function syncDevice(device: Device, remoteUrl: string): Promise<{ p
   return { pushed: result.docs_written };
 }
 
-// "User preference first" (spec section 5): the device's own most recent
-// local edit wins outright, tracked via each document's own
-// `localEditedAt` field rather than trusted PouchDB revision ordering,
-// which reflects replication history, not wall-clock recency across
-// replicas.
+// "User preference first" (spec section 5), made precise there after an
+// earlier draft of this function conflated it with last-write-wins:
+// identity, not recency, decides. The device's own CURRENT local copy of
+// the document always wins, unconditionally -- never compared by
+// timestamp against a rival, since a rival's claimed edit time cannot be
+// trusted (every rival in this design is a harness injection, never a
+// second genuine user choice). This also sidesteps needing to trust
+// PouchDB's own revision ordering, which reflects replication history,
+// not wall-clock recency, and is no more trustworthy a signal than a
+// rival's self-reported timestamp.
 export async function resolveConflicts(device: Device, remoteUrl: string): Promise<{ resolvedCount: number }> {
   const remote = createRemoteDb(remoteUrl);
   const allDocs = await remote.allDocs({ include_docs: true, conflicts: true });
   let resolvedCount = 0;
 
   for (const row of allDocs.rows) {
-    const doc = row.doc as unknown as { _id: string; _rev: string; _conflicts?: string[]; localEditedAt?: string };
+    const doc = row.doc as unknown as { _id: string; _rev: string; _conflicts?: string[] };
     if (!doc._conflicts || doc._conflicts.length === 0) {
       continue;
     }
 
-    const rivals = await Promise.all(
-      doc._conflicts.map((rev) => remote.get(doc._id, { rev }) as unknown as Promise<{ _rev: string; localEditedAt?: string }>)
-    );
-    const all = [{ _rev: doc._rev, localEditedAt: doc.localEditedAt }, ...rivals];
-    all.sort((a, b) => (b.localEditedAt ?? '').localeCompare(a.localEditedAt ?? ''));
-    const winner = all[0];
-    const losers = all.slice(1);
-
-    if (winner._rev !== doc._rev) {
-      // The winning revision was one of the rivals, not the one allDocs
-      // returned as current -- fetch its full body so the local device's
-      // own edit still ends up as the live document content.
-      await remote.put({ ...(await remote.get(doc._id, { rev: winner._rev })), _id: doc._id });
+    let localDoc: PouchDB.Core.ExistingDocument<Record<string, unknown>>;
+    try {
+      localDoc = await device.localDb().get(doc._id);
+    } catch {
+      continue; // device has no local copy of this document; nothing to prefer
     }
-    for (const loser of losers) {
-      await remote.remove(doc._id, loser._rev);
+
+    // Re-write the remote document fresh from the device's own local
+    // content -- a new revision that supersedes every existing one, so no
+    // assumption is needed about whether a _rev string survives
+    // replication unchanged. Then delete every other revision (the
+    // formerly-current one and every conflict) to converge the document.
+    const { _id, _rev, ...content } = localDoc as unknown as { _id: string; _rev: string; [key: string]: unknown };
+    const putResult = await remote.put({ _id: doc._id, ...content });
+    const toDelete = [doc._rev, ...doc._conflicts].filter((rev) => rev !== putResult.rev);
+    for (const rev of toDelete) {
+      await remote.remove(doc._id, rev);
     }
     resolvedCount++;
   }
@@ -1128,7 +1140,11 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
     const revokeResult = await devices[0].revoke('service.satisfaction', 'service-improvement', 'statistics', '2026-08-30T12:00:00.000Z');
     expect(revokeResult.sweptCount).toBe(1);
 
-    // Device 1: an injected conflict, exactly as Task 7 proved works.
+    // Device 1: an injected conflict, exactly as Task 7 proved works. The
+    // rival's localEditedAt is deliberately LATER than the device's own
+    // edit (same reasoning as Task 7's discriminating test) -- resolution
+    // is identity-based, not last-write-wins, so the device's edit must
+    // still win here even though the rival "claims" to be more recent.
     const conflictDocId = 'fleet-conflict-doc';
     await devices[1].localDb().put({
       _id: conflictDocId, type: 'contribution', participantRef: 'p-fleet-1', siteId: 'athens',
@@ -1141,7 +1157,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
       type: 'contribution', participantRef: 'p-fleet-1', siteId: 'athens',
       collectedAt: '2026-08-30T11:00:00.000Z', channel: 'app',
       declaredPurpose: 'service-improvement', declaredRecipientClass: 'statistics',
-      fields: { 'service.satisfaction': 1 }, localEditedAt: '2026-08-30T09:00:00.000Z',
+      fields: { 'service.satisfaction': 1 }, localEditedAt: '2026-08-30T15:00:00.000Z',
       consent: { participantRef: 'p-fleet-1', assertedAt: '2026-08-01T00:00:00.000Z', grants: [grant('service.satisfaction')] }
     });
 

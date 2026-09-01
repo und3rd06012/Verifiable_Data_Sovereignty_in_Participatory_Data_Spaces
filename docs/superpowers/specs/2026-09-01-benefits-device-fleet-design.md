@@ -148,15 +148,26 @@ divergence — and "conflict rate" becomes a parameter this phase's harness
 controls directly, rather than an emergent property of a fleet-of-devices
 simulation this phase does not build.
 
-**Resolution: "user preference first."** When a device's replication
-surfaces a `_conflicts` list on a document, the device's own most recent
-local edit wins outright — not a field-by-field merge, the whole document.
-"User preference" means the participant's own latest choice on their own
-device, full stop, over any rival revision, however that rival arose. The
-device tracks its own last-local-edit timestamp independently of PouchDB's
-revision ordering (which is not guaranteed to agree with wall-clock
-recency across replicas), reads the full conflict set via `{conflicts:
-true}`, and deletes every losing revision to converge the document.
+**Resolution: "user preference first," made precise.** When a device's
+replication surfaces a `_conflicts` list on a document, the device's own
+current local copy wins outright — not a field-by-field merge, the whole
+document — **unconditionally, by identity, never by comparing timestamps.**
+This is deliberately not a last-write-wins rule: a rival revision's claimed
+edit time cannot be trusted (in this design every rival is a harness
+injection standing in for an ambiguous external actor, spec section 5's own
+first paragraph — never a second genuine user choice), so a timestamp-based
+resolver would let a rival that merely *claims* to be more recent override
+the participant's actual choice. "User preference first" means identity,
+not recency, decides: whichever revision is a match for the device's own
+current local document is kept, and every other conflicting revision is
+discarded, regardless of what timestamp any of them carry — including
+PouchDB's own revision ordering, which is not guaranteed to agree with
+wall-clock recency across replicas either and is no more trustworthy a
+signal than a rival's self-reported edit time. Implementation: re-write the
+remote document with the device's own current local content (a fresh
+revision that supersedes every existing one), read the full conflict set
+via `{conflicts: true}`, and delete every other revision to converge the
+document.
 
 ## 6. Gates
 

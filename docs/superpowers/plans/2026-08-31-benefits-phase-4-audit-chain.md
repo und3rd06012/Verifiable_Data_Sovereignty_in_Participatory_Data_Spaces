@@ -2993,6 +2993,13 @@ JSON
 
 trap 'stop_all' EXIT
 stop_all
+ensure_couchdb
+# Wipe any prior run's audit state first — otherwise leftover entries for actor
+# "consumer" from an earlier run of this script, or from Task 6's own probe (which
+# uses the same participant id), inflate this run's sealed-entry count and make the
+# "1 sealed entry" expectation below unreliable. Task 6's probe established this same
+# pattern for the same reason.
+curl -s -o /dev/null -X DELETE "http://admin:benefits@localhost:5984/benefits-audit"
 # EPOCH_SIZE=1 so a single negotiation seals its own epoch immediately, rather than
 # needing 50 real negotiations to accumulate before this probe can observe a seal.
 start_connector provider "$ROOT/connector/runtime/provider.properties" 19193 \
@@ -3031,7 +3038,7 @@ echo
 node "$ROOT/tools/verify-audit-response.mjs" "http://localhost:19197/audit" consumer
 ```
 
-`consumer` is the value `negotiate` (in `tools/lib.sh`) sends as `counterPartyId`, matching `edc.participant.id=provider` / consumer's own id already configured in `connector/runtime/consumer.properties` — confirm the exact id string that file configures (or the id EDC defaults to when unconfigured) before relying on `consumer` here; if it differs, use the real one instead, since `AuditResource` filters strictly by `actor` equality.
+`consumer` is confirmed correct, not assumed: Task 6's own probe run recorded real `AuditEntry` documents with `actor=consumer` for exactly this negotiation flow (see `docs/superpowers/plans/...` Task 6 history, or just re-derive it — `negotiate()` in `tools/lib.sh` sends the consumer's own `counterPartyId` claim as `"provider"` to the provider, but the PROVIDER's own `ContractNegotiationFinalized.getCounterPartyId()` reports the REQUESTER's participant id, which is `consumer.properties`'s `edc.participant.id=consumer`). `AuditResource` filters strictly by `actor` equality, so this must be exact.
 
 - [ ] **Step 3: Run the probe**
 

@@ -27,8 +27,17 @@ export function buildDesignDoc(): DesignDoc {
 
   const validate = [
     'function(newDoc, oldDoc, userCtx, secObj) {',
+    '  var isAdmin = (userCtx.roles || []).indexOf("_admin") !== -1;',
+    '  if (newDoc._deleted) {',
+    '    if (!isAdmin && oldDoc && userCtx.name !== oldDoc.participantRef) {',
+    '      throw({ forbidden: "participant-identity-mismatch" });',
+    '    }',
+    '    return;',
+    '  }',
+    '  if (!isAdmin && userCtx.name !== newDoc.participantRef) {',
+    '    throw({ forbidden: "participant-identity-mismatch" });',
+    '  }',
     '  ' + bundle.split('\n').join('\n  '),
-    '  if (newDoc._deleted) { return; }',
     '  var decision = ConsentCore.evaluateRecord(newDoc, new Date().toISOString());',
     '  if (!decision.allowed) {',
     '    throw({ forbidden: decision.reason });',

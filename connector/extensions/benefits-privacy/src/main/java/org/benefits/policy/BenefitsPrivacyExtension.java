@@ -29,6 +29,8 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
     private WebService webService;
     @Inject
     private PortMappingRegistry portMappingRegistry;
+    @Inject
+    private StewardAuthorizationStore stewardAuthorizationStore;
 
     private ReleaseArtifactStore artifactStore;
 
@@ -73,6 +75,22 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
             var path = context.getSetting("web.http.releaseRequests.path", "/release-requests");
             portMappingRegistry.register(new PortMapping("releaseRequests", port, path));
             webService.registerResource("releaseRequests", resource);
+        }
+
+        if (Boolean.parseBoolean(context.getSetting("benefits.stewardApi.enabled", "false"))) {
+            var couchdbUrl = context.getSetting("benefits.couchdb.url", "http://localhost:5984");
+            var couchUser = context.getSetting("benefits.couchdb.user", "admin");
+            var couchPassword = context.getSetting("benefits.couchdb.password", "");
+            var stewardAuthenticator = new CouchDbStewardAuthenticator(couchdbUrl, new com.fasterxml.jackson.databind.ObjectMapper());
+            var provisioner = new CouchDbUserProvisioner(couchdbUrl, couchUser, couchPassword,
+                    new com.fasterxml.jackson.databind.ObjectMapper());
+            var stewardResource = new StewardResource(stewardAuthorizationStore, buildReleaseRequestStore(context),
+                    stewardAuthenticator, provisioner);
+
+            var stewardPort = context.getSetting("web.http.steward.port", 19199);
+            var stewardPath = context.getSetting("web.http.steward.path", "/steward");
+            portMappingRegistry.register(new PortMapping("steward", stewardPort, stewardPath));
+            webService.registerResource("steward", stewardResource);
         }
 
         seed(context);

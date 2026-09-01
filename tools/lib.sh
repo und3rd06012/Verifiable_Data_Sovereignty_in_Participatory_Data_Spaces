@@ -47,15 +47,41 @@ stop_all() {
 # rather than being repeated in every script.
 ensure_couchdb() {
   if curl -sf http://localhost:5984 >/dev/null 2>&1; then
+    configure_couchdb
     return 0
   fi
   (cd "$ROOT" && docker compose -f deploy/docker-compose.yml up -d couchdb) >/dev/null
   for _ in $(seq 1 30); do
-    curl -sf http://localhost:5984 >/dev/null 2>&1 && return 0
+    if curl -sf http://localhost:5984 >/dev/null 2>&1; then
+      configure_couchdb
+      return 0
+    fi
     sleep 1
   done
   echo "CouchDB did not become reachable at localhost:5984" >&2
   return 1
+}
+
+# CouchDB's own CORS (separate from the connector's; apps/participant-web syncs
+# PouchDB directly to CouchDB from the browser, a different origin than the connector)
+# and the shared "benefits" database, which nothing else in this repo creates. Both PUTs
+# are idempotent: CouchDB's config API accepts a repeat PUT of the same value, and a
+# repeat database creation returns 412 Precondition Failed, treated as success here
+# (same 2xx/4xx-both-success idempotency pattern as provision-steward.sh's 201/409).
+configure_couchdb() {
+  local admin_user=${COUCHDB_ADMIN_USER:-admin}
+  local admin_password=${COUCHDB_ADMIN_PASSWORD:-benefits}
+  curl -sf -u "$admin_user:$admin_password" -X PUT http://localhost:5984/_node/_local/_config/httpd/enable_cors -d '"true"' >/dev/null
+  curl -sf -u "$admin_user:$admin_password" -X PUT http://localhost:5984/_node/_local/_config/cors/origins -d '"*"' >/dev/null
+  curl -sf -u "$admin_user:$admin_password" -X PUT http://localhost:5984/_node/_local/_config/cors/credentials -d '"true"' >/dev/null
+  curl -sf -u "$admin_user:$admin_password" -X PUT http://localhost:5984/_node/_local/_config/cors/methods -d '"GET, PUT, POST, HEAD, DELETE"' >/dev/null
+  curl -sf -u "$admin_user:$admin_password" -X PUT http://localhost:5984/_node/_local/_config/cors/headers -d '"accept, authorization, content-type, origin, referer"' >/dev/null
+  local status
+  status=$(curl -s -o /dev/null -w "%{http_code}" -u "$admin_user:$admin_password" -X PUT http://localhost:5984/benefits)
+  if [ "$status" != "201" ] && [ "$status" != "412" ]; then
+    echo "failed to create benefits database: HTTP $status" >&2
+    return 1
+  fi
 }
 
 start_connector() {

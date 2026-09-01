@@ -60,6 +60,8 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
 
         monitor.info("BENEFITS privacy pipeline registered");
 
+        var releaseRequestStore = buildReleaseRequestStore(context);
+
         if (Boolean.parseBoolean(context.getSetting("benefits.releaseRequests.enabled", "false"))) {
             var url = context.getSetting("benefits.couchdb.url", "http://localhost:5984");
             var database = context.getSetting("benefits.couchdb.database", "benefits");
@@ -67,7 +69,6 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
             var password = context.getSetting("benefits.couchdb.password", "");
             var contributions = new CouchDbContributionSource(url, database, user, password,
                     new com.fasterxml.jackson.databind.ObjectMapper());
-            var releaseRequestStore = buildReleaseRequestStore(context);
             var resource = new ReleaseRequestResource(contributions, releaseRequestStore, artifactStore,
                     buildBudgetAccountant(context), new LaplaceNoiseSource(new java.security.SecureRandom()));
 
@@ -84,7 +85,7 @@ public class BenefitsPrivacyExtension implements ServiceExtension {
             var stewardAuthenticator = new CouchDbStewardAuthenticator(couchdbUrl, new com.fasterxml.jackson.databind.ObjectMapper());
             var provisioner = new CouchDbUserProvisioner(couchdbUrl, couchUser, couchPassword,
                     new com.fasterxml.jackson.databind.ObjectMapper());
-            var stewardResource = new StewardResource(stewardAuthorizationStore, buildReleaseRequestStore(context),
+            var stewardResource = new StewardResource(stewardAuthorizationStore, releaseRequestStore,
                     stewardAuthenticator, provisioner);
 
             var stewardPort = context.getSetting("web.http.steward.port", 19199);

@@ -177,7 +177,7 @@ push replication against a real CouchDB instance, and confirm the document
 that was validated by `consent-couchdb`'s actual design document (not a
 mock) — the same de-risking-probe shape every prior phase opened with.
 
-**Gate 1, revocation semantics.** The updated conformance vectors (14
+**Gate 1, revocation semantics.** The updated conformance vectors (15
 existing plus new revoked-grant cases) pass in `consent-core`'s own test
 suite, and `consent-couchdb`'s design-document bundle (which re-bundles
 `evaluate.ts`) is rebuilt and re-verified against the same vectors through

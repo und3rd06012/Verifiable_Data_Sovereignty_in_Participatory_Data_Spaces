@@ -8,7 +8,7 @@ connector at the data release boundary. What this directory actually proves
 is narrower than "S1 and S2 decide the same way", and splits into three
 separate claims:
 
-1. **Record-level consent semantics are portable across languages.** The 15
+1. **Record-level consent semantics are portable across languages.** The 17
    vectors here are run against S1's live TypeScript evaluator
    (`packages/consent-core/src/evaluate.ts`) and against
    `ConsentEvaluator.java`, a faithful Java transcription of the same rules.
@@ -52,7 +52,7 @@ Reason codes are part of the contract, not diagnostics. The closed set is:
     participant-mismatch    consent.participantRef differs from record.participantRef
     malformed-fields        fields is present, is not null, and is not a
                              JSON object (for example a JSON array)
-    no-grant:<fieldId>      no matching unexpired grant for that field
+    no-grant:<fieldId>      no matching active grant for that field
 
 An empty `grants` array is not a missing consent assertion. It is a present
 assertion that grants nothing, so a record carrying fields under it yields
@@ -79,10 +79,12 @@ the field id, the record's `declaredPurpose` and the record's
 matching, and no case-insensitive comparison.
 
 Validity boundaries, stated as exclusive/inclusive. A grant is active when
-`grantedAt <= now` and either `expiresAt` is null or `expiresAt > now`. Both
-comparisons are lexicographic string comparisons on the ISO 8601 UTC
-millisecond format. In particular: `expiresAt` exactly equal to `now` means
-EXPIRED, and `grantedAt` exactly equal to `now` means ACTIVE.
+`grantedAt <= now`, `revokedAt` is null or `revokedAt > now`, and either
+`expiresAt` is null or `expiresAt > now`. All three comparisons are
+lexicographic string comparisons on the ISO 8601 UTC millisecond format.
+In particular: `expiresAt` exactly equal to `now` means EXPIRED, `revokedAt`
+exactly equal to `now` means REVOKED, and `grantedAt` exactly equal to `now`
+means ACTIVE.
 
 ## The exact-instant boundary and the CouchDB integration test's wall clock
 

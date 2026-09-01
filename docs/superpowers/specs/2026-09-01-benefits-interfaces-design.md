@@ -220,9 +220,11 @@ Consumed by `apps/participant-web`.
 
 - Consent cards: grant/revoke via `consent-web-client`, writing under the
   participant's own provisioned CouchDB credentials (§3).
-- Privacy dashboard: current grants, read from the local PouchDB replica
-  directly — no separate read endpoint needed, since replication already
-  keeps a synced local copy.
+- Privacy dashboard: current grants, read from the same in-memory
+  `ParticipantClient` instance the consent screen uses — a single client is
+  constructed once per session and shared across screens, since grant state
+  lives only in that object's own array (phase 5's `Device` design, ported
+  as-is), never in PouchDB. Only contributed records go through PouchDB.
 - Audit viewer: calls the now-authenticated `AuditResource` (§4).
 
 ## 9. apps/participant-mobile (Flutter)

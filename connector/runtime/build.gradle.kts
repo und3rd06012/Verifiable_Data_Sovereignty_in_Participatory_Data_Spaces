@@ -22,6 +22,7 @@ dependencies {
 
     implementation(project(":connector:extensions:benefits-policy"))
     implementation(project(":connector:extensions:benefits-privacy"))
+    implementation(project(":connector:extensions:benefits-audit"))
 }
 
 application {

@@ -1,0 +1,80 @@
+package org.benefits.policy;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Base64;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class CouchDbReplicationProvisionerIntegrationTest {
+
+    private static final String BASE_URL = "http://localhost:5984";
+    private final HttpClient http = HttpClient.newHttpClient();
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    @Test
+    void aDocumentWrittenToTheSourceEventuallyAppearsInTheTarget() throws Exception {
+        var suffix = System.nanoTime();
+        var sourceDb = "replicate-source-test-" + suffix;
+        var targetDb = "replicate-target-test-" + suffix;
+        createDatabase(sourceDb);
+        createDatabase(targetDb);
+
+        new CouchDbReplicationProvisioner(BASE_URL, "admin", "benefits", mapper).ensureReplication(sourceDb, targetDb);
+
+        var docId = "doc-" + suffix;
+        var body = mapper.createObjectNode().put("marker", "replication-test");
+        var put = http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + sourceDb + "/" + docId))
+                .header("authorization", adminAuth()).header("content-type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(body))).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(put.statusCode()).isEqualTo(201);
+
+        assertReplicatedWithin(targetDb, docId, 30);
+    }
+
+    @Test
+    void ensuringReplicationTwiceIsIdempotent() throws Exception {
+        var suffix = System.nanoTime();
+        var sourceDb = "replicate-source-idem-" + suffix;
+        var targetDb = "replicate-target-idem-" + suffix;
+        createDatabase(sourceDb);
+        createDatabase(targetDb);
+        var provisioner = new CouchDbReplicationProvisioner(BASE_URL, "admin", "benefits", mapper);
+
+        provisioner.ensureReplication(sourceDb, targetDb);
+        // The second call must not throw, even though CouchDB rejects the repeat PUT
+        // of the same job document with 409 (no _rev supplied).
+        provisioner.ensureReplication(sourceDb, targetDb);
+    }
+
+    private void assertReplicatedWithin(String targetDb, String docId, int maxAttempts) throws Exception {
+        for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+            var get = http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + targetDb + "/" + docId))
+                    .header("authorization", adminAuth()).GET().build(), HttpResponse.BodyHandlers.ofString());
+            if (get.statusCode() == 200 && get.body().contains("replication-test")) {
+                return;
+            }
+            if (attempt == maxAttempts) {
+                assertThat(get.statusCode()).as("replicated document status after %d attempts", maxAttempts).isEqualTo(200);
+                assertThat(get.body()).contains("replication-test");
+            }
+            Thread.sleep(500);
+        }
+    }
+
+    private void createDatabase(String dbName) throws Exception {
+        http.send(HttpRequest.newBuilder(URI.create(BASE_URL + "/" + dbName))
+                .header("authorization", adminAuth()).PUT(HttpRequest.BodyPublishers.noBody()).build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
+    private String adminAuth() {
+        return "Basic " + Base64.getEncoder().encodeToString("admin:benefits".getBytes());
+    }
+}

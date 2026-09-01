@@ -7,7 +7,7 @@ export async function syncDevice(client: ParticipantClient, remoteUrl: string): 
   const result = await new Promise<{ docs_written: number }>((resolve, reject) => {
     client.localDb().replicate.to(remote).on('complete', resolve).on('error', reject);
   });
-  client.markSent(pending.map((r) => r._id!));
+  await client.markSent(pending.map((r) => r._id!));
   return { pushed: result.docs_written };
 }
 

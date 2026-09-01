@@ -7,13 +7,38 @@ import { createLocalDb } from './pouchdb';
 // the client's point of view. Contributed records go through PouchDB
 // because they are what actually needs an offline queue and eventual
 // replication.
+const SENT_IDS_DOC_ID = '_local/sentIds';
+
+interface SentIdsDoc {
+  _id: string;
+  _rev?: string;
+  ids: string[];
+}
+
 export class ParticipantClient {
   private readonly db: PouchDB.Database;
   private localGrants: ConsentGrant[] = [];
-  private sentIds = new Set<string>();
+  // Loaded from the `_local/sentIds` PouchDB doc on first use (see
+  // loadSentIds()) -- `_local/` documents are excluded from PouchDB/CouchDB
+  // replication, so this survives a page reload (unlike a plain in-memory
+  // field) without ever leaking the sent-marker into the shared database.
+  private sentIdsCache: Set<string> | null = null;
 
   constructor(private readonly participantRef: string) {
     this.db = createLocalDb(`participant-${participantRef}`);
+  }
+
+  private async loadSentIds(): Promise<Set<string>> {
+    if (this.sentIdsCache) {
+      return this.sentIdsCache;
+    }
+    try {
+      const doc = await this.db.get<SentIdsDoc>(SENT_IDS_DOC_ID);
+      this.sentIdsCache = new Set(doc.ids);
+    } catch {
+      this.sentIdsCache = new Set();
+    }
+    return this.sentIdsCache;
   }
 
   async grantConsent(grant: ConsentGrant): Promise<void> {
@@ -52,16 +77,30 @@ export class ParticipantClient {
   }
 
   async unsentRecords(): Promise<ContributionRecord[]> {
+    const sentIds = await this.loadSentIds();
     const result = await this.db.allDocs({ include_docs: true });
     return result.rows
       .map((row) => row.doc as unknown as ContributionRecord)
-      .filter((doc) => doc.type === 'contribution' && !this.sentIds.has(doc._id!));
+      .filter((doc) => doc.type === 'contribution' && !sentIds.has(doc._id!));
   }
 
-  markSent(ids: string[]): void {
-    for (const id of ids) {
-      this.sentIds.add(id);
+  async markSent(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      return;
     }
+    const sentIds = await this.loadSentIds();
+    for (const id of ids) {
+      sentIds.add(id);
+    }
+    // Purely local, single-writer state (never replicated), so a simple
+    // get-then-put is sufficient -- no concurrent writer can race this.
+    let rev: string | undefined;
+    try {
+      rev = (await this.db.get<SentIdsDoc>(SENT_IDS_DOC_ID))._rev;
+    } catch {
+      rev = undefined;
+    }
+    await this.db.put<SentIdsDoc>({ _id: SENT_IDS_DOC_ID, _rev: rev, ids: [...sentIds] });
   }
 
   localDb(): PouchDB.Database {

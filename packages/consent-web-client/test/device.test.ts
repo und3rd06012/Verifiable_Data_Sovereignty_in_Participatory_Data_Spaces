@@ -68,6 +68,24 @@ describe('ParticipantClient', () => {
     expect(await client.unsentRecords()).toEqual([]);
   });
 
+  it('markSent survives a fresh ParticipantClient pointed at the same local db', async () => {
+    await client.contribute({
+      type: 'contribution', participantRef: 'p-001', siteId: 'athens',
+      collectedAt: '2026-08-30T11:00:00.000Z', channel: 'app',
+      declaredPurpose: 'service-improvement', declaredRecipientClass: 'statistics',
+      fields: { 'service.satisfaction': 4 },
+      consent: { participantRef: 'p-001', assertedAt: '2026-08-01T00:00:00.000Z', grants: [grant('service.satisfaction')] }
+    });
+    const [sent] = await client.unsentRecords();
+    await client.markSent([sent._id!]);
+
+    // A fresh instance simulates a page reload: same participantRef, so
+    // the same underlying (idb-backed) local database, but a brand new
+    // in-memory sentIds cache.
+    const reloaded = new ParticipantClient('p-001');
+    expect(await reloaded.unsentRecords()).toEqual([]);
+  });
+
   it('revoke does not sweep a record whose fields do not include the revoked grant', async () => {
     await client.grantConsent(grant('service.satisfaction'));
     await client.grantConsent(grant('service.other'));

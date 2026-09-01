@@ -17,13 +17,15 @@ A directory of shared JSON conformance vectors keeps the two languages
 identical. See `conformance/README.md` for the contract, and
 `docs/decisions-phases-0-2.md` for the decisions taken while building it.
 
-This covers phases 0 through 3 of the implementation plan. Phase 3 adds the
+This covers phases 0 through 6 of the implementation plan. Phase 3 adds the
 privacy pipeline: k-anonymity grouping and suppression, Laplace noise
 calibrated to a per-site epsilon budget, an atomic budget accountant, and
 connector-side enforcement of both `benefits:kAnonymity` and
 `benefits:epsilonBudget` constraints alongside the phase 0-2 consent
-constraints. The audit chain, device fleet, user interfaces and experiments
-are later phases and are not present.
+constraints. Phase 4 adds the audit chain, phase 5 the device fleet, and
+phase 6 the participant and steward user interfaces described in
+"User interfaces (phase 6)" below. Experiments are a later phase and are not
+yet present.
 
 ## Requirements
 
@@ -102,6 +104,32 @@ CouchDB uses 5984. The provider connector uses 19191 to 19196 and 19291 (the
 data plane's public API); the consumer uses 29191 to 29196 and 29291. The
 probe scripts' HTTP sink uses 4000. All must be free before running the
 negotiation suite.
+
+## User interfaces (phase 6)
+
+Three new apps give participants and community stewards direct interfaces
+onto the phases 0-5 machinery described above, instead of exercising it only
+through scripts and tests:
+
+- `apps/participant-web` (React): a participant grants and revokes consent,
+  contributes data, syncs their local PouchDB outbox to the shared CouchDB
+  database, and views their privacy dashboard and audit trail.
+- `apps/participant-mobile` (Flutter): the same participant flows, on
+  mobile, with an offline-first SQLite outbox that syncs when connectivity
+  returns.
+- `apps/steward-portal` (React): a community steward views the
+  release-request queue and can review, co-sign, veto, or appeal a veto on
+  each request, and provisions new participant CouchDB accounts.
+
+The connector gains two new HTTP ports for these apps to talk to: 19198
+(release requests) and 19199 (steward actions). Exercising the
+steward/release-request/persistence-backed flows manually requires four `-D`
+system properties at connector startup; see the comment above
+`benefits.couchdb.url` in `connector/runtime/provider.properties` for the
+exact flag names.
+
+Use `./tools/provision-steward.sh <steward-id> [password]` to create the
+first steward account before using `apps/steward-portal`.
 
 ## Shutting down
 

@@ -83,6 +83,10 @@ public final class ConsentEvaluator {
             if (expiresAt != null && !expiresAt.isNull() && expiresAt.asText().compareTo(nowIso) <= 0) {
                 continue;
             }
+            JsonNode revokedAt = g.get("revokedAt");
+            if (revokedAt != null && !revokedAt.isNull() && revokedAt.asText().compareTo(nowIso) <= 0) {
+                continue;
+            }
             return true;
         }
         return false;

@@ -31,7 +31,7 @@ export function Queue({ session }: { session: Session }) {
 
   useEffect(() => { load(); }, []);
 
-  async function act(requestId: string, action: 'co-sign' | 'veto', body: Record<string, unknown>) {
+  async function act(requestId: string, action: 'co-sign' | 'veto' | 'review' | 'appeal', body: Record<string, unknown>) {
     await fetch(`${STEWARD_API_BASE_URL}/${encodeURIComponent(requestId)}/${action}`, {
       method: 'POST',
       headers: { authorization: authHeader(session), 'content-type': 'application/json' },
@@ -58,6 +58,36 @@ export function Queue({ session }: { session: Session }) {
             <button onClick={() => act(entry.request.releaseRequestId, 'veto', { datasetHash: 'hash-' + entry.request.releaseRequestId, reason: 'needs revision' })}>
               Veto
             </button>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const rubricScore = Number(formData.get('rubricScore'));
+              const notes = String(formData.get('notes') ?? '');
+              act(entry.request.releaseRequestId, 'review', { datasetHash: 'hash-' + entry.request.releaseRequestId, rubricScore, notes });
+              e.currentTarget.reset();
+            }}>
+              <input name="rubricScore" type="number" placeholder="score" required />
+              <input name="notes" type="text" placeholder="notes" required />
+              <button type="submit">Review</button>
+            </form>
+            {entry.authorization && entry.authorization.vetoes.length > 0 && (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const vetoStewardId = String(formData.get('vetoStewardId') ?? '');
+                const reason = String(formData.get('reason') ?? '');
+                act(entry.request.releaseRequestId, 'appeal', { vetoStewardId, reason });
+                e.currentTarget.reset();
+              }}>
+                <select name="vetoStewardId" required>
+                  {entry.authorization.vetoes.map((veto) => (
+                    <option key={veto.stewardId} value={veto.stewardId}>{veto.stewardId} ({veto.reason})</option>
+                  ))}
+                </select>
+                <input name="reason" type="text" placeholder="appeal reason" required />
+                <button type="submit">Appeal</button>
+              </form>
+            )}
           </li>
         ))}
       </ul>

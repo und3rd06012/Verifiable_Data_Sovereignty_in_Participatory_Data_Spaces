@@ -14,7 +14,7 @@ export function ConsentCards({ session, client }: { session: Session; client: Pa
 
   const remoteUrl = COUCHDB_BASE_URL.replace(
     '://', `://${encodeURIComponent(session.participantRef)}:${encodeURIComponent(session.password)}@`
-  ) + '/participant-' + session.participantRef;
+  ) + '/participant-' + encodeURIComponent(session.participantRef);
 
   async function grant(field: string, purpose: string, recipientClass: 'community' | 'provider' | 'statistics') {
     await client.grantConsent({

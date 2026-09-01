@@ -1,0 +1,23 @@
+{
+  "name": "@benefits/participant-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "test": "echo \"no unit tests in this app; see Gate 4 manual click-through\" && exit 0"
+  },
+  "dependencies": {
+    "@benefits/consent-web-client": "0.1.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.2.2",
+    "typescript": "5.7.2"
+  }
+}

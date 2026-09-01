@@ -94,9 +94,10 @@ In `connector/runtime/provider.properties`, add after the `signaling` context bl
 ```properties
 web.http.audit.port=19197
 web.http.audit.path=/audit
+benefits.audit.enabled=true
 ```
 
-This follows the existing `web.http.<name>.port` / `web.http.<name>.path` pattern already used for `management`, `protocol`, `control`, `signaling`, and `public` in this same file. The consumer connector does not need this context; only the provider (the community connector, per the parent spec's tier diagram) accumulates and serves audit entries.
+This follows the existing `web.http.<name>.port` / `web.http.<name>.path` pattern already used for `management`, `protocol`, `control`, `signaling`, and `public` in this same file. `benefits.audit.enabled` is a new flag this phase introduces: both connectors boot off the same `connector.jar` and therefore load `BenefitsAuditExtension` regardless of which properties file started them, but only the provider (the community connector, per the parent spec's tier diagram) accumulates and serves audit entries — the consumer has no `web.http.audit.*` context configured at all, so the extension must not attempt to connect to CouchDB or register a web resource unless this flag is present and true. Task 6 reads it and no-ops otherwise. `consumer.properties` is deliberately left unchanged — its absence there means disabled, matching this file's own precedent of `benefits.requester.*` being consumer-only config with no equivalent key on the provider side.
 
 - [ ] **Step 5: Add a probe event subscriber**
 
@@ -185,12 +186,18 @@ public class BenefitsAuditExtension implements ServiceExtension {
     @Override
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
+        if (!Boolean.parseBoolean(context.getSetting("benefits.audit.enabled", "false"))) {
+            monitor.info("BENEFITS audit chain disabled (benefits.audit.enabled not set) — skipping");
+            return;
+        }
         eventRouter.register(org.eclipse.edc.spi.event.Event.class, new ProbeEventSubscriber(monitor));
         webService.registerResource("audit", new ProbeAuditResource());
         monitor.info("BENEFITS audit chain: gate 0 probes registered");
     }
 }
 ```
+
+The probe reads the same `benefits.audit.enabled` flag Step 4 adds to `provider.properties` only, and does nothing on the consumer: both connectors boot the same `connector.jar` and therefore load this extension, but `consumer.properties` has no `web.http.audit.*` context configured, so attempting to register a web resource there is exactly the kind of thing that should not be attempted rather than discovered as a startup failure. This mirrors the same gate Task 6 applies to the real extension, applied here first since Task 1's probe script also starts a consumer connector.
 
 If `EventRouter.register` does not accept `Event.class` as a wildcard registration for every event type (it may require one call per concrete event class, e.g. `eventRouter.register(ContractNegotiationFinalized.class, subscriber)`), register the subscriber once per one of the four concrete event classes named in the spec instead, and record which form compiles. If `webService.registerResource(String, Object)` does not match this signature, inspect `org.eclipse.edc.web.spi.WebService` (same jar as `WebServer`, extracted in the probe above) for the real one — EDC's own management-api module is the reference implementation for this registration pattern and is present on the build classpath transitively through `controlplane-base-bom`, so its source can be decompiled with `javap -p` for a working example if the obvious signature does not compile.
 
@@ -1210,7 +1217,33 @@ public class CouchDbAuditStore implements AuditStore {
         this.database = database;
         this.authorization = "Basic " + Base64.getEncoder().encodeToString((user + ":" + password).getBytes());
         this.mapper = mapper;
+        ensureDatabaseExists();
         this.seqCounter = new AtomicLong(loadMaxSeq() + 1);
+    }
+
+    /**
+     * Unlike CouchDbContributionSource in phase 3, this store is wired directly into a
+     * live connector's startup path (BenefitsAuditExtension, Task 6) and exercised by a
+     * real connector process (Task 10's end-to-end probe) — phase 3's CouchDB reader
+     * never was. Nothing else creates the database first, so this store creates its
+     * own, idempotently: 201 means it just did, 412 means another process already did
+     * (both are success), anything else is a real failure.
+     */
+    private void ensureDatabaseExists() {
+        try {
+            var request = HttpRequest.newBuilder(URI.create(baseUrl + "/" + database))
+                    .header("authorization", authorization).PUT(HttpRequest.BodyPublishers.noBody()).build();
+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 201 && response.statusCode() != 412) {
+                throw new EdcException("failed to create CouchDB database " + database
+                        + ", status " + response.statusCode() + ": " + response.body());
+            }
+        } catch (IOException e) {
+            throw new EdcException("failed to create CouchDB database " + database, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new EdcException("interrupted creating CouchDB database " + database, e);
+        }
     }
 
     @Override
@@ -1454,11 +1487,14 @@ git commit -m "Add CouchDB-backed AuditStore with crash-resumable epoch sealing"
 - Create: `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/PolicyPurpose.java`
 - Delete: `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeEventSubscriber.java`
 - Delete: `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeAuditResource.java`
+- Modify: `tools/lib.sh`
 - Test: `connector/extensions/benefits-audit/src/test/java/org/benefits/audit/BenefitsAuditEventListenerTest.java`
 
 **Interfaces:**
 - Consumes: `EpochSealer.record` (Task 4); `BenefitsNamespace.PURPOSE_KEY`, `Constraints.siblingLiteral` (`benefits-policy`, phase 2); the real accessor names confirmed in Task 1's gate 0 report for `ContractNegotiationFinalized`, `ContractNegotiationTerminated`, `TransferProcessCompleted`, `TransferProcessTerminated`.
 - Produces: `BenefitsAuditEventListener` registered against `EventRouter` for the four confirmed event classes (or, if Task 1 found `EventRouter.register` requires the wildcard `Event.class` form instead, adapt this task's registration to match — the mapping logic inside the listener is the same either way, only `instanceof` branches replace four separate `register` calls).
+
+**Read this before writing `onTerminated`:** Task 1's gate 0 probe found that `ContractNegotiationTerminated` does not fire for a policy-refused negotiation — EDC 0.18.0 rejects that case synchronously, before any `ContractNegotiation` entity exists, so there is no entity for the event system to fire against. This event only ever represents a negotiation that was already admitted and later terminated (an explicit management-API termination, or a post-admission lifecycle failure). Spec section 2.2 has the full finding and the empirical evidence. The code below already reflects this in its `plainLanguage` wording and doc comment — do not revert it to language implying this event covers a policy refusal.
 
 - [ ] **Step 1: Write PolicyPurpose**
 
@@ -1623,12 +1659,21 @@ import org.eclipse.edc.connector.controlplane.transfer.spi.event.TransferProcess
 import java.time.Instant;
 
 /**
- * Maps the four EDC event types the parent spec names (section 3.1's "every
- * negotiation, policy decision, and transfer") into AuditEntry and hands each to
- * EpochSealer. TransferProcessEvent carries no counter-party or policy accessor
- * (confirmed by inspecting the compiled class directly), so a transfer entry
- * correlates its actor and statedPurpose from the prior negotiation entry recorded
- * for the same asset, per spec section 6.
+ * Maps four EDC event types into AuditEntry and hands each to EpochSealer.
+ * TransferProcessEvent carries no counter-party or policy accessor (confirmed by
+ * inspecting the compiled class directly), so a transfer entry correlates its actor
+ * and statedPurpose from the prior negotiation entry recorded for the same asset,
+ * per spec section 6.
+ * <p>
+ * ContractNegotiationTerminated does NOT cover a policy-refused negotiation (spec
+ * section 2.2): EDC 0.18.0 rejects an offer that fails ODRL constraint evaluation
+ * synchronously, before any ContractNegotiation entity exists, so no event of any
+ * kind fires for that case. This handler only ever sees a negotiation that was
+ * already admitted into the provider's state machine and later terminated (an
+ * explicit management-API termination, or a post-admission lifecycle failure) —
+ * never a k-anonymity, epsilon-budget, steward-quorum, purpose, or recipient-class
+ * refusal at initial offer validation. Do not describe this entry's plainLanguage as
+ * a "refusal" in a way that implies it covers that case.
  */
 public class BenefitsAuditEventListener {
 
@@ -1651,7 +1696,7 @@ public class BenefitsAuditEventListener {
         var purpose = offer == null ? "unknown" : PolicyPurpose.extract(offer.getPolicy());
         sealer.record(new AuditEntry(-1, null, Instant.now().toString(), "negotiation-terminated",
                 event.getCounterPartyId(), assetId, purpose,
-                "release request refused for asset " + assetId));
+                "negotiation for asset " + assetId + " was admitted and later terminated"));
     }
 
     public void onTransferCompleted(TransferProcessCompleted event) {
@@ -1749,6 +1794,8 @@ import org.eclipse.edc.spi.event.EventSubscriber;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.web.spi.WebService;
+import org.eclipse.edc.web.spi.configuration.PortMapping;
+import org.eclipse.edc.web.spi.configuration.PortMappingRegistry;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -1758,6 +1805,8 @@ public class BenefitsAuditExtension implements ServiceExtension {
     private EventRouter eventRouter;
     @Inject
     private WebService webService;
+    @Inject
+    private PortMappingRegistry portMappingRegistry;
 
     @Override
     public String name() {
@@ -1767,6 +1816,10 @@ public class BenefitsAuditExtension implements ServiceExtension {
     @Override
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
+        if (!Boolean.parseBoolean(context.getSetting("benefits.audit.enabled", "false"))) {
+            monitor.info("BENEFITS audit chain disabled (benefits.audit.enabled not set) — skipping");
+            return;
+        }
         var epochSize = Integer.parseInt(context.getSetting("benefits.audit.epochSize", "50"));
         var store = buildStore(context);
         var sealer = new EpochSealer(store, epochSize);
@@ -1777,6 +1830,16 @@ public class BenefitsAuditExtension implements ServiceExtension {
         eventRouter.register(TransferProcessCompleted.class, envelopeSubscriber(listener::onTransferCompleted));
         eventRouter.register(TransferProcessTerminated.class, envelopeSubscriber(listener::onTransferTerminated));
 
+        // Task 1's gate 0 probe found this is required: JettyExtension only
+        // auto-registers the default (unnamed) web.http.port context. Every other
+        // named context (management, protocol, ...) has its own configuration
+        // extension elsewhere in the EDC BOM that does this same call before
+        // registerResource; "audit" is a brand-new context name with no such
+        // extension, so this extension must register its own PortMapping or the
+        // provider fails to boot with "No PortMapping for contextName 'audit' found".
+        var port = context.getSetting("web.http.audit.port", 19197);
+        var path = context.getSetting("web.http.audit.path", "/audit");
+        portMappingRegistry.register(new PortMapping("audit", port, path));
         webService.registerResource("audit", new AuditResource(store));
         monitor.info("BENEFITS audit chain registered, epochSize=" + epochSize);
     }
@@ -1789,14 +1852,24 @@ public class BenefitsAuditExtension implements ServiceExtension {
         return new CouchDbAuditStore(url, database, user, password, new ObjectMapper());
     }
 
-    @SuppressWarnings("unchecked")
     private <T extends Event> EventSubscriber envelopeSubscriber(java.util.function.Consumer<T> handler) {
-        return envelope -> handler.accept((T) envelope.getPayload());
+        // EventSubscriber.on is confirmed (Task 1's gate 0 report) to be a generic
+        // method — <E extends Event> void on(EventEnvelope<E>) — not a method taking
+        // a wildcarded parameter. A lambda expression cannot implement an interface
+        // method that declares its own type parameter (there is no lambda syntax for
+        // <E>), so this must be an anonymous class, not `envelope -> ...`.
+        return new EventSubscriber() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <E extends Event> void on(EventEnvelope<E> envelope) {
+                handler.accept((T) envelope.getPayload());
+            }
+        };
     }
 }
 ```
 
-If Task 1's gate 0 report found a different `EventSubscriber.on` signature than the `EventEnvelope<? extends Event>` form assumed above, adjust `envelopeSubscriber`'s lambda shape to match — the four `register` calls and the `listener::onXxx` method references stay the same either way.
+`EventRouter.register(Class<E>, EventSubscriber)` was verified directly against `EventRouterImpl`'s bytecode (`~/.gradle/caches/.../org.eclipse.edc/runtime-core/0.18.0/`) to filter delivery by `registeredClass.isAssignableFrom(envelope.getPayload().getClass())` before invoking each subscriber — so each of the four `register` calls above only ever delivers its own event type to its own `envelopeSubscriber`, and the unchecked cast inside it is sound. This was checked because Task 1's report only confirmed the wildcard `register(Event.class, ...)` form (which matches everything); registering four subscribers under four different specific classes and trusting each to receive only its own type was not directly probed, so it was verified here instead of assumed.
 
 The `benefits-audit` database name is `<benefits.couchdb.database>-audit` (default `benefits-audit`), kept separate from the `benefits` database phase 3's `CouchDbContributionSource` reads contribution records from, since audit documents (`auditEntry`, `auditEpoch`) are a different concern than contribution records (`contribution`) and mixing them would make every Mango query in both stores need an extra `type` filter to avoid cross-contamination — they already have one, so this is a defense-in-depth separation, not a strict necessity, but it costs nothing.
 
@@ -1817,12 +1890,49 @@ class AuditResource {
 
 and let Task 7 replace it with the real implementation.
 
-- [ ] **Step 8: Compile and run the full module test suite**
+- [ ] **Step 8: Make the shared connector-starting tooling ensure CouchDB is running**
+
+From this task onward, the provider connector cannot boot at all without CouchDB reachable — `CouchDbAuditStore`'s constructor (Task 5) connects immediately. Phases 0-3's own scripts (`tools/run-case.sh`, `probe-transfer.sh`, `probe-aggregate-transfer.sh`, and this phase's own probes) all start connectors through the single shared `start_connector` function in `tools/lib.sh`, so fixing it there once, rather than in every script, is what keeps this from silently breaking every existing test in the repo the next time any of them runs on this branch.
+
+In `tools/lib.sh`, add this function above `start_connector`:
+
+```bash
+# From benefits-audit onward, a booting connector needs CouchDB reachable
+# (CouchDbAuditStore connects at construction time). Every script that starts
+# a connector goes through start_connector below, so this lives here once
+# rather than being repeated in every script.
+ensure_couchdb() {
+  if curl -sf http://localhost:5984 >/dev/null 2>&1; then
+    return 0
+  fi
+  (cd "$ROOT" && docker compose -f deploy/docker-compose.yml up -d couchdb) >/dev/null
+  for _ in $(seq 1 30); do
+    curl -sf http://localhost:5984 >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+  echo "CouchDB did not become reachable at localhost:5984" >&2
+  return 1
+}
+```
+
+Then change the first line of `start_connector`'s body to call it:
+
+```bash
+start_connector() {
+  ensure_couchdb || return 1
+  local name=$1 config=$2 mgmt_port=$3
+```
+
+This runs for both the provider and the consumer even though only the provider actually uses CouchDB (Step 4's `benefits.audit.enabled` flag keeps the consumer's copy of the extension a no-op) — a single reachability check is cheap, and keeping `start_connector` unconditional is simpler than threading "does this specific properties file need CouchDB" through every caller.
+
+Run: `./tools/probe-audit-events.sh` again (Task 1's gate 0 probe) to confirm `ensure_couchdb` does not break it — it should still pass exactly as it did in Task 1, since that probe's own `BenefitsAuditExtension` copy has been replaced by this task's real one, which still honors `benefits.audit.enabled` on the provider.
+
+- [ ] **Step 9: Compile and run the full module test suite**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test`
 Expected: PASS (compilation succeeds once the placeholder or real `AuditResource` from the note above exists).
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
 git add connector/extensions/benefits-audit/src/main/java/org/benefits/audit/BenefitsAuditEventListener.java \
@@ -1832,6 +1942,7 @@ git add connector/extensions/benefits-audit/src/main/java/org/benefits/audit/Ben
   connector/extensions/benefits-audit/src/main/java/org/benefits/audit/InMemoryAuditStore.java \
   connector/extensions/benefits-audit/src/main/java/org/benefits/audit/CouchDbAuditStore.java \
   connector/extensions/benefits-audit/src/main/java/org/benefits/audit/EpochSealer.java \
+  connector/runtime/provider.properties tools/lib.sh \
   connector/extensions/benefits-audit/src/test/java/org/benefits/audit/BenefitsAuditEventListenerTest.java
 git rm connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeEventSubscriber.java \
   connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeAuditResource.java

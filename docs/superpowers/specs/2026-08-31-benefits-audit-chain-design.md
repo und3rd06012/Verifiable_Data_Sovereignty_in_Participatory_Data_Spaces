@@ -40,8 +40,11 @@ A new EDC extension, `connector/extensions/benefits-audit` (package
 
 - `ContractNegotiationFinalized` — a release request cleared every ODRL
   gate (steward quorum, k-anonymity, epsilon budget) and both parties agreed.
-- `ContractNegotiationTerminated` — a release request was refused at any
-  gate.
+- `ContractNegotiationTerminated` — a negotiation that had already been
+  admitted into the provider's own state machine was later terminated
+  (either through the management API's explicit terminate operation, or a
+  post-admission failure in the negotiation lifecycle). This is narrower
+  than it sounds; see section 2.2.
 - `TransferProcessCompleted` — anonymised bytes were actually delivered.
 - `TransferProcessTerminated` — a transfer was started but did not finish.
 
@@ -61,6 +64,63 @@ own event stream proves happened. Section 3.1's third publishable idea is
 specifically that this log is stronger evidence than an application-written
 one; an event-subscriber extension is the only placement that keeps that
 claim true.
+
+### 2.2 A disclosed limitation: policy-refused negotiations are invisible to this audit chain
+
+Task 1's gate 0 probe (phase 4's implementation) found that EDC 0.18.0
+rejects an offer whose policy fails ODRL constraint evaluation — including
+every one of `benefits-policy`'s functions: `PurposeFunction`,
+`RecipientClassFunction`, `FieldSetFunction`, `StewardQuorumFunction`, and
+`benefits-privacy`'s `KAnonymityFunction`/`EpsilonBudgetFunction`, since all
+six evaluate in the same `NEGOTIATION_SCOPE` pass — synchronously, inside
+the HTTP handler for the DSP negotiation-request endpoint, before a
+`ContractNegotiation` entity is ever persisted on the provider side. No
+entity means no state machine, and no state machine means `EventRouter`
+never fires for the rejection: not `ContractNegotiationRequested`, not
+`ContractNegotiationTerminated`. Confirmed empirically (not inferred): a
+real refused negotiation, forced against a running provider, produced a 400
+response body ("Policy in scope contract.negotiation not fulfilled:
+[Permission constraints: ...]") with zero corresponding lines in the
+provider's event log, while an unrelated negotiation admitted normally and
+terminated afterward through the management API's explicit `terminate`
+operation produced `ContractNegotiationTerminated` exactly as expected.
+
+**The consequence stated plainly:** every refusal case in the C1 suite
+(`quorum-missing`, `quorum-one-steward-twice`, `purpose-mismatch`,
+`recipient-class-mismatch`, `field-outside-grant`,
+`expired-grant-field-excluded`, `k-below-threshold`, `budget-exceeded`) is
+invisible to this audit chain as scoped. This is the entire class of
+"policy decision" this project's steward-quorum, k-anonymity, and
+epsilon-budget machinery exists to make — and it is exactly the class the
+parent spec's section 3.1 implies is audited when it says the connector
+"subscribes to EDC events for every negotiation, policy decision, and
+transfer." That claim does not hold as originally written; the parent spec
+is amended alongside this one (its own section 3.1, 4.5.1-style amendment)
+to state the boundary precisely.
+
+This is scoped narrowly on purpose. A negotiation that clears initial offer
+validation and is terminated afterward — a genuine post-admission
+termination, or an operator's explicit management-API termination — is
+still audited; only refusal *at the initial offer-validation gate* is
+invisible. A future policy re-evaluation elsewhere in a negotiation's
+lifecycle, if EDC 0.18.0 has one, is not covered by this finding and is not
+assumed invisible.
+
+**Why this is disclosed rather than engineered around.** The cheapest
+apparent fix, recording a refusal from inside the constraint function
+itself the moment it returns `false`, was considered and rejected: a
+constraint function choosing to write its own refusal into the audit log is
+exactly the "application asserts about itself" pattern section 2.1 already
+rejected for a different mechanism. It would convert the one thing this
+audit chain is supposed to prove, that entries reflect what the connector's
+own event stream recorded rather than what a component chose to self-report,
+into something weaker than the parent spec's stated ambition, for the sake
+of covering a gap that formed after the ambition was written down. An
+audit chain that quietly claims full coverage while narrowing what it can
+actually see is worse than one that draws its boundary honestly; disclosing
+the gap here, in the same place phase 3 disclosed that k-anonymity
+suppression is not itself differentially private, keeps that same honesty
+bar.
 
 ## 3. Hash construction
 

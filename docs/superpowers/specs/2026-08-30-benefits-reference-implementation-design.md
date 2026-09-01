@@ -168,12 +168,53 @@ other dataspace policy.
 extension subscribes to EDC events for every negotiation, policy
 decision, and transfer, and commits them to the audit structure. The
 log therefore records what the connector actually did. An audit log the
-application writes about itself is weaker evidence.
+application writes about itself is weaker evidence. **This claim is
+narrower than written here; see section 3.1.1, established in phase 4.**
 
 Shamir secret sharing over the payload content key is retained as a
 second lock on release, because a policy engine the operator runs is
 not the same as cryptographic impossibility, and that difference is
 what a skeptical reviewer will press on.
+
+### 3.1.1 What Phase 4 established about event coverage
+
+The claim above, "every negotiation, policy decision, and transfer," was
+written before any EDC event was ever observed firing. Phase 4's gate 0
+probe found it does not hold for one entire class of policy decision: a
+negotiation offer that fails ODRL constraint evaluation (steward quorum,
+purpose, recipient class, field set, k-anonymity, or epsilon budget) is
+rejected by EDC 0.18.0 synchronously, inside the DSP protocol handler,
+before a `ContractNegotiation` entity is created. No entity means no
+state machine transition, and EDC's event system only fires from state
+machine transitions — so `EventRouter` never publishes anything for that
+rejection. Confirmed empirically: a real policy-refused negotiation,
+forced against a running provider, produced a 400 response and zero
+corresponding lines in the provider's event log.
+
+**The audit log therefore does not cover the C1 suite's refusal cases** —
+`quorum-missing`, `quorum-one-steward-twice`, `purpose-mismatch`,
+`recipient-class-mismatch`, `field-outside-grant`,
+`expired-grant-field-excluded`, `k-below-threshold`, `budget-exceeded` —
+which is precisely the "policy decision" this project's steward-quorum,
+k-anonymity, and epsilon-budget machinery exists to make. What the audit
+log does cover: every negotiation admitted into the provider's state
+machine (successful or later terminated) and every transfer attempt.
+
+A cheaper fix was considered and rejected: having a constraint function
+record its own refusal into the audit log the moment it returns `false`.
+That would restore coverage at the cost of the very property this
+section's claim depends on — the log would then contain entries an
+application component chose to self-report, not entries the connector's
+own event stream independently proves happened, for exactly the
+refusal cases where independent proof matters most. Phase 4's own design
+spec (`docs/superpowers/specs/2026-08-31-benefits-audit-chain-design.md`,
+section 2.2) has the full finding, the rejected alternative, and the
+precise boundary (a negotiation terminated after admission is still
+audited; only refusal at initial offer validation is not).
+
+This is a manuscript-relevant correction: any description of the audit
+chain's coverage must state the boundary above, not the "every... policy
+decision" claim as originally written.
 
 ## 4. Data model
 

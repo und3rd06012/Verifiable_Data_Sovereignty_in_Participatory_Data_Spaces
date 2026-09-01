@@ -63,11 +63,14 @@ ensure_couchdb() {
 }
 
 # CouchDB's own CORS (separate from the connector's; apps/participant-web syncs
-# PouchDB directly to CouchDB from the browser, a different origin than the connector)
-# and the shared "benefits" database, which nothing else in this repo creates. Both PUTs
-# are idempotent: CouchDB's config API accepts a repeat PUT of the same value, and a
-# repeat database creation returns 412 Precondition Failed, treated as success here
-# (same 2xx/4xx-both-success idempotency pattern as provision-steward.sh's 201/409).
+# PouchDB directly to CouchDB from the browser, a different origin than the connector),
+# the shared "benefits" database, and the "_users" system database, none of which
+# anything else in this repo creates. All PUTs are idempotent: CouchDB's config API
+# accepts a repeat PUT of the same value, and a repeat database creation returns 412
+# Precondition Failed, treated as success here (same 2xx/4xx-both-success idempotency
+# pattern as provision-steward.sh's 201/409). "_users" must exist before any steward can
+# be provisioned or authenticated (provision-steward.sh and CouchDbStewardAuthenticator
+# both write to / read from it), so a fresh environment fails those flows until it does.
 configure_couchdb() {
   local admin_user=${COUCHDB_ADMIN_USER:-admin}
   local admin_password=${COUCHDB_ADMIN_PASSWORD:-benefits}
@@ -80,6 +83,11 @@ configure_couchdb() {
   status=$(curl -s -o /dev/null -w "%{http_code}" -u "$admin_user:$admin_password" -X PUT http://localhost:5984/benefits)
   if [ "$status" != "201" ] && [ "$status" != "412" ]; then
     echo "failed to create benefits database: HTTP $status" >&2
+    return 1
+  fi
+  status=$(curl -s -o /dev/null -w "%{http_code}" -u "$admin_user:$admin_password" -X PUT http://localhost:5984/_users)
+  if [ "$status" != "201" ] && [ "$status" != "412" ]; then
+    echo "failed to create _users database: HTTP $status" >&2
     return 1
   fi
 }

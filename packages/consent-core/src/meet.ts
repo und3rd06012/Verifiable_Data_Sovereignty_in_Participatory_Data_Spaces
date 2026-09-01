@@ -12,7 +12,8 @@ export function meet(a: ConsentGrant[], b: ConsentGrant[]): ConsentGrant[] {
           purpose: x.purpose,
           recipientClass: x.recipientClass,
           grantedAt: x.grantedAt > y.grantedAt ? x.grantedAt : y.grantedAt,
-          expiresAt: earliest(x.expiresAt, y.expiresAt)
+          expiresAt: earliest(x.expiresAt, y.expiresAt),
+          revokedAt: earliest(x.revokedAt, y.revokedAt)
         });
       }
     }

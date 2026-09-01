@@ -51,6 +51,7 @@ function hasGrant(
     if (g.recipientClass !== recipientClass) { continue; }
     if (g.grantedAt > nowIso) { continue; }
     if (g.expiresAt !== null && g.expiresAt <= nowIso) { continue; }
+    if (g.revokedAt !== null && g.revokedAt <= nowIso) { continue; }
     return true;
   }
   return false;

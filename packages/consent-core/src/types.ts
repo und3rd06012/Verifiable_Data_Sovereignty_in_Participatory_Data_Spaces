@@ -8,6 +8,7 @@ export interface ConsentGrant {
   recipientClass: RecipientClass;
   grantedAt: string;
   expiresAt: string | null;
+  revokedAt: string | null;
 }
 
 export interface ConsentAssertion {

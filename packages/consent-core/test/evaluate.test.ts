@@ -21,7 +21,8 @@ function record(overrides: Partial<ContributionRecord> = {}): ContributionRecord
           purpose: 'service-improvement',
           recipientClass: 'statistics',
           grantedAt: '2026-08-01T00:00:00.000Z',
-          expiresAt: null
+          expiresAt: null,
+          revokedAt: null
         }
       ]
     },
@@ -39,6 +40,18 @@ describe('evaluateRecord boundaries', () => {
   it('allows one millisecond before expiry', () => {
     const r = record();
     r.consent.grants[0].expiresAt = '2026-08-30T12:00:00.001Z';
+    expect(evaluateRecord(r, '2026-08-30T12:00:00.000Z').allowed).toBe(true);
+  });
+
+  it('treats revocation as exclusive at the exact instant', () => {
+    const r = record();
+    r.consent.grants[0].revokedAt = '2026-08-30T12:00:00.000Z';
+    expect(evaluateRecord(r, '2026-08-30T12:00:00.000Z').allowed).toBe(false);
+  });
+
+  it('allows one millisecond before revocation takes effect', () => {
+    const r = record();
+    r.consent.grants[0].revokedAt = '2026-08-30T12:00:00.001Z';
     expect(evaluateRecord(r, '2026-08-30T12:00:00.000Z').allowed).toBe(true);
   });
 

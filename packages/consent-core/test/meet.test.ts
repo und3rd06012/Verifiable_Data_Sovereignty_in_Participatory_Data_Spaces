@@ -2,8 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { meet, meetAll } from '../src/meet';
 import { ConsentGrant } from '../src/types';
 
-function grant(field: string, expiresAt: string | null = null, grantedAt = '2026-08-01T00:00:00.000Z'): ConsentGrant {
-  return { field, purpose: 'service-improvement', recipientClass: 'statistics', grantedAt, expiresAt };
+function grant(
+  field: string,
+  expiresAt: string | null = null,
+  grantedAt = '2026-08-01T00:00:00.000Z',
+  revokedAt: string | null = null
+): ConsentGrant {
+  return { field, purpose: 'service-improvement', recipientClass: 'statistics', grantedAt, expiresAt, revokedAt };
 }
 
 describe('meet', () => {
@@ -28,6 +33,14 @@ describe('meet', () => {
       [grant('a', null, '2026-09-01T00:00:00.000Z')]
     );
     expect(result[0].grantedAt).toBe('2026-09-01T00:00:00.000Z');
+  });
+
+  it('takes the earliest revocation', () => {
+    const result = meet(
+      [grant('a', null, '2026-08-01T00:00:00.000Z', '2026-12-01T00:00:00.000Z')],
+      [grant('a', null, '2026-08-01T00:00:00.000Z', '2026-10-01T00:00:00.000Z')]
+    );
+    expect(result[0].revokedAt).toBe('2026-10-01T00:00:00.000Z');
   });
 
   it('does not match across differing purpose', () => {

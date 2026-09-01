@@ -22,13 +22,27 @@ export class Device {
     return this.localGrants;
   }
 
-  async revoke(field: string, purpose: string, recipientClass: string, atIso: string): Promise<void> {
+  async revoke(
+    field: string, purpose: string, recipientClass: string, atIso: string
+  ): Promise<{ sweptCount: number }> {
     const grant = this.localGrants.find(
       (g) => g.field === field && g.purpose === purpose && g.recipientClass === recipientClass
     );
     if (grant) {
       grant.revokedAt = atIso;
     }
+
+    const unsent = await this.unsentRecords();
+    let sweptCount = 0;
+    for (const record of unsent) {
+      if (Object.prototype.hasOwnProperty.call(record.fields, field)
+          && record.declaredPurpose === purpose
+          && record.declaredRecipientClass === recipientClass) {
+        await this.db.remove(record._id!, record._rev!);
+        sweptCount++;
+      }
+    }
+    return { sweptCount };
   }
 
   async contribute(record: Omit<ContributionRecord, '_id'>): Promise<void> {

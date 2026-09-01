@@ -5,6 +5,7 @@
   "main": "dist/build-design-doc.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "export-design-doc": "npm run build && node scripts/export-design-doc.mjs",
     "test": "vitest run",
     "test:integration": "vitest run test/couchdb.integration.test.ts"
   },

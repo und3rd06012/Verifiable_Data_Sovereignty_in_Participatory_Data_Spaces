@@ -1649,7 +1649,7 @@ class BenefitsAuditEventListenerTest {
     }
 
     @Test
-    void transferCompletedCorrelatesActorAndPurposeFromThePriorNegotiationEntry() {
+    void transferCompletedCorrelatesActorAndPurposeByContractId() {
         var store = new InMemoryAuditStore();
         var sealer = new EpochSealer(store, 100);
         var listener = new BenefitsAuditEventListener(sealer);
@@ -1675,6 +1675,47 @@ class BenefitsAuditEventListenerTest {
         assertThat(transferEntry.statedPurpose()).isEqualTo("statistics");
         assertThat(transferEntry.datasetRef()).isEqualTo("asset-3");
     }
+
+    @Test
+    void transferCorrelatesByItsOwnAgreementEvenWhenTheSameAssetWasNegotiatedTwice() {
+        var store = new InMemoryAuditStore();
+        var sealer = new EpochSealer(store, 100);
+        var listener = new BenefitsAuditEventListener(sealer);
+
+        var firstAgreement = ContractAgreement.Builder.newInstance()
+                .id("agreement-first").providerId("provider").consumerId("consumer")
+                .assetId("shared-asset").policy(policyWithPurpose("advocacy"))
+                .build();
+        listener.onFinalized(ContractNegotiationFinalized.Builder.newInstance()
+                .contractNegotiationId("neg-first").counterPartyId("participant-first")
+                .counterPartyAddress("http://x").protocol("dataspace-protocol-http:2025-1")
+                .contractAgreement(firstAgreement).build());
+
+        var secondAgreement = ContractAgreement.Builder.newInstance()
+                .id("agreement-second").providerId("provider").consumerId("consumer")
+                .assetId("shared-asset").policy(policyWithPurpose("statistics"))
+                .build();
+        listener.onFinalized(ContractNegotiationFinalized.Builder.newInstance()
+                .contractNegotiationId("neg-second").counterPartyId("participant-second")
+                .counterPartyAddress("http://x").protocol("dataspace-protocol-http:2025-1")
+                .contractAgreement(secondAgreement).build());
+
+        // The transfer belongs to the FIRST negotiation's agreement, even though the
+        // SECOND negotiation (for the same asset) is more recent -- proving
+        // correlation is keyed by agreement id, not "most recent entry for this
+        // asset" (the bug Task 6's reviewer found in the original design).
+        var transferEvent = TransferProcessCompleted.Builder.newInstance()
+                .transferProcessId("tp-shared").assetId("shared-asset").type("PUSH").contractId("agreement-first")
+                .build();
+        listener.onTransferCompleted(transferEvent);
+
+        var transferEntry = store.entriesFor("participant-first").stream()
+                .filter(e -> "transfer-completed".equals(e.eventType())).findFirst().orElseThrow();
+        assertThat(transferEntry.actor()).isEqualTo("participant-first");
+        assertThat(transferEntry.statedPurpose()).isEqualTo("advocacy");
+        assertThat(store.entriesFor("participant-second"))
+                .noneMatch(e -> "transfer-completed".equals(e.eventType()));
+    }
 }
 ```
 
@@ -1698,13 +1739,20 @@ import org.eclipse.edc.connector.controlplane.transfer.spi.event.TransferProcess
 import org.eclipse.edc.connector.controlplane.transfer.spi.event.TransferProcessTerminated;
 
 import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Maps four EDC event types into AuditEntry and hands each to EpochSealer.
  * TransferProcessEvent carries no counter-party or policy accessor (confirmed by
  * inspecting the compiled class directly), so a transfer entry correlates its actor
- * and statedPurpose from the prior negotiation entry recorded for the same asset,
- * per spec section 6.
+ * and statedPurpose from the negotiation that produced its agreement, keyed by
+ * agreement id (spec section 6) — correlating by asset id instead is ambiguous
+ * whenever the same asset is negotiated more than once, which an earlier version of
+ * this class did and a task reviewer caught. The cache is in-memory only and does
+ * not survive a restart; a transfer completing after a restart between its
+ * negotiation and the transfer itself falls back to "unknown", the same honest
+ * fallback used for any other cache miss.
  * <p>
  * ContractNegotiationTerminated does NOT cover a policy-refused negotiation (spec
  * section 2.2): EDC 0.18.0 rejects an offer that fails ODRL constraint evaluation
@@ -1719,6 +1767,7 @@ import java.time.Instant;
 public class BenefitsAuditEventListener {
 
     private final EpochSealer sealer;
+    private final Map<String, NegotiationInfo> agreementCache = new ConcurrentHashMap<>();
 
     public BenefitsAuditEventListener(EpochSealer sealer) {
         this.sealer = sealer;
@@ -1726,8 +1775,10 @@ public class BenefitsAuditEventListener {
 
     public void onFinalized(ContractNegotiationFinalized event) {
         var agreement = event.getContractAgreement();
+        var purpose = PolicyPurpose.extract(agreement.getPolicy());
+        agreementCache.put(agreement.getId(), new NegotiationInfo(event.getCounterPartyId(), purpose));
         sealer.record(new AuditEntry(-1, null, Instant.now().toString(), "negotiation-finalized",
-                event.getCounterPartyId(), agreement.getAssetId(), PolicyPurpose.extract(agreement.getPolicy()),
+                event.getCounterPartyId(), agreement.getAssetId(), purpose,
                 "release request approved for asset " + agreement.getAssetId()));
     }
 
@@ -1741,79 +1792,38 @@ public class BenefitsAuditEventListener {
     }
 
     public void onTransferCompleted(TransferProcessCompleted event) {
-        recordTransfer(event.getAssetId(), event.getParticipantContextId(), "transfer-completed",
-                "anonymised data delivered for asset " + event.getAssetId());
+        recordTransfer(event.getContractId(), event.getAssetId(), event.getParticipantContextId(),
+                "transfer-completed", "anonymised data delivered for asset " + event.getAssetId());
     }
 
     public void onTransferTerminated(TransferProcessTerminated event) {
-        recordTransfer(event.getAssetId(), event.getParticipantContextId(), "transfer-terminated",
-                "transfer failed for asset " + event.getAssetId() + ": " + event.getReason());
+        recordTransfer(event.getContractId(), event.getAssetId(), event.getParticipantContextId(),
+                "transfer-terminated", "transfer failed for asset " + event.getAssetId() + ": " + event.getReason());
     }
 
-    private void recordTransfer(String assetId, String fallbackActor, String eventType, String plainLanguage) {
-        var priorEntries = sealer.entriesForAsset(assetId);
-        var actor = priorEntries.isEmpty() ? fallbackActor : priorEntries.get(0).actor();
-        var purpose = priorEntries.isEmpty() ? "unknown (no prior negotiation entry for asset)"
-                : priorEntries.get(0).statedPurpose();
+    private void recordTransfer(String contractId, String assetId, String fallbackActor, String eventType,
+            String plainLanguage) {
+        var cached = agreementCache.get(contractId);
+        var actor = cached != null ? cached.actor() : fallbackActor;
+        var purpose = cached != null ? cached.statedPurpose()
+                : "unknown (no cached negotiation info for contract " + contractId + ")";
         sealer.record(new AuditEntry(-1, null, Instant.now().toString(), eventType, actor, assetId, purpose,
                 plainLanguage));
+    }
+
+    private record NegotiationInfo(String actor, String statedPurpose) {
     }
 }
 ```
 
-This calls `sealer.entriesForAsset(assetId)`, which does not exist yet on `EpochSealer`. Add it in Step 5 below rather than reaching into `AuditStore` directly from the listener, so `EpochSealer` stays the one place that knows how to read consistently under its own lock.
+Correlation is entirely internal to this class — an in-memory `Map` populated in `onFinalized` and read in `recordTransfer`, keyed by the agreement id both `ContractAgreement.getId()` (negotiation side) and `TransferProcessEvent.getContractId()` (transfer side) share. It does not touch `EpochSealer` or `AuditStore` at all; no new method on either is needed for this task.
 
-- [ ] **Step 5: Add entriesForAsset to EpochSealer**
-
-In `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/EpochSealer.java`, add this method (it needs `AuditStore` to expose entries filtered by asset — add `entriesForAsset` to the `AuditStore` interface, `InMemoryAuditStore`, and `CouchDbAuditStore` too, mirroring `entriesFor(participantRef)` but filtering on `datasetRef` instead of `actor`, most-recent-first):
-
-In `AuditStore.java`, add to the interface:
-
-```java
-    List<AuditEntry> entriesForAsset(String datasetRef);
-```
-
-In `InMemoryAuditStore.java`, add:
-
-```java
-    @Override
-    public synchronized List<AuditEntry> entriesForAsset(String datasetRef) {
-        return entries.stream().filter(e -> e.datasetRef().equals(datasetRef))
-                .sorted((a, b) -> Long.compare(b.seq(), a.seq())).toList();
-    }
-```
-
-In `CouchDbAuditStore.java`, add (this reuses the private `dynamicSelector(field, value)` helper Task 5 already added — build the selector through it, never through string concatenation, since a hand-rolled escape was a real Critical finding on this exact class of method):
-
-```java
-    @Override
-    public List<AuditEntry> entriesForAsset(String datasetRef) {
-        var docs = find(dynamicSelector("datasetRef", datasetRef));
-        return parseEntries(docs).stream().sorted((a, b) -> Long.compare(b.seq(), a.seq())).toList();
-    }
-```
-
-In `EpochSealer.java`, add:
-
-```java
-    public List<AuditEntry> entriesForAsset(String datasetRef) {
-        lock.lock();
-        try {
-            return store.entriesForAsset(datasetRef);
-        } finally {
-            lock.unlock();
-        }
-    }
-```
-
-(add `import java.util.List;` to `EpochSealer.java` if not already present from Step 5 of Task 4).
-
-- [ ] **Step 6: Run the test to verify it passes**
+- [ ] **Step 5: Run the test to verify it passes**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests BenefitsAuditEventListenerTest`
 Expected: PASS, all 3 tests.
 
-- [ ] **Step 7: Wire the real listener into the extension and delete the probes**
+- [ ] **Step 6: Wire the real listener into the extension and delete the probes**
 
 Delete `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeEventSubscriber.java` and `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeAuditResource.java` — their job (proving `EventRouter` and `WebService` both work here) is done.
 
@@ -1930,7 +1940,7 @@ class AuditResource {
 
 and let Task 7 replace it with the real implementation.
 
-- [ ] **Step 8: Make the shared connector-starting tooling ensure CouchDB is running**
+- [ ] **Step 7: Make the shared connector-starting tooling ensure CouchDB is running**
 
 From this task onward, the provider connector cannot boot at all without CouchDB reachable — `CouchDbAuditStore`'s constructor (Task 5) connects immediately. Phases 0-3's own scripts (`tools/run-case.sh`, `probe-transfer.sh`, `probe-aggregate-transfer.sh`, and this phase's own probes) all start connectors through the single shared `start_connector` function in `tools/lib.sh`, so fixing it there once, rather than in every script, is what keeps this from silently breaking every existing test in the repo the next time any of them runs on this branch.
 
@@ -1967,21 +1977,17 @@ This runs for both the provider and the consumer even though only the provider a
 
 Run: `./tools/probe-audit-events.sh` again (Task 1's gate 0 probe) to confirm `ensure_couchdb` does not break it — it should still pass exactly as it did in Task 1, since that probe's own `BenefitsAuditExtension` copy has been replaced by this task's real one, which still honors `benefits.audit.enabled` on the provider.
 
-- [ ] **Step 9: Compile and run the full module test suite**
+- [ ] **Step 8: Compile and run the full module test suite**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test`
 Expected: PASS (compilation succeeds once the placeholder or real `AuditResource` from the note above exists).
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add connector/extensions/benefits-audit/src/main/java/org/benefits/audit/BenefitsAuditEventListener.java \
   connector/extensions/benefits-audit/src/main/java/org/benefits/audit/PolicyPurpose.java \
   connector/extensions/benefits-audit/src/main/java/org/benefits/audit/BenefitsAuditExtension.java \
-  connector/extensions/benefits-audit/src/main/java/org/benefits/audit/AuditStore.java \
-  connector/extensions/benefits-audit/src/main/java/org/benefits/audit/InMemoryAuditStore.java \
-  connector/extensions/benefits-audit/src/main/java/org/benefits/audit/CouchDbAuditStore.java \
-  connector/extensions/benefits-audit/src/main/java/org/benefits/audit/EpochSealer.java \
   connector/runtime/provider.properties tools/lib.sh \
   connector/extensions/benefits-audit/src/test/java/org/benefits/audit/BenefitsAuditEventListenerTest.java
 git rm connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeEventSubscriber.java \
@@ -2154,7 +2160,7 @@ In `InMemoryAuditStore.java`, add:
     }
 ```
 
-In `CouchDbAuditStore.java`, add (reuses the same `dynamicSelector` helper as `entriesForAsset`, for the same reason):
+In `CouchDbAuditStore.java`, add (reuses the same `dynamicSelector` helper `entriesFor` already uses — build the selector through it, never through string concatenation, since a hand-rolled escape was a real Critical finding on this exact class of method):
 
 ```java
     @Override

@@ -272,15 +272,39 @@ never a set).
 `TransferProcessCompleted` and `TransferProcessTerminated` extend
 `TransferProcessEvent`, which declares `getAssetId()` (`datasetRef`) but
 carries no counter-party or policy accessor at all — only
-`getContractId()`, the agreement id. Rather than add a second EDC store
-dependency to look the agreement back up, the listener correlates: it
-looks up the `actor` and `statedPurpose` already recorded for the prior
-`AuditEntry` whose `datasetRef` matches, from the negotiation that must
-have preceded any transfer of that asset. If no such entry exists (an
-ordering EDC does not appear to allow but that gate 0 should try to
-provoke), the listener writes `actor = event.getParticipantContextId()`
-and `statedPurpose = "unknown (no prior negotiation entry for asset)"`
-rather than fail the transfer.
+`getContractId()`, the agreement id.
+
+**Correlation key: agreement id, not asset id.** An earlier version of this
+design correlated a transfer's `actor`/`statedPurpose` by looking up the
+most recent `AuditEntry` sharing the same `datasetRef`. Task 6's reviewer
+found this ambiguous and wrong whenever the same asset is negotiated more
+than once — a second negotiation for the same asset (a different
+participant, or a re-negotiation) shifts "most recent entry for this
+asset" onto the wrong negotiation, misattributing a transfer's actor and
+purpose. `getContractId()`'s value is the agreement id EDC assigns exactly
+once per finalized negotiation, with no such ambiguity, and
+`ContractNegotiationFinalized.getContractAgreement().getId()` is that same
+value on the negotiation side — so the listener keys an in-memory cache
+(`Map<String, NegotiationInfo>`, populated in `onFinalized`, read in both
+transfer handlers) by agreement id instead of querying the persisted store
+by asset id. `AuditStore.entriesForAsset` (added to support the rejected
+approach) is removed; nothing else in this design needs it.
+
+**Stated limitation, traded on purpose.** This cache is in-memory only,
+not persisted, so it does not survive a connector restart. A transfer that
+completes after a restart occurring between its negotiation finalizing and
+the transfer itself will find no cached entry and fall back to
+`actor = event.getParticipantContextId()`,
+`statedPurpose = "unknown (no cached negotiation info for contract <id>)"`
+— exactly the honest, disclosed fallback the earlier design already used
+for its own no-match case, not a new failure mode. The alternative (a
+persisted, restart-durable correlation store keyed by agreement id) is
+strictly more robust but adds a second CouchDB-backed structure to a phase
+whose data model is otherwise fixed at two document types; disclosing a
+narrow, restart-only degradation was judged the better trade for a
+reference implementation over widening the persisted schema for a case the
+project's own experiments do not exercise (E1-E4 run fixed batches to
+completion, not connector restarts mid-negotiation).
 
 `plainLanguage` is a short, fixed-format sentence per event type, built
 from the fields above (for example, `"release request approved for asset

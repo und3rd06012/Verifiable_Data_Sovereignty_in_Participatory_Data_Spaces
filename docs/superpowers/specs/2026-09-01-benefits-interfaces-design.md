@@ -156,13 +156,36 @@ dataspace-protocol consumer for these actions):
 
 ### 5.5 Steward portal auth
 
-The parent spec's own open question 1 — whether EDC 0.18.0's scope-based
-authorization changes how the steward portal authenticates against the
-Management API — is marked "Settled in phase 0," but nothing in the
-codebase implements it yet (confirmed by this phase's grounding research:
-zero JAX-RS auth annotations anywhere in `connector/`). Rather than guess
-the mechanism here, Gate 0 settles it empirically against the real
-Management API before any portal UI is built on top of an assumption.
+**Correction from the original draft, found by plan-stage grounding.**
+The parent spec's open question 1 (whether EDC 0.18.0's scope-based
+authorization changes steward-portal auth against the Management API,
+"Settled in phase 0") turns out to name a mechanism that does not exist:
+`BenefitsIamExtension`'s `IdentityService` is an explicit mock — its
+`verifyJwtToken` JSON-parses a caller-supplied token string and re-wraps
+it as claims with no cryptographic verification, and
+`obtainClientCredentials` reads claims from static config, never from a
+runtime-supplied credential. There is nothing real here to reuse.
+
+This turns out not to matter: `StewardResource`, like `AuditResource`, is
+registered directly against EDC's `WebService` (§5.4) — a plain HTTP
+resource, not a dataspace-protocol/Management-API endpoint — so it was
+never going to go through `IdentityService` in the first place. Stewards
+get the same real mechanism participants get (§3, §4): a CouchDB user
+provisioned at onboarding, validated the same way — a Basic-Auth header
+checked against CouchDB's `/_session` endpoint. `StewardResource`'s
+provisioning action (§5.4's `POST
+/steward/participants/{participantRef}/provision`) gets a steward-side
+sibling, provisioning a steward's own CouchDB user the same way.
+
+### 5.6 Budget accountant persistence
+
+`PrivacyPipeline.compute()` (§6) charges epsilon through a
+`BudgetAccountant`; only `InMemoryBudgetAccountant` exists today. A
+privacy budget that resets on every restart is not a budget — it stops
+enforcing anything across time, defeating the reason it exists. Phase 6
+adds `CouchDbBudgetAccountant`, mirroring `CouchDbAuditStore`'s pattern
+exactly (§5.3), alongside `CouchDbStewardAuthorizationStore` and
+`CouchDbReleaseArtifactStore`.
 
 ## 6. Release-request creation
 
@@ -229,9 +252,9 @@ Review queue, rubric entry, co-sign, veto, appeal — a thin client over
 point, before any UI polish: (a) participant-web writes one contribution to
 real CouchDB under a provisioned participant user, confirming the new
 identity check enforces; (b) the Flutter outbox pushes one record over
-plain HTTP to real CouchDB under a provisioned user; (c) the concrete
-Management API auth mechanism for steward-portal (§5.5) is settled
-empirically and one authenticated call to `StewardResource` succeeds.
+plain HTTP to real CouchDB under a provisioned user; (c) one call to
+`StewardResource`, authenticated as a provisioned steward CouchDB user
+(§5.5), succeeds end to end.
 
 **Gate 1, participant-identity write enforcement.** A write whose
 authenticated CouchDB user does not match the document's `participantRef`
@@ -255,15 +278,16 @@ automated — matching the phasing table's own literal gate text for phase 6.
 ## 12. Out of scope
 
 CouchDB database-per-participant topology (ruled against, §3). A custom
-identity provider or JWT issuance — reuses CouchDB's own user auth and
-whatever the EDC Management API already provides. Production-grade
-credential rotation, password reset, MFA. The formal E1/E3/E4/G1/G2
-experiments (phase 7). The manuscript (phase 8).
+identity provider or JWT issuance — reuses CouchDB's own user auth for
+both participants and stewards (§3, §5.5); fixing or replacing
+`BenefitsIamExtension`'s mock `IdentityService` (found during plan-stage
+grounding, §5.5) is explicitly out of scope — it is unused by any phase 6
+HTTP surface, and touching it is a separate concern from building real
+interfaces. Production-grade credential rotation, password reset, MFA.
+The formal E1/E3/E4/G1/G2 experiments (phase 7). The manuscript (phase 8).
 
 ## 13. Open questions
 
-1. Exact EDC 0.18.0 Management API auth mechanism for steward-portal —
-   settled by Gate 0.
-2. Exact participant-onboarding credential-handoff UX (QR code, magic
-   link, manual entry) — left to the plan; the provisioning endpoint
-   (§5.4) is fixed regardless of which the plan picks.
+1. Exact participant- and steward-onboarding credential-handoff UX (QR
+   code, magic link, manual entry) — left to the plan; the provisioning
+   endpoints (§5.4, §5.5) are fixed regardless of which the plan picks.

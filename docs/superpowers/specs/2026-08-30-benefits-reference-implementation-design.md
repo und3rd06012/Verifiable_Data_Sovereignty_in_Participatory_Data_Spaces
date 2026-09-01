@@ -409,8 +409,13 @@ against the same query computed without noise and without suppression,
 reported as a median over the query set with an interquartile range.
 The **low end device profile** is a single CPU core throttled to
 roughly 1 GHz with 1 GB of available memory, chosen to approximate the
-class of handset the target population actually owns; the exact
-throttle is fixed in phase 4 and recorded with the results.
+class of handset the target population actually owns. **Revised in
+phase 4**: fixing the exact throttle there turned out to be premature —
+E2, the experiment phase 5's device fleet feeds, does not exist until
+phase 5, and E1/E4 draw on device-tier and privacy-tier infrastructure
+this phase also does not touch. The throttle is fixed in phase 7
+instead, immediately before the experiments that need it actually run,
+where it is recorded with the results as originally intended.
 
 ### On the real implementation
 
@@ -555,7 +560,7 @@ academic-paper skills rather than by an implementation plan at all.
 | 1 | consent-core, conformance vectors, design doc generation | vectors pass, real CouchDB rejects unconsented writes |
 | 2 | consent-odrl, benefits-policy, steward-quorum | C1 consent cases pass, negotiation refused without quorum |
 | 3 | privacy-pipeline | known answer tests, C1 privacy cases pass, budget exhaustion refuses |
-| 4 | audit-chain, audit-verify | E3 tamper detection at 100% |
+| 4 | audit-chain, audit-verify | mutated entries, mutated roots, and reordered epochs each detected 100% of the time at the mechanism level (phase 4's own spec, Gate 3) — the formal E3 experiment (parameter sweep, low-end device profile, reportable proof-size/verification-time figures) runs in phase 7 with the other experiments, not here; phase 4's own spec section 11 scoped this deliberately, and this row is corrected to match rather than leaving the original terse "E3 tamper detection at 100%" phrasing to be misread as the full experiment |
 | 5 | device-sim fleet | E2 revocation under partition, zero leaked records |
 | 6 | participant-web, steward-portal | manual click through, paper screenshots |
 | 7 | E1, E4, G1, G2, figure generation | results reproduce from seed |

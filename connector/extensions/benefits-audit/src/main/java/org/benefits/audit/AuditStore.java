@@ -30,6 +30,8 @@ public interface AuditStore {
 
     List<AuditEntry> entriesFor(String participantRef);
 
+    List<AuditEntry> entriesInEpoch(String epochId);
+
     List<Epoch> epochChain();
 
     record UnsealedRange(Epoch epoch, long firstSeq, long lastSeq) {

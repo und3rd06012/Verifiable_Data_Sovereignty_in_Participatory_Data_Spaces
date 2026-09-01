@@ -188,6 +188,12 @@ public class CouchDbAuditStore implements AuditStore {
     }
 
     @Override
+    public List<AuditEntry> entriesInEpoch(String epochId) {
+        var docs = find(dynamicSelector("epoch", epochId));
+        return parseEntries(docs).stream().sorted((a, b) -> Long.compare(a.seq(), b.seq())).toList();
+    }
+
+    @Override
     public List<Epoch> epochChain() {
         var docs = find("{\"selector\":{\"type\":\"auditEpoch\"},\"limit\":" + MAX_RESULTS + "}");
         List<Epoch> result = new ArrayList<>();

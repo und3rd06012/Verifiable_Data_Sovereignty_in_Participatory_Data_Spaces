@@ -20,7 +20,7 @@ describe.skipIf(!process.env.E1_LIVE)('runSweep', () => {
       seed: 1,
       batchSizes: [10, 50],
       fieldCounts: [1, 5],
-      grantSetSizes: [1, 10],
+      decoyCounts: [0, 10],
       trials: 1,
       outDir
     });
@@ -32,20 +32,20 @@ describe.skipIf(!process.env.E1_LIVE)('runSweep', () => {
       expect(lines[0]).toBe(
         'seed,trial,batch_size,field_count,grant_set_size,wall_time_ms,throttle_cpus,throttle_memory_mb,host_cpu_model'
       );
-      // 2 batch sizes x 2 field counts x 2 grant-set sizes x 1 trial = 8 rows, plus header.
+      // 2 batch sizes x 2 field counts x 2 decoy counts x 1 trial = 8 rows, plus header.
       expect(lines.length).toBe(9);
 
-      // Regression check for the grant_set_size = Math.max(fieldCount, grantSetSize)
-      // rule: fieldCounts includes 5 and grantSetSizes includes 1, so the swept
-      // combination (fieldCount=5, grantSetSize=1) is present. In sweep order,
-      // grantSetSize=1 is always visited before grantSetSize=10 for a given
-      // fieldCount, so the first data row with field_count === '5' is exactly that
-      // combination; its realized grant_set_size must be the max, 5, not the raw
-      // swept value, 1.
+      // Regression check for the C2 rename: grant_set_size is now always exactly
+      // fieldCount + decoyCount, deterministically, with no floor/ceiling behavior.
+      // fieldCounts includes 5 and decoyCounts includes both 0 and 10, so both the
+      // zero-decoy baseline (grant_set_size === 5) and the decoy-bearing cell
+      // (grant_set_size === 15) are present for field_count=5; check both to
+      // meaningfully exercise decoyCount's effect on the realized grant set size.
       const dataRows = lines.slice(1).map((line) => line.split(','));
-      const fieldCountFiveRow = dataRows.find((row) => row[3] === '5');
-      expect(fieldCountFiveRow).toBeDefined();
-      expect(fieldCountFiveRow?.[4]).toBe('5');
+      const fieldCountFiveNoDecoyRow = dataRows.find((row) => row[3] === '5' && row[4] === '5');
+      expect(fieldCountFiveNoDecoyRow).toBeDefined();
+      const fieldCountFiveTenDecoyRow = dataRows.find((row) => row[3] === '5' && row[4] === '15');
+      expect(fieldCountFiveTenDecoyRow).toBeDefined();
     }
   }, 120000);
 });

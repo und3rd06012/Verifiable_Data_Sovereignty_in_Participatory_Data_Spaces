@@ -13,7 +13,7 @@ export interface SyntheticRecordOptions {
   seed: number;
   index: number;
   fieldCount: number;
-  grantSetSize: number;
+  decoyCount: number;
 }
 
 // mulberry32(seed) alone would replay the same sequence for every record at a
@@ -23,18 +23,6 @@ function seedFor(seed: number, index: number): number {
   return (seed * 2654435761 + index) >>> 0;
 }
 
-/**
- * Generate a fully-consented synthetic ContributionRecord with signed device identity.
- *
- * When fieldCount > grantSetSize, the realized consent.grants.length will be
- * Math.max(fieldCount, grantSetSize), not grantSetSize. Every field in the record
- * must have its own matching ConsentGrant (one grant covers exactly one field), so
- * to satisfy the full-consent guarantee this function provides, additional grants
- * are automatically created for any fields not covered by grantSetSize alone.
- *
- * Callers requiring the actual grant count should read record.consent.grants.length
- * directly rather than assuming it equals opts.grantSetSize.
- */
 export function generateSyntheticRecord(opts: SyntheticRecordOptions): SyntheticRecord {
   const rand = mulberry32(seedFor(opts.seed, opts.index));
   const participantRef = 'synthetic-participant-' + (opts.seed % 1000) + '-' + (opts.index % 500);
@@ -48,13 +36,13 @@ export function generateSyntheticRecord(opts: SyntheticRecordOptions): Synthetic
   }
 
   const grants: unknown[] = [];
-  for (let i = 0; i < opts.grantSetSize; i++) {
-    // Wrap so that with grantSetSize < fieldCount, at least the first fields are
-    // still covered; with grantSetSize >= fieldCount, every field is covered and
-    // the remaining grants cover synthetic filler fields the record never uses.
-    const field = i < grantedFieldNames.length ? grantedFieldNames[i] : 'synthetic.unused' + i;
+  // Decoys first: hasGrant() scans the array in order and returns on the
+  // first match, so every field's lookup must walk past all decoys before
+  // reaching its own grant. This is what makes decoyCount the parameter
+  // that actually drives evaluateRecord's scan cost (see spec 3.2).
+  for (let i = 0; i < opts.decoyCount; i++) {
     grants.push({
-      field,
+      field: 'synthetic.decoy' + i,
       purpose: 'service-improvement',
       recipientClass: 'statistics',
       grantedAt: '2026-01-01T00:00:00.000Z',
@@ -62,11 +50,9 @@ export function generateSyntheticRecord(opts: SyntheticRecordOptions): Synthetic
       revokedAt: null
     });
   }
-  // If grantSetSize < fieldCount, the remaining fields need their own grants too,
-  // so the record stays fully consented regardless of which dimension is larger.
-  for (let i = grants.length; i < grantedFieldNames.length; i++) {
+  for (const field of grantedFieldNames) {
     grants.push({
-      field: grantedFieldNames[i],
+      field,
       purpose: 'service-improvement',
       recipientClass: 'statistics',
       grantedAt: '2026-01-01T00:00:00.000Z',

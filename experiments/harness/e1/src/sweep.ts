@@ -13,7 +13,7 @@ export interface SweepOptions {
   seed: number;
   batchSizes: number[];
   fieldCounts: number[];
-  grantSetSizes: number[];
+  decoyCounts: number[];
   trials: number;
   outDir: string;
   throttleCpus?: number;
@@ -54,12 +54,12 @@ async function writeBatch(
   batchOffset: number,
   batchSize: number,
   fieldCount: number,
-  grantSetSize: number
+  decoyCount: number
 ): Promise<number> {
   const docs = [];
   for (let i = 0; i < batchSize; i++) {
     docs.push(
-      generateSyntheticRecord({ seed, index: batchOffset + i, fieldCount, grantSetSize })
+      generateSyntheticRecord({ seed, index: batchOffset + i, fieldCount, decoyCount })
     );
   }
   const start = process.hrtime.bigint();
@@ -92,15 +92,16 @@ export async function runSweep(opts: SweepOptions): Promise<void> {
 
   for (const arm of ARMS) {
     const dbName = await dbNameFor(arm, opts.seed);
-    await installArm(client, arm, dbName);
-
     const rows: (string | number)[][] = [];
     let indexOffset = 0;
 
     for (const batchSize of opts.batchSizes) {
       for (const fieldCount of opts.fieldCounts) {
-        for (const grantSetSize of opts.grantSetSizes) {
+        for (const decoyCount of opts.decoyCounts) {
           for (let trial = 0; trial < opts.trials; trial++) {
+            // Recreated fresh before every cell so database size never
+            // accumulates across the sweep and confounds with batch size.
+            await installArm(client, arm, dbName);
             const wallTimeMs = await writeBatch(
               client,
               dbName,
@@ -108,23 +109,16 @@ export async function runSweep(opts: SweepOptions): Promise<void> {
               indexOffset,
               batchSize,
               fieldCount,
-              grantSetSize
+              decoyCount
             );
             indexOffset += batchSize;
-            // generateSyntheticRecord (Task 2) guarantees every field has a matching
-            // grant, and ConsentGrant covers exactly one field each, so a fully
-            // consented record's realized grants.length is max(fieldCount,
-            // grantSetSize), not the raw grantSetSize whenever fieldCount exceeds it
-            // (see Task 2's own doc comment on this). Reporting the realized count
-            // here, not the swept input, keeps this column an honest label of what
-            // hasGrant()'s linear scan actually walked for this row.
-            const realizedGrantSetSize = Math.max(fieldCount, grantSetSize);
+            const grantSetSize = fieldCount + decoyCount;
             rows.push([
               opts.seed,
               trial,
               batchSize,
               fieldCount,
-              realizedGrantSetSize,
+              grantSetSize,
               wallTimeMs,
               throttleCpus,
               throttleMemoryMb,

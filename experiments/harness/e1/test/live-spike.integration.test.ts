@@ -22,13 +22,13 @@ describe.skipIf(!process.env.E1_LIVE)('signature design doc against real CouchDB
   });
 
   it('accepts a correctly signed, fully consented record', async () => {
-    const record = generateSyntheticRecord({ seed: 100, index: 0, fieldCount: 2, grantSetSize: 2 });
+    const record = generateSyntheticRecord({ seed: 100, index: 0, fieldCount: 2, decoyCount: 2 });
     const res = await client.put('/' + DB + '/' + record._id, record);
     expect(res.status).toBe(201);
   });
 
   it('rejects a record with a tampered signature', async () => {
-    const record = generateSyntheticRecord({ seed: 100, index: 1, fieldCount: 2, grantSetSize: 2 });
+    const record = generateSyntheticRecord({ seed: 100, index: 1, fieldCount: 2, decoyCount: 2 });
     const tamperedBytes = base64Decode(record.signature);
     tamperedBytes[0] = tamperedBytes[0] ^ 0xff;
     const tampered = { ...record, _id: record._id + '-tampered', signature: Buffer.from(tamperedBytes).toString('base64') };
@@ -38,7 +38,7 @@ describe.skipIf(!process.env.E1_LIVE)('signature design doc against real CouchDB
   });
 
   it('rejects an unconsented field even with a valid signature', async () => {
-    const record = generateSyntheticRecord({ seed: 100, index: 2, fieldCount: 2, grantSetSize: 2 });
+    const record = generateSyntheticRecord({ seed: 100, index: 2, fieldCount: 2, decoyCount: 2 });
     const unconsented = { ...record, _id: record._id + '-unconsented', consent: { ...record.consent, grants: [] } };
     const res = await client.put('/' + DB + '/' + unconsented._id, unconsented);
     expect(res.status).toBe(403);

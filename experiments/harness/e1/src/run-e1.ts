@@ -3,7 +3,7 @@ import { runSweep } from './sweep.js';
 const SEED = 1;
 const BATCH_SIZES = [10, 50, 100, 500, 1000, 5000, 10000];
 const FIELD_COUNTS = [1, 5, 20];
-const GRANT_SET_SIZES = [1, 10, 50];
+const DECOY_COUNTS = [0, 10, 50];
 const TRIALS = 3;
 
 runSweep({
@@ -13,7 +13,7 @@ runSweep({
   seed: SEED,
   batchSizes: BATCH_SIZES,
   fieldCounts: FIELD_COUNTS,
-  grantSetSizes: GRANT_SET_SIZES,
+  decoyCounts: DECOY_COUNTS,
   trials: TRIALS,
   outDir: '../../results/e1',
   throttleCpus: 1,

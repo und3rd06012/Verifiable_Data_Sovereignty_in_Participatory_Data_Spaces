@@ -8,8 +8,8 @@
     "test": "vitest run",
     "verify-inclusion": "npm run build && node dist/run-inclusion.js",
     "verify-chain": "npm run build && node dist/run-chain.js",
-    "verify-inclusion-throttled": "npm run build && docker run --rm --cpus=1 --memory=1g -v \"$(cd ../../.. && pwd)\":/repo -w /repo/experiments/harness/e3-verify node:22-alpine node dist/run-inclusion.js",
-    "verify-chain-throttled": "npm run build && docker run --rm --cpus=1 --memory=1g -v \"$(cd ../../.. && pwd)\":/repo -w /repo/experiments/harness/e3-verify node:22-alpine node dist/run-chain.js"
+    "verify-inclusion-throttled": "npm run build && docker run --rm --cpus=1 --memory=1g -e E3_THROTTLE_CPUS=1 -e E3_THROTTLE_MEMORY_MB=1024 -v \"$(cd ../../.. && pwd)\":/repo -w /repo/experiments/harness/e3-verify node:22-alpine node dist/run-inclusion.js",
+    "verify-chain-throttled": "npm run build && docker run --rm --cpus=1 --memory=1g -e E3_THROTTLE_CPUS=1 -e E3_THROTTLE_MEMORY_MB=1024 -v \"$(cd ../../.. && pwd)\":/repo -w /repo/experiments/harness/e3-verify node:22-alpine node dist/run-chain.js"
   },
   "dependencies": {
     "@benefits/audit-verify": "0.1.0"

@@ -4,8 +4,8 @@ runInclusionVerifyTime({
   seed: 1,
   fixturesPath: '../e3/fixtures/inclusion-fixtures.json',
   csvPath: '../../results/e3/verify-inclusion-time.csv',
-  throttleCpus: 1,
-  throttleMemoryMb: 1024
+  throttleCpus: process.env.E3_THROTTLE_CPUS ?? '',
+  throttleMemoryMb: process.env.E3_THROTTLE_MEMORY_MB ?? ''
 }).then(() => {
   console.log('inclusion verify-time run complete');
 }).catch((err) => {

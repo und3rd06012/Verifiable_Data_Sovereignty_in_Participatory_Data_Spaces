@@ -14,6 +14,12 @@ describe('generateSyntheticRecord', () => {
     expect((record.consent as any).grants.length).toBe(10);
   });
 
+  it('expands grants to match fieldCount when grantSetSize < fieldCount', () => {
+    const record = generateSyntheticRecord({ seed: 1, index: 0, fieldCount: 20, grantSetSize: 1 });
+    expect(Object.keys(record.fields).length).toBe(20);
+    expect((record.consent as any).grants.length).toBe(20);
+  });
+
   it('is fully consented: every field has a matching, currently-active grant', () => {
     const record = generateSyntheticRecord({ seed: 2, index: 3, fieldCount: 3, grantSetSize: 3 });
     const grants = (record.consent as any).grants as any[];

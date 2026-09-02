@@ -23,6 +23,18 @@ function seedFor(seed: number, index: number): number {
   return (seed * 2654435761 + index) >>> 0;
 }
 
+/**
+ * Generate a fully-consented synthetic ContributionRecord with signed device identity.
+ *
+ * When fieldCount > grantSetSize, the realized consent.grants.length will be
+ * Math.max(fieldCount, grantSetSize), not grantSetSize. Every field in the record
+ * must have its own matching ConsentGrant (one grant covers exactly one field), so
+ * to satisfy the full-consent guarantee this function provides, additional grants
+ * are automatically created for any fields not covered by grantSetSize alone.
+ *
+ * Callers requiring the actual grant count should read record.consent.grants.length
+ * directly rather than assuming it equals opts.grantSetSize.
+ */
 export function generateSyntheticRecord(opts: SyntheticRecordOptions): SyntheticRecord {
   const rand = mulberry32(seedFor(opts.seed, opts.index));
   const participantRef = 'synthetic-participant-' + (opts.seed % 1000) + '-' + (opts.index % 500);

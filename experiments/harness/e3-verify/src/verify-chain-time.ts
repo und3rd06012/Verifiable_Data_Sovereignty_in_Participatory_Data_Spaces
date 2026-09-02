@@ -12,8 +12,16 @@ export interface RunChainVerifyTimeOptions {
   seed: number;
   fixturesPath: string;
   csvPath: string;
-  throttleCpus: number | string;
-  throttleMemoryMb: number | string;
+  throttleCpus: string;
+  throttleMemoryMb: string;
+}
+
+const REPETITIONS = 10;
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
 export async function runChainVerifyTime(opts: RunChainVerifyTimeOptions): Promise<void> {
@@ -21,15 +29,27 @@ export async function runChainVerifyTime(opts: RunChainVerifyTimeOptions): Promi
   const hostCpuModel = readHostCpuModel();
   const rows: (string | number)[][] = [];
 
+  // Untimed warmup pass: lets the JS engine JIT-warm the verify path before
+  // any measurement, so the first timed repetition isn't paying a one-time cost.
   for (const fixture of fixtures) {
-    const start = process.hrtime.bigint();
     const ok = await verifyChain(fixture.epochs);
-    const end = process.hrtime.bigint();
     if (!ok) {
-      throw new Error('fixture chain of length ' + fixture.chainLength + ' failed to verify');
+      throw new Error('fixture chain of length ' + fixture.chainLength + ' failed to verify during warmup');
     }
-    const elapsedMs = Number(end - start) / 1e6;
-    rows.push([opts.seed, fixture.chainLength, elapsedMs, opts.throttleCpus, opts.throttleMemoryMb, hostCpuModel]);
+  }
+
+  for (const fixture of fixtures) {
+    const elapsed: number[] = [];
+    for (let rep = 0; rep < REPETITIONS; rep++) {
+      const start = process.hrtime.bigint();
+      const ok = await verifyChain(fixture.epochs);
+      const end = process.hrtime.bigint();
+      if (!ok) {
+        throw new Error('fixture chain of length ' + fixture.chainLength + ' failed to verify');
+      }
+      elapsed.push(Number(end - start) / 1e6);
+    }
+    rows.push([opts.seed, fixture.chainLength, median(elapsed), opts.throttleCpus, opts.throttleMemoryMb, hostCpuModel]);
   }
 
   writeCsv(

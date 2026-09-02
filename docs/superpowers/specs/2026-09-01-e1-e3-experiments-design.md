@@ -215,17 +215,59 @@ using the same pinned image digest as `deploy/docker-compose.yml`, torn
 down and recreated fresh per sweep run so results are not affected by a
 prior run's leftover databases or design documents.
 
-Within one sweep run, each arm's database is recreated fresh before
-every swept cell (every batch-size/field-count/decoy-count/trial
-combination), not once per arm. Batch size is one of the swept
-dimensions this experiment measures, and the sweep's batch sizes are
-ascending; a database that only gets created once per arm would grow
-monotonically across the sweep, so database size, compaction behavior,
-and page-cache pressure would rise in lockstep with batch size and
-confound it with the measurement. Recreating per cell costs one
-delete-and-create round trip per data point, which is small next to the
-write batch itself even at the smallest batch size, and keeps batch
-size the only thing that varies between consecutive cells.
+Within one sweep run, each arm's database is recreated fresh at the
+start of every batch-size tier (every distinct value in the batch-size
+sweep), not once per arm and not once per individual cell. Batch size
+is one of the swept dimensions this experiment measures, and the
+sweep's batch sizes are ascending; a database that only gets created
+once per arm would grow monotonically across the sweep, so database
+size, compaction behavior, and page-cache pressure would rise in
+lockstep with batch size and confound it with the measurement.
+
+Recreating once per cell was the first design (and is still correct in
+principle), but running the real production sweep against it live
+surfaced an operational limit: CouchDB's own database-lifecycle churn,
+not the experiment's actual data, exhausted the low-end device
+profile's 1 GB memory limit well before any individual batch did. The
+production run's Erlang VM was killed by the kernel OOM killer (`os_mon`
+reporting its ports closed) after roughly 260 delete-and-create cycles,
+at a batch size of only 100 documents, with total data written still
+small; a full sweep needs on the order of 567 such cycles (7 batch
+sizes x 3 field counts x 3 decoy counts x 3 trials, per arm). Recreating
+once per batch-size tier instead cuts that to 7 cycles per arm, roughly
+1/27th the churn, while still preventing the original confound: each
+tier starts from an empty database and only accumulates the (at most
+27) cells within that same batch size before the next tier recreates
+it, so database size never carries forward from a smaller batch size
+into a larger one, which is the property that actually matters. This
+was found and fixed empirically, against the real throttled container,
+not decided in the abstract.
+
+A second, independent limit surfaced the same way once per-tier
+recreation was in place: a single `_bulk_docs` call of 5000 or more
+documents crashes the container outright regardless of database
+history, validator, or arm (verified in isolation: a lone write of
+5000 freshly-generated documents into an empty database OOM-killed a
+freshly started container; 1000 completed comfortably). This is
+CouchDB's own per-request buffering and B-tree update cost for a write
+that large, not a property of anything this harness adds. Separately,
+the signature arm's per-document Ed25519 verification inside
+`validate_doc_update` is CPU-bound enough under the 1-CPU throttle
+that a 1000-document single write took long enough to trip CouchDB's
+internal `fabric_worker_timeout` (about 60 seconds), returning a 500
+even though the container itself survived.
+
+Batches above 250 documents are therefore chunked into multiple
+sequential `_bulk_docs` calls of at most 250 documents each, with
+wall-clock time summed across the chunks and reported as that cell's
+`wall_time_ms`; 250 was verified live, for every arm including
+signature, to clear both limits with margin. This changes what a large
+"batch" physically is on the wire (N sequential requests instead of
+one), but is also a more realistic model of how a resource-constrained
+edge device would actually be driven: no reasonable client sends a
+single multi-megabyte request body to a memory- and CPU-limited target
+either. Batch sizes at or below 250 are sent as a single request,
+unchanged from the original design.
 
 ### 3.5 Output
 

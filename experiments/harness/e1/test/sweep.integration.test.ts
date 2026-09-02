@@ -34,6 +34,18 @@ describe.skipIf(!process.env.E1_LIVE)('runSweep', () => {
       );
       // 2 batch sizes x 2 field counts x 2 grant-set sizes x 1 trial = 8 rows, plus header.
       expect(lines.length).toBe(9);
+
+      // Regression check for the grant_set_size = Math.max(fieldCount, grantSetSize)
+      // rule: fieldCounts includes 5 and grantSetSizes includes 1, so the swept
+      // combination (fieldCount=5, grantSetSize=1) is present. In sweep order,
+      // grantSetSize=1 is always visited before grantSetSize=10 for a given
+      // fieldCount, so the first data row with field_count === '5' is exactly that
+      // combination; its realized grant_set_size must be the max, 5, not the raw
+      // swept value, 1.
+      const dataRows = lines.slice(1).map((line) => line.split(','));
+      const fieldCountFiveRow = dataRows.find((row) => row[3] === '5');
+      expect(fieldCountFiveRow).toBeDefined();
+      expect(fieldCountFiveRow?.[4]).toBe('5');
     }
   }, 120000);
 });

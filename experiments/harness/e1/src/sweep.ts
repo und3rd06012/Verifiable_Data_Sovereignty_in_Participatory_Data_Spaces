@@ -68,6 +68,19 @@ async function writeBatch(
   if (res.status !== 201) {
     throw new Error('bulk write failed with status ' + res.status);
   }
+  // _bulk_docs returns 201 at the top level even when individual documents are
+  // rejected by validate_doc_update; per-document failures only show up in the
+  // response body's array as { id, error, reason }. Check for those explicitly
+  // so a partial rejection fails the batch loudly rather than silently recording
+  // wall_time_ms for a batch that didn't fully succeed.
+  const results: Array<{ id?: string; error?: string; reason?: string }> = res.body;
+  const rejected = results.filter((r) => r.error);
+  if (rejected.length > 0) {
+    throw new Error(
+      'bulk write rejected ' + rejected.length + ' of ' + docs.length + ' documents: ' +
+        rejected.map((r) => r.id + ':' + r.reason).join(', ')
+    );
+  }
   return Number(end - start) / 1e6;
 }
 

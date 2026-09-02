@@ -1,0 +1,17 @@
+{
+  "name": "@benefits/experiment-e3-verify",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "verify-inclusion": "npm run build && node dist/run-inclusion.js",
+    "verify-chain": "npm run build && node dist/run-chain.js",
+    "verify-inclusion-throttled": "npm run build && docker run --rm --cpus=1 --memory=1g -v \"$(cd ../../.. && pwd)\":/repo -w /repo/experiments/harness/e3-verify node:22-alpine node dist/run-inclusion.js",
+    "verify-chain-throttled": "npm run build && docker run --rm --cpus=1 --memory=1g -v \"$(cd ../../.. && pwd)\":/repo -w /repo/experiments/harness/e3-verify node:22-alpine node dist/run-chain.js"
+  },
+  "dependencies": {
+    "@benefits/audit-verify": "0.1.0"
+  }
+}

@@ -1,9 +1,9 @@
-import { createCouchDbClient } from './couchdb-client';
-import { buildSignatureDesignDoc } from './build-signature-design-doc';
+import { createCouchDbClient } from './couchdb-client.js';
+import { buildSignatureDesignDoc } from './build-signature-design-doc.js';
 import { buildDesignDoc } from '@benefits/consent-couchdb';
-import { generateSyntheticRecord } from './synthetic-records';
-import { readHostCpuModel } from './host-info';
-import { writeCsv } from './csv';
+import { generateSyntheticRecord } from './synthetic-records.js';
+import { readHostCpuModel } from './host-info.js';
+import { writeCsv } from './csv.js';
 import { join } from 'node:path';
 
 export interface SweepOptions {

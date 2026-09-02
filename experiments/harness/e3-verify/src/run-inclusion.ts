@@ -1,4 +1,4 @@
-import { runInclusionVerifyTime } from './verify-inclusion-time';
+import { runInclusionVerifyTime } from './verify-inclusion-time.js';
 
 runInclusionVerifyTime({
   seed: 1,

@@ -1,8 +1,8 @@
 import * as ed from '@noble/ed25519';
 import { sha512 } from '@noble/hashes/sha512.js';
-import { randomBytes } from './rng';
-import { signedPayload, SignableRecord } from './canonicalize';
-import { utf8Encode } from './portable-codec';
+import { randomBytes } from './rng.js';
+import { signedPayload, SignableRecord } from './canonicalize.js';
+import { utf8Encode } from './portable-codec.js';
 
 ed.hashes.sha512 = sha512;
 

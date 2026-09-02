@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { verifyChain, Epoch } from '@benefits/audit-verify';
-import { writeCsv } from './csv';
-import { readHostCpuModel } from './host-info';
+import { writeCsv } from './csv.js';
+import { readHostCpuModel } from './host-info.js';
 
 interface ChainFixture {
   chainLength: number;

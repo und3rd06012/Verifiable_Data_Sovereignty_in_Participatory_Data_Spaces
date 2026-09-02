@@ -1,4 +1,4 @@
-import { runSweep } from './sweep';
+import { runSweep } from './sweep.js';
 
 const SEED = 1;
 const BATCH_SIZES = [10, 50, 100, 500, 1000, 5000, 10000];

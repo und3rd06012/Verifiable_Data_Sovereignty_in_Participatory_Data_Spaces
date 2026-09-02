@@ -1,4 +1,4 @@
-import { runChainVerifyTime } from './verify-chain-time';
+import { runChainVerifyTime } from './verify-chain-time.js';
 
 runChainVerifyTime({
   seed: 1,

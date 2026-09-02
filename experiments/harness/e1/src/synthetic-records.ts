@@ -1,6 +1,6 @@
-import { mulberry32 } from './rng';
-import { generateKeyPair, signRecord } from './sign';
-import { SignableRecord } from './canonicalize';
+import { mulberry32 } from './rng.js';
+import { generateKeyPair, signRecord } from './sign.js';
+import { SignableRecord } from './canonicalize.js';
 
 export interface SyntheticRecord extends SignableRecord {
   _id: string;

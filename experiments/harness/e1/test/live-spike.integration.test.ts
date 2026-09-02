@@ -7,7 +7,7 @@ import { base64Decode } from '../src/portable-codec';
 const client = createCouchDbClient('http://localhost:5985', 'admin', 'benefits');
 const DB = 'e1-spike';
 
-describe('signature design doc against real CouchDB', () => {
+describe.skipIf(!process.env.E1_LIVE)('signature design doc against real CouchDB', () => {
   beforeAll(async () => {
     await client.delete('/' + DB);
     const created = await client.put('/' + DB);

@@ -1,0 +1,55 @@
+[
+  {
+    "epochSize":5,
+    "leafIndex": 0,
+    "leaf": "cf81ec79199f006a99151070929e85a34742f469c727c5a3d9698a30d0f5bf6f",
+    "root": "09562f81bc8457b9c506589007c73f0a627e4bc493f90d87a2598e9bb13578d9",
+    "steps": [
+      { "siblingHash": "4b3271ccd4e0116efb2e9c3938068a9cb11934f88fba679f0f5a95dda997b402", "siblingIsRight": true },
+      { "siblingHash": "10c09d31c700d1b19601a79cc17ca54cdd844ed5a92798b637ff508ab0e84e34", "siblingIsRight": true },
+      { "siblingHash": "ae8a5efdd0280b3b2fda430d250898d1e2cf525672143478175fc22e2886eb8a", "siblingIsRight": true }
+    ]
+  },
+  {
+    "epochSize":5,
+    "leafIndex": 1,
+    "leaf": "4b3271ccd4e0116efb2e9c3938068a9cb11934f88fba679f0f5a95dda997b402",
+    "root": "09562f81bc8457b9c506589007c73f0a627e4bc493f90d87a2598e9bb13578d9",
+    "steps": [
+      { "siblingHash": "cf81ec79199f006a99151070929e85a34742f469c727c5a3d9698a30d0f5bf6f", "siblingIsRight": false },
+      { "siblingHash": "10c09d31c700d1b19601a79cc17ca54cdd844ed5a92798b637ff508ab0e84e34", "siblingIsRight": true },
+      { "siblingHash": "ae8a5efdd0280b3b2fda430d250898d1e2cf525672143478175fc22e2886eb8a", "siblingIsRight": true }
+    ]
+  },
+  {
+    "epochSize":5,
+    "leafIndex": 2,
+    "leaf": "538e46236fca91e64a793db658d52c1dc745ee0c1b4297a02153a0d55744b212",
+    "root": "09562f81bc8457b9c506589007c73f0a627e4bc493f90d87a2598e9bb13578d9",
+    "steps": [
+      { "siblingHash": "c1fbc330a0d80edc6c21d4fc2fd98aa05b735c180153ed7a7ab63601cc8c522e", "siblingIsRight": true },
+      { "siblingHash": "fb45299c2bb45f30fe88bfbff6ba7021ba2677774aefb37208b2b57ad1ade41d", "siblingIsRight": false },
+      { "siblingHash": "ae8a5efdd0280b3b2fda430d250898d1e2cf525672143478175fc22e2886eb8a", "siblingIsRight": true }
+    ]
+  },
+  {
+    "epochSize":5,
+    "leafIndex": 3,
+    "leaf": "c1fbc330a0d80edc6c21d4fc2fd98aa05b735c180153ed7a7ab63601cc8c522e",
+    "root": "09562f81bc8457b9c506589007c73f0a627e4bc493f90d87a2598e9bb13578d9",
+    "steps": [
+      { "siblingHash": "538e46236fca91e64a793db658d52c1dc745ee0c1b4297a02153a0d55744b212", "siblingIsRight": false },
+      { "siblingHash": "fb45299c2bb45f30fe88bfbff6ba7021ba2677774aefb37208b2b57ad1ade41d", "siblingIsRight": false },
+      { "siblingHash": "ae8a5efdd0280b3b2fda430d250898d1e2cf525672143478175fc22e2886eb8a", "siblingIsRight": true }
+    ]
+  },
+  {
+    "epochSize":5,
+    "leafIndex": 4,
+    "leaf": "ae8a5efdd0280b3b2fda430d250898d1e2cf525672143478175fc22e2886eb8a",
+    "root": "09562f81bc8457b9c506589007c73f0a627e4bc493f90d87a2598e9bb13578d9",
+    "steps": [
+      { "siblingHash": "d8001fb362ea21ae91da6f516a7914b22c7b97321fc9eb3ea9471045304cf99e", "siblingIsRight": false }
+    ]
+  }
+]

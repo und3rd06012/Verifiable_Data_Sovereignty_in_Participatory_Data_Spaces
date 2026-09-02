@@ -7,3 +7,17 @@ services:
       COUCHDB_PASSWORD: benefits
     ports:
       - "5985:5984"
+
+  couchdb-e1-throttled:
+    image: couchdb@sha256:9ea24cbd76522fe845d1c32c7fd1dcfc8a3ba73dcc4817d62f8a7f7f1dfaffe3
+    container_name: benefits-couchdb-e1-throttled
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: benefits
+    ports:
+      - "5986:5984"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1g

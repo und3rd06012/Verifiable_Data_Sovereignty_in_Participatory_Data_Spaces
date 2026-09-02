@@ -250,7 +250,13 @@ change to `EpochSealer` itself.
 
 Two things are measured, at different layers, matching what "reportable
 numbers are proof size and participant side verification time" (parent
-spec section 5) actually names:
+spec section 5) actually names. Both are swept against epoch size, which
+is the dimension the parent spec names. `verifyChain()`'s own cost does
+not depend on epoch size at all (it does one hash comparison per epoch,
+regardless of how many entries that epoch sealed), so it is measured
+separately, swept against chain length instead. Sweeping it against
+epoch size would produce a flat line with no informational content and
+would misrepresent what the number depends on.
 
 - **Proof size**, computed server-side: for a given epoch size, build
   the tree, call the existing `MerkleTree.proof()` for a swept set of
@@ -258,24 +264,32 @@ spec section 5) actually names:
   hash, so proof size in bytes follows directly: `steps().size() * 32`
   for the hex-encoded SHA-256 hashes `AuditHashing` produces, recorded
   as its own column rather than assumed at analysis time).
-- **Participant-side verification time**, measured on the client side of
-  the boundary: `packages/audit-verify`'s `verifyInclusion()` and
-  `verifyChain()`, run in Node under the low-end throttle described
-  below, timed with `process.hrtime.bigint()` around the call. This is
-  "participant side" because `audit-verify` is the package a
-  participant's own device actually runs (`apps/participant-web`,
-  `apps/participant-mobile`); the Java side only generates the fixtures
-  the Node side then verifies; it is not itself timed as a headline
-  number.
+- **Inclusion-proof verification time**, measured on the client side of
+  the boundary: `packages/audit-verify`'s `verifyInclusion()`, run in
+  Node under the low-end throttle described below, timed with
+  `process.hrtime.bigint()` around the (awaited) call, swept against the
+  same epoch sizes as proof size above. This is "participant side"
+  because `audit-verify` is the package a participant's own device
+  actually runs (`apps/participant-web`, `apps/participant-mobile`); the
+  Java side only generates the fixtures the Node side then verifies; it
+  is not itself timed as a headline number.
+- **Chain verification time**, same package and harness,
+  `verifyChain()`, swept against chain length (number of epochs in the
+  chain): 5, 20, 100, 500 epochs, each built with a fixed, small epoch
+  size (10 entries) since entry count per epoch is irrelevant to this
+  measurement.
 
 ### 4.5 Output
 
 `experiments/results/e3/proof-size.csv`: `seed`, `epoch_size`,
 `leaf_index`, `proof_steps`, `proof_bytes`.
 
-`experiments/results/e3/verify-time.csv`: `seed`, `epoch_size`,
-`verify_kind` (`inclusion` or `chain`), `elapsed_ms`, `throttle_cpus`,
+`experiments/results/e3/verify-inclusion-time.csv`: `seed`,
+`epoch_size`, `leaf_index`, `elapsed_ms`, `throttle_cpus`,
 `throttle_memory_mb`, `host_cpu_model`.
+
+`experiments/results/e3/verify-chain-time.csv`: `seed`, `chain_length`,
+`elapsed_ms`, `throttle_cpus`, `throttle_memory_mb`, `host_cpu_model`.
 
 ## 5. Low-end device profile
 

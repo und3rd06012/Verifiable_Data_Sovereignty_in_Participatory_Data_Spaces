@@ -127,7 +127,7 @@ grant-set size as swept dimensions without fixing their values):
   cannot vary scan cost independently of field count at all under this
   project's one-grant-per-field consent model (every field's own grant
   is structurally required, so the array can never be *smaller* than
-  `fieldCount` while staying fully consented) — that was this spec's
+  `fieldCount` while staying fully consented). That was this spec's
   original design, and it measured document size, not scan cost, which
   is exactly the defect this correction fixes. The realized grant array
   size (`fieldCount + decoyCount`) is what the E1 results CSV's

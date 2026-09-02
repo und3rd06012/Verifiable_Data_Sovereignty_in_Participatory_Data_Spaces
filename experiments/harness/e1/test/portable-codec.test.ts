@@ -13,7 +13,7 @@ describe('utf8Encode', () => {
   });
 
   it('encodes a surrogate pair (emoji) identically to Buffer', () => {
-    const input = 'field-😀-end';
+    const input = 'field-\uD83D\uDE00-end';
     expect(Array.from(utf8Encode(input))).toEqual(Array.from(Buffer.from(input, 'utf8')));
   });
 

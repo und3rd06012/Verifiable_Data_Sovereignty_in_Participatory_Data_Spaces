@@ -1512,12 +1512,20 @@ export async function runSweep(opts: SweepOptions): Promise<void> {
               grantSetSize
             );
             indexOffset += batchSize;
+            // generateSyntheticRecord (Task 2) guarantees every field has a matching
+            // grant, and ConsentGrant covers exactly one field each, so a fully
+            // consented record's realized grants.length is max(fieldCount,
+            // grantSetSize), not the raw grantSetSize whenever fieldCount exceeds it
+            // (see Task 2's own doc comment on this). Reporting the realized count
+            // here, not the swept input, keeps this column an honest label of what
+            // hasGrant()'s linear scan actually walked for this row.
+            const realizedGrantSetSize = Math.max(fieldCount, grantSetSize);
             rows.push([
               opts.seed,
               trial,
               batchSize,
               fieldCount,
-              grantSetSize,
+              realizedGrantSetSize,
               wallTimeMs,
               throttleCpus,
               throttleMemoryMb,

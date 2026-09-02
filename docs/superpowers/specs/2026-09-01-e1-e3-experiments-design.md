@@ -275,9 +275,11 @@ would misrepresent what the number depends on.
   is not itself timed as a headline number.
 - **Chain verification time**, same package and harness,
   `verifyChain()`, swept against chain length (number of epochs in the
-  chain): 5, 20, 100, 500 epochs, each built with a fixed, small epoch
-  size (10 entries) since entry count per epoch is irrelevant to this
-  measurement.
+  chain): 5, 20, 100, 500 epochs. `verifyChain()` only recomputes and
+  compares `prevEpochHash` chain links; it never touches an epoch's
+  entries or recomputes a Merkle root from them, so the fixture epochs
+  need no real entries or trees behind them, only a `merkleRoot` value
+  consistent with `AuditHashing.prevEpochHash()`'s own inputs.
 
 ### 4.5 Output
 

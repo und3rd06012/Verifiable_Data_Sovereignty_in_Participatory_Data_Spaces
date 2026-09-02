@@ -112,10 +112,28 @@ grant-set size as swept dimensions without fixing their values):
 - **Field count:** 1, 5, 20 fields per record's `fields` object,
   spanning a minimal record up to one wider than any real record this
   project's conformance vectors use.
-- **Grant-set size:** 1, 10, 50 grants in the record's embedded
-  `ConsentAssertion`. `hasGrant()` in `consent-core/src/evaluate.ts`
-  scans this list linearly per field, so grant-set size is exactly the
-  parameter that determines how that scan's cost grows.
+- **Grant-set size:** 0, 10, 50 decoy grants added to the record's
+  embedded `ConsentAssertion`, on top of the one real grant every field
+  needs to stay fully consented. `hasGrant()` in
+  `consent-core/src/evaluate.ts` scans the grant array linearly per
+  field and returns on the first match, so a decoy grant only adds scan
+  cost if it is actually walked before a match is found. This is why
+  decoys are generated *before* each field's real grant in the array
+  (`experiments/harness/e1/src/synthetic-records.ts`): every field's
+  lookup must scan past all of them first, making decoy count the
+  parameter that actually determines how the scan's cost grows,
+  independent of field count. A design that instead sized the grant
+  array only up to `fieldCount` and called the result "grant-set size"
+  cannot vary scan cost independently of field count at all under this
+  project's one-grant-per-field consent model (every field's own grant
+  is structurally required, so the array can never be *smaller* than
+  `fieldCount` while staying fully consented) — that was this spec's
+  original design, and it measured document size, not scan cost, which
+  is exactly the defect this correction fixes. The realized grant array
+  size (`fieldCount + decoyCount`) is what the E1 results CSV's
+  `grant_set_size` column reports, since that is the count a reader can
+  actually verify against the record; decoy count is the swept,
+  independent variable behind it.
 
 The full sweep is the cross product of these three dimensions (7 x 3 x 3
 = 63 points) times the three arms, each repeated for a fixed number of
@@ -197,6 +215,18 @@ using the same pinned image digest as `deploy/docker-compose.yml`, torn
 down and recreated fresh per sweep run so results are not affected by a
 prior run's leftover databases or design documents.
 
+Within one sweep run, each arm's database is recreated fresh before
+every swept cell (every batch-size/field-count/decoy-count/trial
+combination), not once per arm. Batch size is one of the swept
+dimensions this experiment measures, and the sweep's batch sizes are
+ascending; a database that only gets created once per arm would grow
+monotonically across the sweep, so database size, compaction behavior,
+and page-cache pressure would rise in lockstep with batch size and
+confound it with the measurement. Recreating per cell costs one
+delete-and-create round trip per data point, which is small next to the
+write batch itself even at the smallest batch size, and keeps batch
+size the only thing that varies between consecutive cells.
+
 ### 3.5 Output
 
 One CSV per arm at `experiments/results/e1/<arm>.csv`, columns: `seed`,
@@ -239,12 +269,16 @@ The sweep's gate is "results reproduce from seed" (parent spec section
 8). `EpochSealer`'s existing code path only ever gets its randomness
 from `UUID.randomUUID()` for `epochId`, which is not part of any
 hash input the sweep needs to reproduce, but the E3 harness's own
-synthetic-entry generator (populating entry content, injected tamper
-locations, and epoch boundaries for the sweep) must use a seeded
-PRNG (`java.util.Random(seed)`, not `Math.random()`/`ThreadLocalRandom`)
-so a given seed always produces the same fixtures. This is a new
-class, `experiments/harness/e3`'s own `SeededFixtureGenerator`, not a
-change to `EpochSealer` itself.
+synthetic-entry generator (populating entry content and epoch
+boundaries for the sweep) must use a seeded PRNG (`java.util.Random(seed)`,
+not `Math.random()`/`ThreadLocalRandom`) so a given seed always
+produces the same fixtures. This is a new class, `experiments/harness/e3`'s
+own `SeededFixtureGenerator`, not a change to `EpochSealer` itself.
+E3-full measures proof size and verification time only (section 4.4),
+not tamper detection, which phase 4's own spec already proved at 100%
+at the mechanism level (section 4.1); this generator therefore has no
+tamper-injection responsibility, unlike the boolean pass/fail tests
+that already exist for that purpose.
 
 ### 4.4 What gets measured, and where
 
@@ -261,9 +295,13 @@ would misrepresent what the number depends on.
 - **Proof size**, computed server-side: for a given epoch size, build
   the tree, call the existing `MerkleTree.proof()` for a swept set of
   leaf indices, and record `steps().size()` (each step is one sibling
-  hash, so proof size in bytes follows directly: `steps().size() * 32`
-  for the hex-encoded SHA-256 hashes `AuditHashing` produces, recorded
-  as its own column rather than assumed at analysis time).
+  hash, so proof size in raw digest bytes follows directly:
+  `steps().size() * 32`, since SHA-256 produces a 32-byte digest;
+  `AuditHashing` carries that digest as a 64-character hex string over
+  the wire and through this pipeline's JSON fixtures, so `proof_bytes`
+  as reported here is the underlying digest size, not the transmitted
+  hex-string byte count, which is double it. Recorded as its own
+  column rather than assumed at analysis time).
 - **Inclusion-proof verification time**, measured on the client side of
   the boundary: `packages/audit-verify`'s `verifyInclusion()`, run in
   Node under the low-end throttle described below, timed with
@@ -272,14 +310,23 @@ would misrepresent what the number depends on.
   because `audit-verify` is the package a participant's own device
   actually runs (`apps/participant-web`, `apps/participant-mobile`); the
   Java side only generates the fixtures the Node side then verifies; it
-  is not itself timed as a headline number.
+  is not itself timed as a headline number. A single `verifyInclusion()`
+  call is sub-millisecond even at the largest epoch size, well inside
+  JIT-warmup and per-`await` scheduling noise for a chain of async
+  `crypto.subtle.digest` calls, so a single untimed warmup pass over
+  every fixture runs first (discarded), then each fixture is timed
+  across 10 repetitions and the row records the median, matching E1's
+  own use of repeated trials (section 3.2) to make a single-shot,
+  sub-millisecond measurement reportable at all.
 - **Chain verification time**, same package and harness,
   `verifyChain()`, swept against chain length (number of epochs in the
   chain): 5, 20, 100, 500 epochs. `verifyChain()` only recomputes and
   compares `prevEpochHash` chain links; it never touches an epoch's
   entries or recomputes a Merkle root from them, so the fixture epochs
   need no real entries or trees behind them, only a `merkleRoot` value
-  consistent with `AuditHashing.prevEpochHash()`'s own inputs.
+  consistent with `AuditHashing.prevEpochHash()`'s own inputs. Timed the
+  same way as inclusion-proof verification: one untimed warmup pass,
+  then the median of 10 timed repetitions per chain length.
 
 ### 4.5 Output
 
@@ -319,6 +366,16 @@ spec's framing ("chosen to approximate the class of handset the target
 population actually owns") for each experiment respectively. It is not
 applied to E3's Java fixture-generation side, which is server-side
 tooling, not a stand-in for a participant's device.
+
+E3's Node verification process has both a throttled and an unthrottled
+invocation (the latter for fast local iteration, the former for the
+actual reported numbers). The `throttle_cpus`/`throttle_memory_mb`
+columns must reflect which one actually produced each row, not a
+constant asserted regardless of invocation: the harness reads these
+from its own environment (e.g. an environment variable the throttled
+invocation sets and the unthrottled one leaves unset) rather than
+hardcoding the throttled profile's values, so an unthrottled run cannot
+silently mislabel its rows as throttled.
 
 ## 6. Non-goals
 

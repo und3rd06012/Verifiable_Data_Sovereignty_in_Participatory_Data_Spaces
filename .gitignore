@@ -2,7 +2,8 @@ node_modules/
 build/
 .gradle/
 dist/
-experiments/results/*.csv
+experiments/results/**/*.csv
+experiments/harness/e3/fixtures/
 __pycache__/
 .venv/
 .superpowers/

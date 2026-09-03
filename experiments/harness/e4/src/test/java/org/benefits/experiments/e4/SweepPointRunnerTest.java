@@ -34,15 +34,17 @@ class SweepPointRunnerTest {
     void negativeNoisedProportionDenominatorIsTreatedAsSuppressedNotAsAComputedRelativeError() {
         // Traced scenario (re-traced after the mix64 seed-derivation fix changed which
         // seed/index tuples hit this path): at epsilon=0.01, population=10, k=3, this exact
-        // seed/point hits a proportion query with a negative sum of noised group counts
-        // (observedTotal < 0; PrivacyPipeline never clamps noised counts). The widened
-        // "observedTotal <= 0.0" guard treats this the same as a suppressed/refused query
+        // seed/point hits BOTH proportion queries (proportion-largest-service-type and
+        // proportion-legal-aid) with a negative sum of noised group counts (observedTotal
+        // < 0 for each; PrivacyPipeline never clamps noised counts). The widened
+        // "observedTotal <= 0.0" guard treats each the same as a suppressed/refused query
         // (relative error sentinel 1.0, counted in suppressionRefusalRate) instead of
         // computing a nonsensical negative-denominator "observed proportion". Reverting the
         // guard to the original "observedTotal == 0.0" check on this exact scenario
         // (verified against the real, temporarily-reverted production code) measurably
         // lowers suppressionRefusalRate (traced at 0.8, 32/40) versus the fixed 0.85 (34/40)
-        // asserted here, proving the widened guard is actually exercised in this scenario.
+        // asserted here, a 2-point swing proving the widened guard is exercised by both
+        // queries in this scenario, not just one.
         var result = new SweepPointRunner(1).run(0.01, 10, 3, false, 0, 0, 0, 0);
         assertThat(result.dataPoints()).isEqualTo(40);
         assertThat(result.suppressionRefusalRate()).isCloseTo(0.85, within(1e-9));

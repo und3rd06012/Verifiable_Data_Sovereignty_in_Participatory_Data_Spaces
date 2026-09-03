@@ -156,22 +156,47 @@ original all-inclusive statistic produced before that fix.
 ### 4.5 G1: quorum availability and deadlock (`g1_figure.py` → `g1-availability.pdf`)
 
 Reads `experiments/results/g1/availability.csv` directly (already
-pre-aggregated, 135 data rows). Filters to `veto_share == 0.0` only, to
-isolate the real-versus-hypothetical comparison cleanly from the added
-complexity a nonzero veto share would introduce into the same panels
-(veto_share's own effect is a secondary result, out of this figure's own
-scope per section 6).
+pre-aggregated, 135 data rows). Filters to `veto_share == 0.3` (the
+largest swept value, of `{0.0, 0.1, 0.3}`), amended from an earlier draft
+of this spec that filtered to `veto_share == 0.0`: at `veto_share == 0.0`
+no vetoes ever occur, so Arm B degenerates to exactly Arm A's behavior by
+construction (confirmed directly against the real CSV: all 45 rows at
+`veto_share == 0.0` have `arm_a_reached_rate == arm_b_reached_rate` and
+`arm_b_vetoed_rate == 0.0`), and the figure would show two flat,
+identical, zero-valued lines in every panel: no comparison at all.
+`veto_share == 0.3` shows the largest divergence between the arms of the
+three swept values, which is what this figure exists to show.
+
+Also filters to `N == 20` (the largest of the three swept pool sizes,
+`{5, 10, 20}`, matching this sub-project's own spec calling it "the
+largest pool" and the parent spec's "community scale" framing), amended
+from an earlier draft that named no `N` filter at all: the CSV's swept
+`N` dimension was left unfiltered and unaggregated in that draft, and
+since each panel's x-axis (`p_act`) and legend (arm) do not encode `N`,
+the three real `N` values' rows landed at the same `p_act` x-position and
+were connected by line segments in sort order, producing a visible
+zigzag rather than one clean line per arm per panel. `N == 20` alone
+gives exactly one row per `(quorum_fraction, p_act)` pair, avoiding the
+issue entirely.
 
 Three small-multiple panels, one per swept `quorum_fraction` value (0.3,
-0.5, 0.7). Each panel: x-axis `p_act` (0.1 to 0.9), y-axis
-`starved_rate` (0.0 to 1.0), two lines, `arm_a_starved_rate` (real,
-solid) and `arm_b_starved_rate` (hypothetical veto-blocks, dashed),
-same color, differing only by line style so the real-versus-hypothetical
-distinction reads as one consistent visual language across all three
-panels. Directly answers the parent spec's own framing (5): "whether 2 of
-3 with rotation is workable at community scale or whether it stalls",
-and shows how much worse the hypothetical veto-blocking policy would be
-if it were ever actually implemented.
+0.5, 0.7). Each panel: x-axis `p_act` (0.1 to 0.9), y-axis "quorum
+failure rate" (0.0 to 1.0, i.e. `1 - reached_rate`), two lines, Arm A's
+failure rate (real, solid, equal to `arm_a_starved_rate`, since starved
+is Arm A's only failure bucket) and Arm B's failure rate (hypothetical
+veto-blocks, dashed, equal to `arm_b_starved_rate + arm_b_vetoed_rate`,
+since Arm B's failures split across two mutually exclusive buckets, a
+permanent VETOED bucket and a STARVED bucket, and a veto is a permanent
+objection so the vast majority of Arm B's real failures land in
+`arm_b_vetoed_rate`, not `arm_b_starved_rate` alone), same color,
+differing only by line style so the real-versus-hypothetical distinction
+reads as one consistent visual language across all three panels. Plotting
+`arm_b_starved_rate` alone, as an earlier draft of this spec specified,
+would understate Arm B's true failure rate by excluding its dominant
+failure mode. Directly answers the parent spec's own framing (5):
+"whether 2 of 3 with rotation is workable at community scale or whether
+it stalls", and shows how much worse the hypothetical veto-blocking
+policy would be if it were ever actually implemented.
 
 ### 4.6 G2: consent heterogeneity versus aggregate utility (`g2_figure.py` → `g2-heterogeneity.pdf`)
 

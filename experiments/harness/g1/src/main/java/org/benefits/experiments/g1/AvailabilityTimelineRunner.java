@@ -40,6 +40,8 @@ public class AvailabilityTimelineRunner {
 
         var acted = new boolean[n];
         Integer armATicks = null;
+        Integer armBTicks = null;
+        var armBVetoed = false;
 
         for (var tick = 1; tick <= MAX_TICKS; tick++) {
             for (var s = 0; s < n; s++) {
@@ -67,20 +69,33 @@ public class AvailabilityTimelineRunner {
                 }
             }
 
+            var authorization = store.findByReleaseRequestId(RELEASE_REQUEST_ID);
+            if (authorization == null) {
+                continue;
+            }
+
             if (armATicks == null) {
-                var authorization = store.findByReleaseRequestId(RELEASE_REQUEST_ID);
-                if (authorization != null) {
-                    var context = new ContractNegotiationPolicyContext(
-                            new ParticipantAgent("g1-consumer", Map.of(), Map.of()));
-                    if (quorumFunction.evaluate(Operator.GEQ, quorum, permission, context)) {
-                        armATicks = tick;
-                        break;
-                    }
+                var context = new ContractNegotiationPolicyContext(
+                        new ParticipantAgent("g1-consumer", Map.of(), Map.of()));
+                if (quorumFunction.evaluate(Operator.GEQ, quorum, permission, context)) {
+                    armATicks = tick;
                 }
+            }
+
+            if (armBTicks == null && !armBVetoed) {
+                if (!authorization.vetoes().isEmpty()) {
+                    armBVetoed = true;
+                } else if (HypotheticalVetoBlocksQuorumFunction.evaluate(authorization, quorum)) {
+                    armBTicks = tick;
+                }
+            }
+
+            if (armATicks != null && (armBTicks != null || armBVetoed)) {
+                break;
             }
         }
 
-        return new RunOutcome(armATicks, null, false);
+        return new RunOutcome(armATicks, armBTicks, armBVetoed);
     }
 
     private static Permission permissionFor(String releaseRequestId) {

@@ -367,10 +367,20 @@ itself is not modified). Reuses `Statistics` the same way (imported from
 `experiments:harness:e4`, not duplicated, unlike G1, which has no other
 reason to depend on E4 and duplicates `Statistics` instead: section 3.4).
 
-- `epsilon`: 0.5, 1.0, 2.0 (three representative values, G2's headline
-  swept variable is heterogeneity, not the epsilon-vs-refusal transition
-  E4 already characterized in detail, so a coarse epsilon grid is
-  sufficient here).
+- `epsilon`: 0.25, 0.5, 1.0, 2.0 (four values). The original three
+  (0.5, 1.0, 2.0) were chosen on the reasoning that G2's headline swept
+  variable is heterogeneity, not the epsilon-vs-refusal transition E4
+  already characterized, so a coarse grid seemed sufficient. The first
+  real production run (before this line was added) showed that
+  reasoning was wrong: at `TOTAL_SITE_BUDGET = 2.0` (below), even the
+  lowest of the three original values clears only 4 of the fixed
+  8-query workload's queries before budget exhausts, so 87 to 95
+  percent of every pooled sample was the refusal sentinel and the
+  pooled median (below) was pinned at 1.0 in all 42 rows regardless of
+  `h`. `0.25` is the exact value at which all 8 queries clear budget
+  (`8 x 0.25 = 2.0 = TOTAL_SITE_BUDGET`), so it is the one addition
+  needed to make the crosstab queries' own `h`-driven exclusion signal
+  observable at all, rather than sweeping a wider or finer grid.
 - `population`: 100, 300.
 - `k`: 5 (fixed, k-anonymity threshold is not this experiment's focus).
 - `skew`: uniform only (fixed, likewise not this experiment's focus;
@@ -380,7 +390,7 @@ reason to depend on E4 and duplicates `Statistics` instead: section 3.4).
   finely spaced near the low end where a paper reader most wants to see
   the initial slope of the utility-vs-heterogeneity curve).
 
-3 x 2 x 1 x 1 x 7 = 42 sweep points, no repeated trials per point
+4 x 2 x 1 x 1 x 7 = 56 sweep points, no repeated trials per point
 (deterministic given the seed, exactly like E4 and unlike G1: a single
 population generation and query workload run per point is enough, since
 there is no per-tick stochastic process here the way G1 has).
@@ -427,24 +437,48 @@ suppression/refusal-sentinel convention E4 established (relative error
   fullTruth` for every group), so `h = 0`'s row is a direct sanity check.
 
 Both are pooled to a median/IQR across the whole 8-query workload,
-exactly as E4 pools its single relative-error statistic. No
-surviving-only split here: that was E4's own fix for its own degenerate
-all-inclusive median at high epsilon, and G2's epsilon grid (section 4.3)
-is coarse and does not aim to characterize that same refusal transition,
-so this spec does not add a matching surviving-only pair here. If the real
-production sweep turns out to need one, the same final-review-fix-wave
-pattern that fixed E4 applies.
+exactly as E4 pools its single relative-error statistic.
+
+**A surviving-only pair of each statistic is also reported**, computed
+over only the non-sentinel data points, exactly mirroring the fix E4's
+own final review made for the identical failure mode (a shared-budget
+workload whose pooled median is dominated by the refusal/suppression
+sentinel once that sentinel exceeds half the pool). This was
+specifically pre-authorized by this section's own earlier text ("if the
+real production sweep turns out to need one, the same
+final-review-fix-wave pattern that fixed E4 applies"), and the real
+production sweep did need one: even with the epsilon grid's 0.25 addition
+(section 4.3) restoring every query's ability to clear budget at the
+lowest epsilon, the higher swept epsilon values (0.5, 1.0, 2.0) still
+refuse most of the workload, so the all-inclusive median alone still
+saturates at those values exactly as E4's did. `surviving_coverage_median_relative_error`,
+`surviving_coverage_iqr_relative_error`, `surviving_exclusion_median_relative_error`,
+and `surviving_exclusion_iqr_relative_error` are the median/IQR of each
+statistic's own pooled list restricted to points where a query both
+succeeded (was not refused) and the specific group was not suppressed;
+`surviving_data_points` is that restricted set's size. When
+`surviving_data_points` is 0, the four surviving statistic columns are
+the empty string, not `0` or `NaN`, matching E4's own convention exactly.
 
 Also reported: `excluded_fraction`, the fraction of the generated
 population that had no valid grant for at least one of the 8 queries'
 `groupBy` fields. The direct, query-independent measurement of "how much
-of the community did heterogeneity actually exclude" at that `h`.
+of the community did heterogeneity actually exclude" at that `h`. Since
+this is a per-participant property of the generated population and the
+consent-assignment seed does not depend on `epsilon`, this column is
+identical across every epsilon value at the same `(population, h)`
+combination, by design: it exists to isolate the exclusion mechanism
+itself from the privacy mechanism's own noise/refusal behavior, which
+is exactly what the two relative-error statistics above are for.
 
 CSV `experiments/results/g2/heterogeneity.csv` columns: `seed`, `epsilon`,
 `population`, `k`, `h`, `excluded_fraction`,
 `coverage_median_relative_error`, `coverage_iqr_relative_error`,
 `exclusion_median_relative_error`, `exclusion_iqr_relative_error`,
-`suppression_refusal_rate`, `data_points`.
+`suppression_refusal_rate`, `surviving_coverage_median_relative_error`,
+`surviving_coverage_iqr_relative_error`, `surviving_exclusion_median_relative_error`,
+`surviving_exclusion_iqr_relative_error`, `surviving_data_points`,
+`data_points`.
 
 ## 5. Non-goals
 

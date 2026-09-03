@@ -1,0 +1,15 @@
+{
+  "name": "@benefits/experiment-e2",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "sweep": "npm run build && node dist/run-e2.js"
+  },
+  "dependencies": {
+    "@benefits/device-sim": "0.1.0",
+    "@benefits/consent-couchdb": "0.1.0"
+  }
+}

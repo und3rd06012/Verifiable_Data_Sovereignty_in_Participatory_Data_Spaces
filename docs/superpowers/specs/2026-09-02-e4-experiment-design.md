@@ -201,7 +201,13 @@ group in the ground truth becomes one relative-error data point.
   group survived suppression in the observed `ReleaseArtifact`:
   relative error = `abs(noised - true) / true` (a group with a true
   count of zero cannot occur, since `KAnonymity.aggregate` never
-  returns an empty group).
+  returns an empty group). This value is not capped at 1.0: Laplace
+  noise has unbounded support, so a small true count can genuinely
+  receive a noise draw larger than itself and read as more than 100%
+  error. That is real, meaningful signal about how badly noise hurts a
+  small group specifically, not a defect to clamp away. The 1.0 cap
+  below applies only to the suppressed and refused cases, where there
+  is no noised value to compare against at all.
 - If the query succeeded but that group was suppressed (present in
   ground truth, absent from the observed release because it fell below
   k): relative error = 1.0 (capped, not infinite. The community gets

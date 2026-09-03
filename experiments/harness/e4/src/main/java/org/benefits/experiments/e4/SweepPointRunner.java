@@ -70,12 +70,23 @@ public class SweepPointRunner {
                 var trueTarget = trueByGroup.getOrDefault(targetCategory, 0);
                 var trueProportion = trueTarget / (double) trueTotal;
 
-                if (released.isEmpty()) {
+                if (trueProportion == 0.0) {
+                    // The target category (e.g. legal-aid) has zero true participants in
+                    // this population, so relative error against a zero baseline is
+                    // undefined (it would divide by zero). Drop this data point from the
+                    // pool entirely rather than fabricate a sentinel value; dataPoints()
+                    // is therefore one lower than usual (7 instead of the normal 8-query
+                    // minimum) for the rare sweep point where this triggers.
+                } else if (released.isEmpty()) {
                     relativeErrors.add(1.0);
                     suppressedOrRefused++;
                 } else {
                     var observedTotal = observedByGroup.values().stream().mapToDouble(Double::doubleValue).sum();
-                    if (observedTotal == 0.0) {
+                    if (observedTotal <= 0.0) {
+                        // PrivacyPipeline never clamps noised counts, so at low epsilon the
+                        // sum of noised group counts can go negative (not just exactly
+                        // zero). A non-positive noised denominator is as meaningless as a
+                        // suppressed/refused query, so it is treated the same way.
                         relativeErrors.add(1.0);
                         suppressedOrRefused++;
                     } else {

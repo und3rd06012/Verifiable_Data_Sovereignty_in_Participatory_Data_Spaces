@@ -3,6 +3,7 @@ package org.benefits.experiments.e4;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 class SweepPointRunnerTest {
 
@@ -17,11 +18,53 @@ class SweepPointRunnerTest {
     }
 
     @Test
-    void medianAndIqrAreWithinTheBoundedZeroToOneRange() {
+    void medianAndIqrAreNonNegativeAndFinite() {
+        // Relative error for a surviving-but-noisy group is NOT capped at 1.0 (Laplace
+        // noise has unbounded support), so median/IQR are not bounded to [0, 1] in
+        // general; only non-negativity and finiteness are guaranteed properties.
         var result = new SweepPointRunner(1).run(0.5, 100, 5, false, 1, 1, 1, 0);
-        assertThat(result.medianRelativeError()).isBetween(0.0, 1.0);
-        assertThat(result.iqrRelativeError()).isBetween(0.0, 1.0);
+        assertThat(result.medianRelativeError()).isGreaterThanOrEqualTo(0.0);
+        assertThat(result.medianRelativeError()).isFinite();
+        assertThat(result.iqrRelativeError()).isGreaterThanOrEqualTo(0.0);
+        assertThat(result.iqrRelativeError()).isFinite();
         assertThat(result.suppressionRefusalRate()).isBetween(0.0, 1.0);
+    }
+
+    @Test
+    void negativeNoisedProportionDenominatorIsTreatedAsSuppressedNotAsAComputedRelativeError() {
+        // Traced scenario: at epsilon=0.05, population=10, k=3, this exact seed/point hits
+        // BOTH proportion queries (proportion-largest-service-type and proportion-legal-aid)
+        // with a negative sum of noised group counts (observedTotal < 0; PrivacyPipeline
+        // never clamps noised counts). The widened "observedTotal <= 0.0" guard treats each
+        // the same as a suppressed/refused query (relative error sentinel 1.0, counted in
+        // suppressionRefusalRate) instead of computing a nonsensical negative-denominator
+        // "observed proportion" and an unbounded relative error (traced at ~4.0 and ~4.1
+        // respectively, over four times each query's own true proportion, silently
+        // distorting the pooled IQR). Reverting the guard to the brief's original
+        // "observedTotal == 0.0" check on this exact scenario measurably lowers
+        // suppressionRefusalRate (traced at 0.7837837837837838, 29/37) versus the fixed
+        // 0.8378378378378378 (31/37) asserted here, proving the widened guard is actually
+        // exercised (by both queries) in this scenario.
+        var result = new SweepPointRunner(6).run(0.05, 10, 3, false, 0, 0, 0, 0);
+        assertThat(result.dataPoints()).isEqualTo(37);
+        assertThat(result.suppressionRefusalRate()).isCloseTo(0.8378378378378378, within(1e-9));
+    }
+
+    @Test
+    void zeroTrueProportionExcludesTheDataPointInsteadOfDividingByZero() {
+        // Traced scenario: at this seed/population, the generated population happens to
+        // contain zero legal-aid participants, so proportion-legal-aid's true proportion
+        // is exactly 0.0. Without the trueProportion == 0.0 guard, the code divides by
+        // that zero denominator (Math.abs(observedProportion - 0.0) / 0.0); since the
+        // legal-aid group also never appears in the release (it never existed in the true
+        // data either), the numerator is also exactly 0.0, producing NaN (0.0 / 0.0) that
+        // would corrupt Statistics.percentile's sort. The fix drops that data point
+        // instead, so dataPoints() is one lower than the pre-fix count traced for this
+        // same scenario (30 without the guard, 29 with it, asserted here).
+        var result = new SweepPointRunner(1).run(0.2, 8, 3, false, 0, 0, 0, 0);
+        assertThat(result.dataPoints()).isEqualTo(29);
+        assertThat(result.medianRelativeError()).isFinite();
+        assertThat(result.iqrRelativeError()).isFinite();
     }
 
     @Test

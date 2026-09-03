@@ -1,0 +1,6 @@
+seed,online_probability,trials,propagation_median_ticks,propagation_iqr_ticks,propagation_data_points,consistency_median_ticks,consistency_iqr_ticks,consistency_data_points,leaked_record_count,unresolved_conflict_count,host_cpu_model,throttle_cpus,throttle_memory_mb
+1,0.05,30,16.5,23,90,12.5,21.5,90,0,0,AMD Ryzen 7 5800H with Radeon Graphics,1,1024
+1,0.1,30,6,12.75,90,9,13,90,0,0,AMD Ryzen 7 5800H with Radeon Graphics,1,1024
+1,0.3,30,2,3.5,90,2,3,90,0,0,AMD Ryzen 7 5800H with Radeon Graphics,1,1024
+1,0.5,30,2,2,90,2,2,90,0,0,AMD Ryzen 7 5800H with Radeon Graphics,1,1024
+1,0.9,30,1,0,90,1,0,90,0,0,AMD Ryzen 7 5800H with Radeon Graphics,1,1024

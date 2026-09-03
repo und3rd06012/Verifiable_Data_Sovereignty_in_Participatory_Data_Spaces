@@ -1,4 +1,5 @@
 import { Device, DutyCycle, syncDevice, createRemoteDb } from '@benefits/device-sim';
+import type { RecipientClass } from '@benefits/consent-core';
 import { mulberry32 } from './rng';
 
 const MAX_TICKS = 200;
@@ -6,11 +7,10 @@ const REVOCATION_COUNT = 3;
 const BASELINE_COUNT = 4;
 const FLEET_SIZE = REVOCATION_COUNT + BASELINE_COUNT;
 
-// recipientClass is typed explicitly as the literal union (matching
-// @benefits/consent-core's RecipientClass) rather than inferred as
-// `string`: this file is compiled by tsc (unlike the test files), and an
+// recipientClass is typed explicitly as RecipientClass rather than inferred
+// as `string`: this file is compiled by tsc (unlike the test files), and an
 // inferred `string` return type is not assignable to ConsentGrant.
-function grant(field: string, purpose = 'service-improvement', recipientClass: 'community' | 'provider' | 'statistics' = 'statistics') {
+function grant(field: string, purpose = 'service-improvement', recipientClass: RecipientClass = 'statistics') {
   return {
     field, purpose, recipientClass,
     grantedAt: '2026-08-01T00:00:00.000Z', expiresAt: null, revokedAt: null

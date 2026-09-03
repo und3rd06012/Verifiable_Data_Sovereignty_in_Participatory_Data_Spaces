@@ -6,6 +6,16 @@ construction and the figure would show two flat, identical, zero-valued
 lines with no comparison at all, whereas veto_share == 0.3 shows the
 largest divergence between the arms.
 
+Also filters to N == 20, the largest of the three swept steward pool
+sizes ({5, 10, 20}, matching this sub-project's own spec calling it "the
+largest pool" and the parent spec's "community scale" framing). Each
+panel's x-axis (p_act) and legend (arm) do not encode N, so without this
+filter the three swept N values' rows would land at the same p_act
+x-position and get connected by line segments in sort order, producing a
+visible zigzag rather than one clean line per arm per panel. N == 20
+alone gives exactly one row per (quorum_fraction, p_act) pair, avoiding
+the issue entirely.
+
 Plots 1 - reached_rate (quorum failure rate) rather than the raw
 starved_rate columns directly, because Arm B's failures split across two
 mutually exclusive buckets, a permanent VETOED bucket and a STARVED
@@ -27,7 +37,7 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
 
     df = load_csv(RESULTS_PATH)
-    df = df[df['veto_share'] == 0.3]
+    df = df[(df['veto_share'] == 0.3) & (df['N'] == 20)]
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 

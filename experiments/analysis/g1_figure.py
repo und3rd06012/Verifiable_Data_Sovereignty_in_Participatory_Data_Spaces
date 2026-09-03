@@ -1,7 +1,15 @@
 """G1: quorum availability and deadlock, real versus hypothetical
-veto-blocking (spec section 4.5). Filters to veto_share == 0.0 to isolate
-the real-versus-hypothetical comparison from the added complexity a nonzero
-veto share would introduce into the same panels.
+veto-blocking (spec section 4.5). Filters to veto_share == 0.3, the
+largest of the three swept values ({0.0, 0.1, 0.3}): at veto_share == 0.0
+no vetoes ever occur, so Arm B degenerates to exactly Arm A's behavior by
+construction and the figure would show two flat, identical, zero-valued
+lines with no comparison at all, whereas veto_share == 0.3 shows the
+largest divergence between the arms.
+
+Plots 1 - reached_rate (quorum failure rate) rather than the raw
+starved_rate columns directly, because Arm B's failures split across two
+mutually exclusive buckets, a permanent VETOED bucket and a STARVED
+bucket, and arm_b_starved_rate alone excludes its dominant failure mode.
 """
 import os
 
@@ -19,25 +27,25 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
 
     df = load_csv(RESULTS_PATH)
-    df = df[df['veto_share'] == 0.0]
+    df = df[df['veto_share'] == 0.3]
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 
     for ax, quorum_fraction in zip(axes, QUORUM_FRACTIONS):
         subset = df[df['quorum_fraction'] == quorum_fraction].sort_values('p_act')
         ax.plot(
-            subset['p_act'], subset['arm_a_starved_rate'],
+            subset['p_act'], 1 - subset['arm_a_reached_rate'],
             label='arm A (real)', marker='o', linestyle='-', color='#0072B2'
         )
         ax.plot(
-            subset['p_act'], subset['arm_b_starved_rate'],
+            subset['p_act'], subset['arm_b_starved_rate'] + subset['arm_b_vetoed_rate'],
             label='arm B (hypothetical)', marker='o', linestyle='--', color='#0072B2'
         )
         ax.set_xlabel('p_act')
         ax.set_ylim(-0.05, 1.05)
         ax.set_title('quorum_fraction = %.1f' % quorum_fraction)
 
-    axes[0].set_ylabel('starved rate')
+    axes[0].set_ylabel('quorum failure rate')
     axes[0].legend()
     fig.suptitle('G1: quorum availability, real versus hypothetical veto-blocking')
     fig.tight_layout()

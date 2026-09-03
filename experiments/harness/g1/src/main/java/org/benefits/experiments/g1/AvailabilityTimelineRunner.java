@@ -21,8 +21,8 @@ import static org.benefits.policy.BenefitsNamespace.RELEASE_REQUEST_KEY;
  * Runs one simulated steward-availability timeline (spec section 3.2): a pool of N
  * stewards, each not-yet-acted steward independently acting each tick with probability
  * p_act, driving the real StewardQuorumFunction/InMemoryStewardAuthorizationStore
- * (Arm A, spec section 3.1). Arm B (the hypothetical veto-blocks-quorum arm) is added
- * in Task 4.
+ * (Arm A, spec section 3.1), together with Arm B (the hypothetical veto-blocks-quorum
+ * arm, spec section 3.1) evaluated on the same simulated timeline.
  */
 public class AvailabilityTimelineRunner {
 
@@ -50,14 +50,10 @@ public class AvailabilityTimelineRunner {
                 }
                 if (random.nextDouble() < pAct) {
                     acted[s] = true;
-                    // A veto is recorded here in the store even though Task 3's own Arm
-                    // A logic below never reads .vetoes() at all, matching the real
-                    // StewardQuorumFunction's behavior exactly. This keeps the random
-                    // draw sequence and the store's real state identical between Task 3
-                    // and Task 4: Task 4 only adds a second reader of this same,
-                    // already-correct state (Arm B's veto/quorum check), and does not
-                    // change what gets appended or when, so Task 3's own committed test
-                    // results stay valid unchanged after Task 4 extends this method.
+                    // A veto is recorded here in the store even though Arm A's own
+                    // quorum check below never reads .vetoes() at all, matching the
+                    // real StewardQuorumFunction's behavior exactly. Arm B (below)
+                    // reads this same, already-correct store state independently.
                     var stewardId = "steward-" + s;
                     if (random.nextDouble() < vetoShare) {
                         store.appendVeto(RELEASE_REQUEST_ID, DATASET_HASH,

@@ -8,7 +8,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from common import setup_plot_style, load_csv
+from common import setup_plot_style, load_csv, MARKERS
 
 RESULTS_PATH = os.path.join(os.path.dirname(__file__), '..', 'results', 'g2', 'heterogeneity.csv')
 OUT_DIR = os.path.join(os.path.dirname(__file__), 'figures')
@@ -26,7 +26,7 @@ def main():
 
     for ax, epsilon in zip(axes, EPSILONS):
         subset = df[df['epsilon'] == epsilon].sort_values('h')
-        coverage_line, = ax.plot(subset['h'], subset['surviving_coverage_median_relative_error'], label='coverage', marker='o')
+        coverage_line, = ax.plot(subset['h'], subset['surviving_coverage_median_relative_error'], label='coverage', marker=MARKERS[0])
         ax.fill_between(
             subset['h'],
             subset['surviving_coverage_median_relative_error'] - subset['surviving_coverage_iqr_relative_error'] / 2,
@@ -34,7 +34,7 @@ def main():
             alpha=0.2,
             color=coverage_line.get_color(),
         )
-        exclusion_line, = ax.plot(subset['h'], subset['surviving_exclusion_median_relative_error'], label='exclusion', marker='o')
+        exclusion_line, = ax.plot(subset['h'], subset['surviving_exclusion_median_relative_error'], label='exclusion', marker=MARKERS[1])
         ax.fill_between(
             subset['h'],
             subset['surviving_exclusion_median_relative_error'] - subset['surviving_exclusion_iqr_relative_error'] / 2,

@@ -9,7 +9,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from common import setup_plot_style, load_csv
+from common import setup_plot_style, load_csv, MARKERS
 
 RESULTS_PATH = os.path.join(os.path.dirname(__file__), '..', 'results', 'e4', 'utility.csv')
 OUT_DIR = os.path.join(os.path.dirname(__file__), 'figures')
@@ -29,11 +29,11 @@ def main():
 
     for ax, population in zip(axes, POPULATIONS):
         subset = df[df['population'] == population]
-        for k in K_VALUES:
+        for k, marker in zip(K_VALUES, MARKERS):
             k_subset = subset[subset['k'] == k].sort_values('epsilon')
             line, = ax.plot(
                 k_subset['epsilon'], k_subset['surviving_median_relative_error'],
-                label='k=%d' % k, marker='o'
+                label='k=%d' % k, marker=marker
             )
             if k == IQR_BAND_K:
                 ax.fill_between(

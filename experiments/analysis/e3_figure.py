@@ -8,7 +8,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from common import setup_plot_style, load_csv
+from common import setup_plot_style, load_csv, MARKERS
 
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'results', 'e3')
 OUT_DIR = os.path.join(os.path.dirname(__file__), 'figures')
@@ -37,14 +37,14 @@ def main():
 
     fig, (ax_size, ax_inclusion, ax_chain) = plt.subplots(1, 3, figsize=(16, 5))
 
-    ax_size.plot(proof_size['epoch_size'], proof_size['median'], marker='o')
-    ax_size.fill_between(proof_size['epoch_size'], proof_size['q25'], proof_size['q75'], alpha=0.2)
+    ax_size.plot(proof_size['epoch_size'], proof_size['median'], marker=MARKERS[0], color='#0072B2')
+    ax_size.fill_between(proof_size['epoch_size'], proof_size['q25'], proof_size['q75'], alpha=0.2, color='#0072B2')
     ax_size.set_xscale('log')
     ax_size.set_xlabel('epoch size')
     ax_size.set_ylabel('proof size (bytes), median with IQR band')
     ax_size.set_title('inclusion proof size')
 
-    ax_inclusion.plot(verify_inclusion['epoch_size'], verify_inclusion['median'], marker='o', color='#D55E00')
+    ax_inclusion.plot(verify_inclusion['epoch_size'], verify_inclusion['median'], marker=MARKERS[1], color='#D55E00')
     ax_inclusion.fill_between(
         verify_inclusion['epoch_size'], verify_inclusion['q25'], verify_inclusion['q75'], alpha=0.2, color='#D55E00'
     )
@@ -53,7 +53,7 @@ def main():
     ax_inclusion.set_ylabel('verification time (ms), median with IQR band')
     ax_inclusion.set_title('inclusion proof verification time')
 
-    ax_chain.plot(verify_chain['chain_length'], verify_chain['elapsed_ms'], marker='o', color='#009E73')
+    ax_chain.plot(verify_chain['chain_length'], verify_chain['elapsed_ms'], marker=MARKERS[2], color='#009E73')
     ax_chain.set_xlabel('chain length')
     ax_chain.set_ylabel('verification time (ms)')
     ax_chain.set_title('chain-of-custody verification time')

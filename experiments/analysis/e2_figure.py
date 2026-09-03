@@ -7,7 +7,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from common import setup_plot_style, load_csv
+from common import setup_plot_style, load_csv, MARKERS
 
 RESULTS_PATH = os.path.join(os.path.dirname(__file__), '..', 'results', 'e2', 'partition.csv')
 OUT_DIR = os.path.join(os.path.dirname(__file__), 'figures')
@@ -21,19 +21,19 @@ def main():
 
     fig, ax = plt.subplots(figsize=(6, 5))
 
-    ax.plot(df['online_probability'], df['propagation_median_ticks'], label='propagation', marker='o')
+    prop_line, = ax.plot(df['online_probability'], df['propagation_median_ticks'], label='propagation', marker=MARKERS[0])
     ax.fill_between(
         df['online_probability'],
         df['propagation_median_ticks'] - df['propagation_iqr_ticks'] / 2,
         df['propagation_median_ticks'] + df['propagation_iqr_ticks'] / 2,
-        alpha=0.2,
+        alpha=0.2, color=prop_line.get_color(),
     )
-    ax.plot(df['online_probability'], df['consistency_median_ticks'], label='consistency', marker='o')
+    cons_line, = ax.plot(df['online_probability'], df['consistency_median_ticks'], label='consistency', marker=MARKERS[1])
     ax.fill_between(
         df['online_probability'],
         df['consistency_median_ticks'] - df['consistency_iqr_ticks'] / 2,
         df['consistency_median_ticks'] + df['consistency_iqr_ticks'] / 2,
-        alpha=0.2,
+        alpha=0.2, color=cons_line.get_color(),
     )
 
     ax.set_xlabel('online probability (connectivity duty cycle)')

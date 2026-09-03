@@ -11,7 +11,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from common import setup_plot_style, load_csv
+from common import setup_plot_style, load_csv, MARKERS
 
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'results', 'e1')
 OUT_DIR = os.path.join(os.path.dirname(__file__), 'figures')
@@ -42,12 +42,12 @@ def main():
     fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 
     for ax, field_count in zip(axes, FIELD_COUNTS):
-        for frame in frames:
+        for frame, marker in zip(frames, MARKERS):
             arm = frame['arm'].iloc[0]
             subset = frame[frame['field_count'] == field_count]
             agg = aggregate(subset).sort_values('batch_size')
-            ax.plot(agg['batch_size'], agg['median'], label=arm, marker='o')
-            ax.fill_between(agg['batch_size'], agg['q25'], agg['q75'], alpha=0.2)
+            line, = ax.plot(agg['batch_size'], agg['median'], label=arm, marker=marker)
+            ax.fill_between(agg['batch_size'], agg['q25'], agg['q75'], alpha=0.2, color=line.get_color())
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_xlabel('batch size')

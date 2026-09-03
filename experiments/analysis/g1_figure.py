@@ -25,7 +25,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from common import setup_plot_style, load_csv
+from common import setup_plot_style, load_csv, MARKERS
 
 RESULTS_PATH = os.path.join(os.path.dirname(__file__), '..', 'results', 'g1', 'availability.csv')
 OUT_DIR = os.path.join(os.path.dirname(__file__), 'figures')
@@ -45,11 +45,11 @@ def main():
         subset = df[df['quorum_fraction'] == quorum_fraction].sort_values('p_act')
         ax.plot(
             subset['p_act'], 1 - subset['arm_a_reached_rate'],
-            label='arm A (real)', marker='o', linestyle='-', color='#0072B2'
+            label='arm A (real)', marker=MARKERS[0], linestyle='-', color='#0072B2'
         )
         ax.plot(
             subset['p_act'], subset['arm_b_starved_rate'] + subset['arm_b_vetoed_rate'],
-            label='arm B (hypothetical)', marker='o', linestyle='--', color='#0072B2'
+            label='arm B (hypothetical)', marker=MARKERS[1], linestyle='--', color='#0072B2'
         )
         ax.set_xlabel('p_act')
         ax.set_ylim(-0.05, 1.05)

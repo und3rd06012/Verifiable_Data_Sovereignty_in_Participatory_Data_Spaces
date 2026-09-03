@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@benefits/device-sim": "0.1.0",
-    "@benefits/consent-couchdb": "0.1.0"
+    "@benefits/consent-couchdb": "0.1.0",
+    "@benefits/consent-core": "0.1.0"
   }
 }

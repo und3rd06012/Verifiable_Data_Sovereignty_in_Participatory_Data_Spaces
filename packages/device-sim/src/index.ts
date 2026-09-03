@@ -1,4 +1,4 @@
-export { Device } from './device';
-export { DutyCycle } from './dutyCycle';
-export { syncDevice, resolveConflicts, injectConflict } from './sync';
-export { createLocalDb, createRemoteDb } from './pouchdb';
+export { Device } from './device.js';
+export { DutyCycle } from './dutyCycle.js';
+export { syncDevice, resolveConflicts, injectConflict } from './sync.js';
+export { createLocalDb, createRemoteDb } from './pouchdb.js';

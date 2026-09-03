@@ -1,5 +1,5 @@
-import { runTrial } from './trial';
-import { median, iqr } from './statistics';
+import { runTrial } from './trial.js';
+import { median, iqr } from './statistics.js';
 
 export interface SweepPointResult {
   seed: number;

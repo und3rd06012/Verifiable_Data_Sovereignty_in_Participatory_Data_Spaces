@@ -1,7 +1,7 @@
-import { createRemoteDb } from './pouchdb';
-import { Device } from './device';
+import { createRemoteDb } from './pouchdb.js';
+import { Device } from './device.js';
 
-export { injectConflict } from './conflictInjector';
+export { injectConflict } from './conflictInjector.js';
 
 export async function syncDevice(device: Device, remoteUrl: string): Promise<{ pushed: number }> {
   const remote = createRemoteDb(remoteUrl);

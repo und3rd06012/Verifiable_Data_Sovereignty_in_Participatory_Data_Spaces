@@ -1,6 +1,6 @@
-import { runSweepPoint } from './sweep-point';
-import { readHostCpuModel } from './host-info';
-import { writeCsv } from './csv';
+import { runSweepPoint } from './sweep-point.js';
+import { readHostCpuModel } from './host-info.js';
+import { writeCsv } from './csv.js';
 import { buildDesignDoc } from '@benefits/consent-couchdb';
 import { join } from 'node:path';
 

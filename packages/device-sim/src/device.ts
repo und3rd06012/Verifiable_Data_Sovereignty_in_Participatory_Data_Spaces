@@ -1,5 +1,5 @@
 import type { ConsentGrant, ContributionRecord } from '@benefits/consent-core';
-import { createLocalDb } from './pouchdb';
+import { createLocalDb } from './pouchdb.js';
 
 // Local grant state lives in a plain array, not PouchDB -- a device's own
 // consent grants are small, always fully present locally (never partial),

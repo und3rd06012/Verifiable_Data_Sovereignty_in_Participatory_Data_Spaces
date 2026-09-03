@@ -1,6 +1,6 @@
 import { Device, DutyCycle, syncDevice, resolveConflicts, injectConflict, createRemoteDb } from '@benefits/device-sim';
 import type { RecipientClass } from '@benefits/consent-core';
-import { mulberry32 } from './rng';
+import { mulberry32 } from './rng.js';
 
 const MAX_TICKS = 200;
 const REVOCATION_COUNT = 3;

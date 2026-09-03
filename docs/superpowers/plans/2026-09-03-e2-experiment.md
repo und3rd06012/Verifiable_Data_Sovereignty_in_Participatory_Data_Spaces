@@ -721,6 +721,10 @@ git commit -m "feat(e2): add the trial runner, revocation and baseline devices"
 
 - [ ] **Step 1: Add failing tests for the conflict role**
 
+Add `import { createRemoteDb } from '@benefits/device-sim';` to this test file's
+existing imports (it currently only imports `runTrial`, `buildDesignDoc`, and the
+vitest helpers).
+
 Add to `experiments/harness/e2/test/trial.integration.test.ts`:
 
 ```typescript
@@ -737,6 +741,37 @@ Add to `experiments/harness/e2/test/trial.integration.test.ts`:
     const result = await runTrial(1, 0.9, 0, 3, REMOTE_URL);
     expect(result.propagationTicks).toHaveLength(3);
     expect(result.consistencyTicks).toHaveLength(3);
+  }, 30000);
+
+  it('a resolved conflict device document reflects its own local edit, not the injected rival', async () => {
+    // Deliberately checks the WINNING CONTENT on remote, not just that
+    // unresolvedConflictCount is 0. That check alone cannot distinguish
+    // "a real conflict was created and correctly resolved" from "no real
+    // conflict was ever created in the first place" (both leave remote's
+    // _conflicts array empty). Task 2's own live spike found exactly this
+    // failure mode live: without a syncDevice() call before resolveConflicts()
+    // for a conflict device, injectConflict's rival becomes the ONLY remote
+    // revision (no sibling to conflict with), resolveConflicts silently
+    // finds nothing to resolve, and unresolvedConflictCount stays 0 even
+    // though the device's own edit never won. This test asserts the actual
+    // field value (5, the device's own local edit set up in trial.ts) beat
+    // the rival's (1), which only holds if a genuine conflict existed and
+    // was genuinely resolved.
+    const seed = 1;
+    const onlineProbability = 0.9;
+    const onlineProbabilityIndex = 0;
+    const trialIndex = 4;
+    await runTrial(seed, onlineProbability, onlineProbabilityIndex, trialIndex, REMOTE_URL);
+
+    // Device index 3 is the first conflict device (indices 0-2 are
+    // revocation, 3-5 are conflict, matching REVOCATION_COUNT=3 then
+    // CONFLICT_COUNT=3 in trial.ts), so its participantRef and docId follow
+    // exactly the same construction trial.ts itself uses.
+    const participantRef = `p-e2-${seed}-${onlineProbabilityIndex}-${trialIndex}-3`;
+    const docId = `e2-conflict-${participantRef}`;
+    const remote = createRemoteDb(REMOTE_URL);
+    const doc = await remote.get(docId) as any;
+    expect(doc.fields['service.satisfaction']).toBe(5);
   }, 30000);
 ```
 
@@ -824,6 +859,17 @@ Replace the tick loop's per-device action block:
         continue;
       }
       if (entry.role === 'conflict') {
+        // syncDevice must run before resolveConflicts: injectConflict (tick 0)
+        // only wrote the rival revision to remote, since the device's own
+        // local edit was never pushed. Without this sync, remote holds a
+        // single, unconflicted leaf (the rival's), resolveConflicts finds no
+        // _conflicts entry, and resolvedCount is silently 0 rather than 1
+        // (confirmed live in Task 2's own spike, which hit exactly this and
+        // required the same fix, matching fleet.integration.test.ts's own
+        // proven "every device syncs, then resolveConflicts runs separately"
+        // sequence). Modeled as one atomic action on the device's first
+        // online tick, the same as every other role's single action per tick.
+        await syncDevice(entry.device, remoteUrl);
         await resolveConflicts(entry.device, remoteUrl);
         consistencyTicks.push(tick);
       } else {

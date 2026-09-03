@@ -1,6 +1,7 @@
 package org.benefits.policy;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.StringJoiner;
 
@@ -29,7 +30,11 @@ public class PrivacyPipeline {
             return Optional.empty();
         }
 
-        var groups = KAnonymity.aggregate(contributions.contributionsFor(query.siteId()), query, k);
+        var raw = contributions.contributionsFor(query.siteId());
+        var filtered = (query.purpose() == null || query.recipientClass() == null)
+                ? raw
+                : raw.stream().filter(c -> consentCovers(c, query)).toList();
+        var groups = KAnonymity.aggregate(filtered, query, k);
 
         var computedK = groups.stream().mapToInt(GroupedCount::count).min().orElse(0);
 
@@ -73,5 +78,35 @@ public class PrivacyPipeline {
             }
         }
         return out.toString();
+    }
+
+    /**
+     * True when contribution c may be included under query's declared purpose and
+     * recipientClass (both already confirmed non-null by the caller). A contribution
+     * with untracked consent (consentGrants() == null) is always included, preserving
+     * every existing caller's exact current behavior. Otherwise, every field in
+     * query.groupBy() must have a matching, currently-valid grant: same field, same
+     * purpose, same recipientClass, grantedAt not in the future, and neither expired
+     * nor revoked as of now. Ports ConsentEvaluator.hasGrant's already-proven matching
+     * rule from raw JSON-node comparison to typed ConsentGrant comparison.
+     */
+    private static boolean consentCovers(Contribution c, QuerySpec query) {
+        if (c.consentGrants() == null) {
+            return true;
+        }
+        var now = Instant.now().toString();
+        for (var field : query.groupBy()) {
+            var covered = c.consentGrants().stream().anyMatch(grant ->
+                    field.equals(grant.field())
+                            && query.purpose().equals(grant.purpose())
+                            && query.recipientClass().equals(grant.recipientClass())
+                            && grant.grantedAt().compareTo(now) <= 0
+                            && (grant.expiresAt() == null || grant.expiresAt().compareTo(now) > 0)
+                            && (grant.revokedAt() == null || grant.revokedAt().compareTo(now) > 0));
+            if (!covered) {
+                return false;
+            }
+        }
+        return true;
     }
 }

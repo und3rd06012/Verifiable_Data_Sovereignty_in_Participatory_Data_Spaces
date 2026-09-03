@@ -490,22 +490,16 @@ public class AvailabilityTimelineRunner {
                 }
                 if (random.nextDouble() < pAct) {
                     acted[s] = true;
-                    // vetoShare is not consumed here in Task 3 (Arm A ignores vetoes
-                    // entirely, matching the real production function), but the draw
-                    // order must still consume one nextDouble() per acting steward
-                    // for veto/sign, so that Task 4 extending this loop with real
-                    // veto-vs-sign branching does not change Arm A's own draw sequence
-                    // and therefore does not change any already-committed Task 3 result.
+                    // A veto is recorded here in the store even though Task 3's own Arm
+                    // A logic below never reads .vetoes() at all, matching the real
+                    // StewardQuorumFunction's behavior exactly. This keeps the random
+                    // draw sequence and the store's real state identical between Task 3
+                    // and Task 4: Task 4 only adds a second reader of this same,
+                    // already-correct state (Arm B's veto/quorum check), and does not
+                    // change what gets appended or when, so Task 3's own committed test
+                    // results stay valid unchanged after Task 4 extends this method.
                     var stewardId = "steward-" + s;
                     if (random.nextDouble() < vetoShare) {
-                        // Task 3 does not record this as a veto (no store call): Arm A
-                        // does not exist without a real signature or veto append call,
-                        // but recording a veto here is exactly Task 4's job. To keep
-                        // Task 3's own committed behavior stable across Task 4's
-                        // extension, this branch is intentionally identical in both
-                        // tasks (see Task 4 Step 4): it appends the veto now, in Task 3,
-                        // rather than being added later, since a no-op branch here
-                        // would make the draw-order comment above misleading.
                         store.appendVeto(RELEASE_REQUEST_ID, DATASET_HASH,
                                 new org.benefits.policy.StewardVeto(stewardId, "simulated", Instant.EPOCH));
                     } else {

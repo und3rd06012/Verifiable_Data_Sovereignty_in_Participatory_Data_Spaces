@@ -7,9 +7,13 @@ import java.util.List;
  * sensitivity depends on the value range, and an incorrect range silently
  * under-noises the result.
  */
-public record QuerySpec(String siteId, List<String> groupBy) {
+public record QuerySpec(String siteId, List<String> groupBy, String purpose, String recipientClass) {
 
     public QuerySpec {
         groupBy = List.copyOf(groupBy);
+    }
+
+    public QuerySpec(String siteId, List<String> groupBy) {
+        this(siteId, groupBy, null, null);
     }
 }

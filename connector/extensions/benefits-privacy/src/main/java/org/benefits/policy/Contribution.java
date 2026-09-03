@@ -1,12 +1,14 @@
 package org.benefits.policy;
 
+import java.util.List;
 import java.util.Map;
 
 /**
  * One contributed record as the privacy pipeline sees it. The attributes map holds
  * the quasi-identifier values a query may group by, such as channel or service type.
  */
-public record Contribution(String participantRef, String siteId, Map<String, String> attributes) {
+public record Contribution(String participantRef, String siteId, Map<String, String> attributes,
+                            List<ConsentGrant> consentGrants) {
 
     /**
      * Sentinel returned by {@link #attribute(String)} for an attribute the map has no
@@ -19,6 +21,11 @@ public record Contribution(String participantRef, String siteId, Map<String, Str
 
     public Contribution {
         attributes = Map.copyOf(attributes);
+        consentGrants = consentGrants == null ? null : List.copyOf(consentGrants);
+    }
+
+    public Contribution(String participantRef, String siteId, Map<String, String> attributes) {
+        this(participantRef, siteId, attributes, null);
     }
 
     public String attribute(String name) {

@@ -278,6 +278,14 @@ is the batch's total elapsed time for that write batch, measured
 client-side around the batch of HTTP `PUT`s. `trial` is 0, 1, 2 for the
 three repeats of each configuration.
 
+The committed CSVs are the real production sweep (seed 1, the full
+7 x 3 x 3 grid, 3 trials, all three arms), not a reduced-scale check.
+They show a clean, monotonic crossover: at the largest batch size
+(10,000 documents, heaviest field/decoy configuration), baseline
+writes complete in roughly 1-6 seconds, structural in roughly 8-22
+seconds, and signature in roughly 11-15 minutes. This is the
+crossover number section 4.3 of the parent spec asks for.
+
 ## 4. E3-full: audit tamper detection and verification cost
 
 ### 4.1 What phase 4 already proved, and what this adds
@@ -381,6 +389,14 @@ would misrepresent what the number depends on.
 
 `experiments/results/e3/verify-chain-time.csv`: `seed`, `chain_length`,
 `elapsed_ms`, `throttle_cpus`, `throttle_memory_mb`, `host_cpu_model`.
+
+The committed CSVs are the real production run (seed 1, epoch sizes
+10 through 5000, chain lengths 5 through 500, all under the throttled
+profile). Chain verification time scales linearly with chain length as
+expected (roughly 0.17ms at 5 epochs to roughly 12.4ms at 500), and
+inclusion-proof verification stays sub-millisecond throughout, both
+consistent with `verifyChain()`'s and `verifyInclusion()`'s O(n) cost
+in chain length and proof depth respectively.
 
 ## 5. Low-end device profile
 

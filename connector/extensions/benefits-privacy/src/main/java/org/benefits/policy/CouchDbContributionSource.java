@@ -119,8 +119,27 @@ public class CouchDbContributionSource implements ContributionSource {
             contributions.add(new Contribution(
                     participantRef,
                     doc.path("siteId").asText(),
-                    attributes));
+                    attributes,
+                    parseConsentGrants(doc)));
         }
         return contributions;
+    }
+
+    private static List<ConsentGrant> parseConsentGrants(JsonNode doc) {
+        var consent = doc.get("consent");
+        if (consent == null || consent.isNull() || !consent.has("grants") || consent.get("grants").isNull()) {
+            return null;
+        }
+        List<ConsentGrant> grants = new ArrayList<>();
+        for (var g : consent.get("grants")) {
+            grants.add(new ConsentGrant(
+                    g.path("field").asText(),
+                    g.path("purpose").asText(),
+                    g.path("recipientClass").asText(),
+                    g.path("grantedAt").asText(),
+                    g.hasNonNull("expiresAt") ? g.get("expiresAt").asText() : null,
+                    g.hasNonNull("revokedAt") ? g.get("revokedAt").asText() : null));
+        }
+        return grants;
     }
 }

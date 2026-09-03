@@ -43,6 +43,13 @@ class CouchDbContributionSourceIntegrationTest {
         send("POST", "/" + DB, """
                 {"type":"contribution","participantRef":"p-3","siteId":"mytilene",
                  "channel":"app","fields":{"service.satisfaction":3}}""");
+        send("POST", "/" + DB, """
+                {"type":"contribution","participantRef":"p-4","siteId":"athens",
+                 "channel":"paper",
+                 "consent":{"participantRef":"p-4","grants":[
+                     {"field":"channel","purpose":"community-insight","recipientClass":"community",
+                      "grantedAt":"2020-01-01T00:00:00Z","expiresAt":null,"revokedAt":null}
+                 ],"assertedAt":"2020-01-01T00:00:00Z"}}""");
     }
 
     @AfterAll
@@ -54,9 +61,9 @@ class CouchDbContributionSourceIntegrationTest {
     void readsOnlyContributionsForTheRequestedSite() {
         var source = new CouchDbContributionSource(BASE, DB, "admin", "benefits", new ObjectMapper());
         var athens = source.contributionsFor("athens");
-        assertThat(athens).hasSize(2);
+        assertThat(athens).hasSize(3);
         assertThat(athens).extracting(Contribution::participantRef)
-                .containsExactlyInAnyOrder("p-1", "p-2");
+                .containsExactlyInAnyOrder("p-1", "p-2", "p-4");
     }
 
     @Test
@@ -64,7 +71,7 @@ class CouchDbContributionSourceIntegrationTest {
         var source = new CouchDbContributionSource(BASE, DB, "admin", "benefits", new ObjectMapper());
         var athens = source.contributionsFor("athens");
         assertThat(athens).extracting(c -> c.attribute("channel"))
-                .containsExactlyInAnyOrder("app", "sms");
+                .containsExactlyInAnyOrder("app", "sms", "paper");
     }
 
     @Test
@@ -121,5 +128,24 @@ class CouchDbContributionSourceIntegrationTest {
 
         assertThat(results).hasSize(1);
         assertThat(results.get(0).participantRef()).isEqualTo("p-corfu");
+    }
+
+    @Test
+    void readsConsentGrantsFromTheDocumentIntoContribution() {
+        var source = new CouchDbContributionSource(BASE, DB, "admin", "benefits", new ObjectMapper());
+        var athens = source.contributionsFor("athens");
+
+        var p4 = athens.stream().filter(c -> c.participantRef().equals("p-4")).findFirst().orElseThrow();
+        assertThat(p4.consentGrants()).hasSize(1);
+        assertThat(p4.consentGrants().get(0).field()).isEqualTo("channel");
+        assertThat(p4.consentGrants().get(0).purpose()).isEqualTo("community-insight");
+
+        // p-1/p-2 (the pre-existing fixtures, no "consent" field in their documents at
+        // all) must still parse with consentGrants() == null, not an empty list: the
+        // production write path (packages/consent-couchdb) always writes a consent
+        // object today, but this distinction still matters for any document that
+        // predates that write path or was written by a test fixture without one.
+        var p1 = athens.stream().filter(c -> c.participantRef().equals("p-1")).findFirst().orElseThrow();
+        assertThat(p1.consentGrants()).isNull();
     }
 }

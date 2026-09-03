@@ -12,6 +12,11 @@ public record HeterogeneitySweepPointResult(
         double exclusionMedianRelativeError,
         double exclusionIqrRelativeError,
         double suppressionRefusalRate,
-        int dataPoints
+        int dataPoints,
+        Double survivingCoverageMedianRelativeError,
+        Double survivingCoverageIqrRelativeError,
+        Double survivingExclusionMedianRelativeError,
+        Double survivingExclusionIqrRelativeError,
+        int survivingDataPoints
 ) {
 }

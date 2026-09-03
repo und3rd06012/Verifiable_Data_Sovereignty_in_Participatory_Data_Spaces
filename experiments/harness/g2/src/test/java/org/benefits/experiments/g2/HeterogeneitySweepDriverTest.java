@@ -30,6 +30,9 @@ class HeterogeneitySweepDriverTest {
         assertThat(lines.get(0)).isEqualTo("seed,epsilon,population,k,h,excluded_fraction,"
                 + "coverage_median_relative_error,coverage_iqr_relative_error,"
                 + "exclusion_median_relative_error,exclusion_iqr_relative_error,"
-                + "suppression_refusal_rate,data_points");
+                + "suppression_refusal_rate,"
+                + "surviving_coverage_median_relative_error,surviving_coverage_iqr_relative_error,"
+                + "surviving_exclusion_median_relative_error,surviving_exclusion_iqr_relative_error,"
+                + "surviving_data_points,data_points");
     }
 }

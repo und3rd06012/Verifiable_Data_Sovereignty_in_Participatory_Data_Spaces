@@ -20,7 +20,10 @@ public class HeterogeneitySweepDriver {
         lines.add("seed,epsilon,population,k,h,excluded_fraction,"
                 + "coverage_median_relative_error,coverage_iqr_relative_error,"
                 + "exclusion_median_relative_error,exclusion_iqr_relative_error,"
-                + "suppression_refusal_rate,data_points");
+                + "suppression_refusal_rate,"
+                + "surviving_coverage_median_relative_error,surviving_coverage_iqr_relative_error,"
+                + "surviving_exclusion_median_relative_error,surviving_exclusion_iqr_relative_error,"
+                + "surviving_data_points,data_points");
 
         var pointIndex = 0;
         for (var epsilon : config.epsilonValues()) {
@@ -51,6 +54,11 @@ public class HeterogeneitySweepDriver {
                 Double.toString(result.exclusionMedianRelativeError()),
                 Double.toString(result.exclusionIqrRelativeError()),
                 Double.toString(result.suppressionRefusalRate()),
+                result.survivingCoverageMedianRelativeError() == null ? "" : Double.toString(result.survivingCoverageMedianRelativeError()),
+                result.survivingCoverageIqrRelativeError() == null ? "" : Double.toString(result.survivingCoverageIqrRelativeError()),
+                result.survivingExclusionMedianRelativeError() == null ? "" : Double.toString(result.survivingExclusionMedianRelativeError()),
+                result.survivingExclusionIqrRelativeError() == null ? "" : Double.toString(result.survivingExclusionIqrRelativeError()),
+                Integer.toString(result.survivingDataPoints()),
                 Integer.toString(result.dataPoints())
         );
     }

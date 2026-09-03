@@ -8,7 +8,7 @@ public class RunG2Sweep {
     public static void main(String[] args) throws IOException {
         var seed = 1L;
         var config = new HeterogeneitySweepConfig(
-                List.of(0.5, 1.0, 2.0),
+                List.of(0.25, 0.5, 1.0, 2.0),
                 List.of(100, 300),
                 5,
                 List.of(0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0)

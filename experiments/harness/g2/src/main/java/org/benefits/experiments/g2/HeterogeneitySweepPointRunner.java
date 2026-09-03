@@ -42,6 +42,8 @@ public class HeterogeneitySweepPointRunner {
 
         List<Double> coverageErrors = new ArrayList<>();
         List<Double> exclusionErrors = new ArrayList<>();
+        List<Double> survivingCoverageErrors = new ArrayList<>();
+        List<Double> survivingExclusionErrors = new ArrayList<>();
         var suppressedOrRefused = 0;
         var totalDataPoints = 0;
 
@@ -50,10 +52,10 @@ public class HeterogeneitySweepPointRunner {
             var scopedSpec = new QuerySpec(query.spec().siteId(), query.spec().groupBy(),
                     HeterogeneousPopulationGenerator.PURPOSE, HeterogeneousPopulationGenerator.RECIPIENT_CLASS);
             var consenting = contributions.stream()
-                    .filter(c -> consentCoversForTest(c, scopedSpec))
+                    .filter(c -> consentCovers(c, scopedSpec))
                     .toList();
             for (var c : contributions) {
-                if (!consentCoversForTest(c, scopedSpec)) {
+                if (!consentCovers(c, scopedSpec)) {
                     excludedParticipants.add(c.participantRef());
                 }
             }
@@ -77,8 +79,12 @@ public class HeterogeneitySweepPointRunner {
                         exclusionErrors.add(1.0);
                         suppressedOrRefused++;
                     } else {
-                        coverageErrors.add(Math.abs(observedCount - consentingCount) / (double) consentingCount);
-                        exclusionErrors.add(Math.abs(observedCount - fullCount) / (double) fullCount);
+                        var coverageError = Math.abs(observedCount - consentingCount) / (double) consentingCount;
+                        var exclusionError = Math.abs(observedCount - fullCount) / (double) fullCount;
+                        coverageErrors.add(coverageError);
+                        exclusionErrors.add(exclusionError);
+                        survivingCoverageErrors.add(coverageError);
+                        survivingExclusionErrors.add(exclusionError);
                     }
                 }
             } else {
@@ -116,15 +122,24 @@ public class HeterogeneitySweepPointRunner {
                     } else {
                         var observedTarget = observedByGroup.getOrDefault(targetCategory, 0.0);
                         var observedProportion = observedTarget / observedTotal;
-                        coverageErrors.add(Math.abs(observedProportion - consentingProportion) / consentingProportion);
-                        exclusionErrors.add(fullProportion == 0.0 ? 1.0
-                                : Math.abs(observedProportion - fullProportion) / fullProportion);
+                        var coverageError = Math.abs(observedProportion - consentingProportion) / consentingProportion;
+                        var exclusionError = fullProportion == 0.0 ? 1.0
+                                : Math.abs(observedProportion - fullProportion) / fullProportion;
+                        coverageErrors.add(coverageError);
+                        exclusionErrors.add(exclusionError);
+                        survivingCoverageErrors.add(coverageError);
+                        survivingExclusionErrors.add(exclusionError);
                     }
                 }
             }
         }
 
         var excludedFraction = excludedParticipants.size() / (double) contributions.size();
+
+        Double survivingCoverageMedian = survivingCoverageErrors.isEmpty() ? null : Statistics.median(survivingCoverageErrors);
+        Double survivingCoverageIqr = survivingCoverageErrors.isEmpty() ? null : Statistics.iqr(survivingCoverageErrors);
+        Double survivingExclusionMedian = survivingExclusionErrors.isEmpty() ? null : Statistics.median(survivingExclusionErrors);
+        Double survivingExclusionIqr = survivingExclusionErrors.isEmpty() ? null : Statistics.iqr(survivingExclusionErrors);
 
         return new HeterogeneitySweepPointResult(
                 seed, epsilon, population, k, h,
@@ -134,11 +149,25 @@ public class HeterogeneitySweepPointRunner {
                 Statistics.median(exclusionErrors),
                 Statistics.iqr(exclusionErrors),
                 suppressedOrRefused / (double) totalDataPoints,
-                totalDataPoints
+                totalDataPoints,
+                survivingCoverageMedian,
+                survivingCoverageIqr,
+                survivingExclusionMedian,
+                survivingExclusionIqr,
+                survivingCoverageErrors.size()
         );
     }
 
-    private static boolean consentCoversForTest(org.benefits.policy.Contribution c, QuerySpec query) {
+    /**
+     * Deliberately omits PrivacyPipeline.consentCovers's three grantedAt/expiresAt/
+     * revokedAt time-window conjuncts. This is safe only because every grant
+     * HeterogeneousPopulationGenerator produces is unconditionally valid (a fixed
+     * past grantedAt, expiresAt and revokedAt always null): if that generator is
+     * ever changed to produce a grant with a real expiry or revocation, this method
+     * must be updated to match PrivacyPipeline.consentCovers's full six-conjunct
+     * rule, or the two would silently diverge.
+     */
+    private static boolean consentCovers(org.benefits.policy.Contribution c, QuerySpec query) {
         if (c.consentGrants() == null) {
             return true;
         }

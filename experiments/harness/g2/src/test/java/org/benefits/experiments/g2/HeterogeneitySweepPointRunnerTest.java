@@ -44,4 +44,23 @@ class HeterogeneitySweepPointRunnerTest {
         assertThat(result.coverageMedianRelativeError()).isGreaterThanOrEqualTo(0.0).isFinite();
         assertThat(result.exclusionMedianRelativeError()).isGreaterThanOrEqualTo(0.0).isFinite();
     }
+
+    @Test
+    void survivingMedianEqualsAtHeterogeneityZeroAndDivergesAtHeterogeneityOne() {
+        var atZero = new HeterogeneitySweepPointRunner(1L).run(0.25, 300, 5, 0.0, 0);
+        var atOne = new HeterogeneitySweepPointRunner(1L).run(0.25, 300, 5, 1.0, 1);
+
+        // At h=0 nobody is excluded, so consentingTruth == fullTruth for every
+        // surviving group, and the two surviving medians must be exactly equal.
+        assertThat(atZero.survivingCoverageMedianRelativeError())
+                .isEqualTo(atZero.survivingExclusionMedianRelativeError());
+
+        // At h=1, the exclusion signal (drift from the TRUE full-population value)
+        // must be strictly larger than the coverage signal (drift from the
+        // consenting subset's own true value, which the privacy mechanism alone is
+        // responsible for), since excluding real participants moves the observed
+        // answer away from the full population's truth on top of ordinary noise.
+        assertThat(atOne.survivingExclusionMedianRelativeError())
+                .isGreaterThan(atOne.survivingCoverageMedianRelativeError());
+    }
 }

@@ -65,6 +65,16 @@ public class SeededPopulationGenerator {
     }
 
     private long derivedSeed(int populationSize, boolean skewed) {
-        return seed * 1_000_003L + populationSize * 2L + (skewed ? 1 : 0);
+        return mix64(seed * 1_000_003L + populationSize * 2L + (skewed ? 1 : 0));
+    }
+
+    // Standard MurmurHash3 fmix64 finalizer, breaking java.util.Random's adjacent-seed
+    // first-draw correlation for the long runs of consecutive derived-seed values this
+    // sweep produces (spec section 6).
+    private static long mix64(long z) {
+        z = (z ^ (z >>> 33)) * 0xff51afd7ed558ccdL;
+        z = (z ^ (z >>> 33)) * 0xc4ceb9fe1a85ec53L;
+        z = z ^ (z >>> 33);
+        return z;
     }
 }

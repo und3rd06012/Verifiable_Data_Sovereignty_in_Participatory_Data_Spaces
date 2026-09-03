@@ -119,6 +119,16 @@ public class SweepPointRunner {
         combined = combined * 5 + populationIndex;
         combined = combined * 4 + kIndex;
         combined = combined * 2 + skewIndex;
-        return seed * 1_000_003L + combined;
+        return mix64(seed * 1_000_003L + combined);
+    }
+
+    // Standard MurmurHash3 fmix64 finalizer, breaking java.util.Random's adjacent-seed
+    // first-draw correlation for the long runs of consecutive derived-seed values this
+    // sweep produces (spec section 6).
+    private static long mix64(long z) {
+        z = (z ^ (z >>> 33)) * 0xff51afd7ed558ccdL;
+        z = (z ^ (z >>> 33)) * 0xc4ceb9fe1a85ec53L;
+        z = z ^ (z >>> 33);
+        return z;
     }
 }

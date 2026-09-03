@@ -1,0 +1,223 @@
+\begin{thebibliography}{999}
+
+\bibitem[Katrakazas and Ntib(2026)]{katrakazas2026}
+Katrakazas, P.; Ntib, A.
+\newblock Verifiable Data Sovereignty for Vulnerable Populations in
+  Participatory Data Spaces.
+\newblock In Proceedings of the 2026 IEEE Smart and Inclusive Digital Systems
+  Conference (SIDS). IEEE,  2026.
+
+\bibitem[Abowd et~al.(2022)Abowd, Ashmead, Cumings-Menon, Garfinkel, Heineck,
+  Heiss, Johns, Kifer, Leclerc, Machanavajjhala, Moran, Sexton, Spence, and
+  Zhuravlev]{abowd2022}
+Abowd, J.M.; Ashmead, R.; Cumings-Menon, R.; Garfinkel, S.; Heineck, M.; Heiss,
+  C.; Johns, R.; Kifer, D.; Leclerc, P.; Machanavajjhala, A.;  et~al.
+\newblock The 2020 {Census} Disclosure Avoidance System {TopDown} Algorithm.
+\newblock {\em Harvard Data Sci. Rev.} {\bf 2022}.
+\newblock Special Issue 2, {\url{https://doi.org/10.1162/99608f92.529e3cb9}}.
+
+\bibitem[Steinbuss et~al.(2022)Steinbuss, Otto, Teuscher, and
+  Pettenpohl]{idsram4}
+Steinbuss, S.; Otto, B.; Teuscher, A.; Pettenpohl, H.
+\newblock {IDS Reference Architecture Model 4 (IDS-RAM 4)}.
+\newblock Technical report, International Data Spaces Association,  2022.
+\newblock {\url{https://doi.org/10.5281/zenodo.5105529}}.
+
+\bibitem[{Gaia-X European Association for Data and Cloud AISBL}(2022)]{gaiax}
+{Gaia-X European Association for Data and Cloud AISBL}.
+\newblock {Gaia-X Architecture Document 22.10}.
+\newblock Technical report, Gaia-X AISBL,  2022.
+\newblock [Online]. Available: \url{https://docs.gaia-x.eu/}.
+
+\bibitem[{DECODE Consortium}(2019)]{decode2019}
+{DECODE Consortium}.
+\newblock {DECODE: Decentralised Citizens Owned Data Ecosystem, Final Project
+  Report},  2019.
+\newblock EU H2020 Grant Agreement No.\ 732546. [Online]. Available:
+  \url{https://decodeproject.eu}.
+
+\bibitem[Gisdakis et~al.(2014)Gisdakis, Giannetsos, and
+  Papadimitratos]{gisdakis2014}
+Gisdakis, S.; Giannetsos, T.; Papadimitratos, P.
+\newblock {SPPEAR}: Security \& Privacy-Preserving Architecture for
+  Participatory-Sensing Applications.
+\newblock In Proceedings of the Proc. ACM WiSec,  2014, pp. 39--50.
+\newblock {\url{https://doi.org/10.1145/2627393.2627402}}.
+
+\bibitem[Vaughn and Jacquez(2020)]{vaughn2020}
+Vaughn, L.M.; Jacquez, F.
+\newblock Participatory Research Methods: Choice Points in the Research
+  Process.
+\newblock {\em J. Particip. Res. Methods} {\bf 2020}, {\em 1}.
+\newblock {\url{https://doi.org/10.35844/001c.13244}}.
+
+\bibitem[{Greshake Tzovaras} et~al.(2019)]{openhumans2019}
+{Greshake Tzovaras}, B.;  et~al.
+\newblock {Open Humans}: A Platform for Participant-Centered Research and
+  Personal Data Exploration.
+\newblock {\em GigaScience} {\bf 2019}, {\em 8},~giz076.
+\newblock {\url{https://doi.org/10.1093/gigascience/giz076}}.
+
+\bibitem[Langford et~al.(2020)]{mydata2020}
+Langford, J.;  et~al.
+\newblock {Understanding MyData Operators}.
+\newblock Technical report, MyData Global,  2020.
+\newblock White paper. [Online]. Available: \url{https://mydata.org/papers/}.
+
+\bibitem[McInnis et~al.(2024)McInnis, Pindus, Kareem, and Nebeker]{mcinnis2024}
+McInnis, B.J.; Pindus, R.; Kareem, D.; Nebeker, C.
+\newblock Considerations for the Design of Informed Consent in Digital Health
+  Research: Participant Perspectives.
+\newblock {\em J. Empir. Res. Hum. Res. Ethics} {\bf 2024}, {\em 19},~175--185.
+\newblock {\url{https://doi.org/10.1177/15562646241290078}}.
+
+\bibitem[Chereja et~al.(2025)]{chereja2025}
+Chereja, I.;  et~al.
+\newblock Privacy-Conducive Data Ecosystem Architecture: By-Design
+  Vulnerability Assessment Using Privacy Risk Expansion Factor and Privacy
+  Exposure Index.
+\newblock {\em Sensors} {\bf 2025}, {\em 25},~3554.
+\newblock {\url{https://doi.org/10.3390/s25113554}}.
+
+\bibitem[Dam et~al.(2023)Dam, Klausner, Neumaier, and Priebe]{dam2023}
+Dam, T.; Klausner, L.D.; Neumaier, S.; Priebe, T.
+\newblock A Survey of Dataspace Connector Implementations.
+\newblock In Proceedings of the Proc. 2nd Italian Conf. Big Data Data Sci.
+  (ITADATA),  2023, Vol. 3606, {\em CEUR Workshop Proceedings}.
+\newblock Paper 41. [Online]. Available:
+  \url{https://ceur-ws.org/Vol-3606/paper41.pdf}.
+
+\bibitem[M{\"u}gge et~al.(2023)M{\"u}gge, {Grosse Erdmann}, Riedelsheimer,
+  Manoury, Smolka, Wichmann, and Lindow]{mugge2023}
+M{\"u}gge, J.; {Grosse Erdmann}, J.; Riedelsheimer, T.; Manoury, M.M.; Smolka,
+  S.O.; Wichmann, S.; Lindow, K.
+\newblock Empowering End-of-Life Vehicle Decision Making with Cross-Company
+  Data Exchange and Data Sovereignty via {Catena-X}.
+\newblock {\em Sustainability} {\bf 2023}, {\em 15},~7187.
+\newblock {\url{https://doi.org/10.3390/su15097187}}.
+
+\bibitem[Kalogeropoulos et~al.(2023)Kalogeropoulos, Vlontzou, Psaromanolakis,
+  Zarogianni, and Theodorou]{kalogeropoulos2023}
+Kalogeropoulos, I.; Vlontzou, M.E.; Psaromanolakis, N.; Zarogianni, E.;
+  Theodorou, V.
+\newblock {EdgeDS}: Data Spaces enabled Multi-access Edge Computing,  2023.
+\newblock arXiv:2304.05966. [Online]. Available:
+  \url{https://arxiv.org/abs/2304.05966}.
+
+\bibitem[Norikane and Nishimura(2025)]{norikane2025}
+Norikane, Y.; Nishimura, H.
+\newblock Security and Resilience of a Data Space Based Manufacturing Supply
+  Chain.
+\newblock {\em Systems} {\bf 2025}, {\em 13},~676.
+\newblock {\url{https://doi.org/10.3390/systems13080676}}.
+
+\bibitem[Schneier and Kelsey(1999)]{schneier1999}
+Schneier, B.; Kelsey, J.
+\newblock Secure Audit Logs to Support Computer Forensics.
+\newblock {\em ACM Trans. Inf. Syst. Secur.} {\bf 1999}, {\em 2},~159--176.
+\newblock {\url{https://doi.org/10.1145/317087.317089}}.
+
+\bibitem[Crosby and Wallach(2009)]{crosby2009}
+Crosby, S.A.; Wallach, D.S.
+\newblock Efficient Data Structures for Tamper-Evident Logging.
+\newblock In Proceedings of the Proc. 18th USENIX Secur. Symp.,  2009, pp.
+  317--334.
+\newblock [Online]. Available:
+  \url{https://dl.acm.org/doi/10.5555/1855768.1855788}.
+
+\bibitem[Laurie et~al.(2013)Laurie, Langley, and Kasper]{laurie2013}
+Laurie, B.; Langley, A.; Kasper, E.
+\newblock {Certificate Transparency},  2013.
+\newblock RFC 6962, IETF. [Online]. Available:
+  \url{https://www.rfc-editor.org/rfc/rfc6962.html}.
+
+\bibitem[Melara et~al.(2015)Melara, Blankstein, Bonneau, Felten, and
+  Freedman]{melara2015}
+Melara, M.S.; Blankstein, A.; Bonneau, J.; Felten, E.W.; Freedman, M.J.
+\newblock {CONIKS}: Bringing Key Transparency to End Users.
+\newblock In Proceedings of the Proc. 24th USENIX Secur. Symp.,  2015, pp.
+  383--398.
+\newblock [Online]. Available:
+  \url{https://www.usenix.org/system/files/conference/usenixsecurity15/sec15-paper-melara.pdf}.
+
+\bibitem[Hu et~al.(2021)Hu, Hooshmand, Kalidhindi, Yang, and Popa]{hu2021}
+Hu, Y.; Hooshmand, K.; Kalidhindi, H.; Yang, S.J.; Popa, R.A.
+\newblock {Merkle\textsuperscript{2}}: A Low-Latency Transparency Log System,
+  2021.
+\newblock Proc. IEEE Symp. Secur. Priv. (S\&P) 2021. IACR ePrint 2021/453.
+  [Online]. Available: \url{https://eprint.iacr.org/2021/453}.
+
+\bibitem[Abadi et~al.(2016)Abadi, Chu, Goodfellow, McMahan, Mironov, Talwar,
+  and Zhang]{abadi2016}
+Abadi, M.; Chu, A.; Goodfellow, I.; McMahan, H.B.; Mironov, I.; Talwar, K.;
+  Zhang, L.
+\newblock Deep Learning with Differential Privacy.
+\newblock In Proceedings of the Proc. ACM SIGSAC Conf. Comput. Commun. Secur.
+  (CCS),  2016, pp. 308--318.
+\newblock {\url{https://doi.org/10.1145/2976749.2978318}}.
+
+\bibitem[Mironov(2017)]{mironov2017}
+Mironov, I.
+\newblock {R{\'e}nyi} Differential Privacy.
+\newblock In Proceedings of the Proc. IEEE 30th Comput. Secur. Found. Symp.
+  (CSF),  2017, pp. 263--275.
+\newblock {\url{https://doi.org/10.1109/CSF.2017.11}}.
+
+\bibitem[Hay et~al.(2016)Hay, Machanavajjhala, Miklau, Chen, and
+  Zhang]{hay2016}
+Hay, M.; Machanavajjhala, A.; Miklau, G.; Chen, Y.; Zhang, D.
+\newblock Principled Evaluation of Differentially Private Algorithms using
+  {DPBench}.
+\newblock In Proceedings of the Proc. Int. Conf. Manage. Data (SIGMOD),  2016,
+  pp. 139--154.
+\newblock {\url{https://doi.org/10.1145/2882903.2882931}}.
+
+\bibitem[Rogers et~al.(2021)Rogers, Subramaniam, Peng, Durfee, Lee, Kancha,
+  Sahay, and Ahammad]{rogers2021}
+Rogers, R.; Subramaniam, S.; Peng, S.; Durfee, D.; Lee, S.; Kancha, S.K.;
+  Sahay, S.; Ahammad, P.
+\newblock {LinkedIn's} Audience Engagements {API}: A Privacy Preserving Data
+  Analytics System at Scale.
+\newblock {\em J. Priv. Confidentiality} {\bf 2021}, {\em 11}.
+\newblock {\url{https://doi.org/10.29012/jpc.782}}.
+
+\bibitem[Prasser et~al.(2020)Prasser, Eicher, Spengler, Bild, and
+  Kuhn]{prasser2020}
+Prasser, F.; Eicher, J.; Spengler, H.; Bild, R.; Kuhn, K.A.
+\newblock Flexible Data Anonymization Using {ARX}---Current Status and
+  Challenges Ahead.
+\newblock {\em Softw. Pract. Exp.} {\bf 2020}, {\em 50},~1277--1304.
+\newblock {\url{https://doi.org/10.1002/spe.2812}}.
+
+\bibitem[Kokoris-Kogias et~al.(2020)Kokoris-Kogias, Alp, Gasser, Jovanovic,
+  Syta, and Ford]{kokoriskogias2020}
+Kokoris-Kogias, E.; Alp, E.C.; Gasser, L.; Jovanovic, P.; Syta, E.; Ford, B.
+\newblock {CALYPSO}: Private Data Management for Decentralized Ledgers.
+\newblock {\em Proc. VLDB Endow.} {\bf 2020}, {\em 14},~586--599.
+\newblock {\url{https://doi.org/10.14778/3436905.3436917}}.
+
+\bibitem[Raisaro et~al.(2019)Raisaro, Troncoso-Pastoriza, Misbach, {S{\'a}
+  Sousa}, Pradervand, Missiaglia, Michielin, Ford, and Hubaux]{raisaro2019}
+Raisaro, J.L.; Troncoso-Pastoriza, J.R.; Misbach, M.; {S{\'a} Sousa}, J.;
+  Pradervand, S.; Missiaglia, E.; Michielin, O.; Ford, B.; Hubaux, J.P.
+\newblock {MedCo}: Enabling Secure and Privacy-Preserving Exploration of
+  Distributed Clinical and Genomic Data.
+\newblock {\em IEEE/ACM Trans. Comput. Biol. Bioinform.} {\bf 2019}, {\em
+  16},~1328--1341.
+\newblock {\url{https://doi.org/10.1109/TCBB.2018.2854776}}.
+
+\bibitem[Zhao and Su(2024)]{zhao2024}
+Zhao, J.; Su, Q.
+\newblock A Threshold Traceable Delegation Authorization Scheme for Data
+  Sharing in Healthcare.
+\newblock {\em Comput. Secur.} {\bf 2024}, {\em 139},~103686.
+\newblock {\url{https://doi.org/10.1016/j.cose.2023.103686}}.
+
+\bibitem[Albalwy(2026)]{albalwy2026}
+Albalwy, F.
+\newblock Zero-Knowledge-Based Policy Enforcement for Privacy-Preserving
+  Cross-Institutional Health Data Sharing on Blockchain.
+\newblock {\em Systems} {\bf 2026}, {\em 14},~385.
+\newblock {\url{https://doi.org/10.3390/systems14040385}}.
+
+\end{thebibliography}

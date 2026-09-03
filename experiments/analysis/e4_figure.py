@@ -31,7 +31,7 @@ def main():
         subset = df[df['population'] == population]
         for k in K_VALUES:
             k_subset = subset[subset['k'] == k].sort_values('epsilon')
-            ax.plot(
+            line, = ax.plot(
                 k_subset['epsilon'], k_subset['surviving_median_relative_error'],
                 label='k=%d' % k, marker='o'
             )
@@ -41,6 +41,7 @@ def main():
                     k_subset['surviving_median_relative_error'] - k_subset['surviving_iqr_relative_error'] / 2,
                     k_subset['surviving_median_relative_error'] + k_subset['surviving_iqr_relative_error'] / 2,
                     alpha=0.2,
+                    color=line.get_color(),
                 )
         ax.set_xscale('log')
         ax.set_xlabel('epsilon')

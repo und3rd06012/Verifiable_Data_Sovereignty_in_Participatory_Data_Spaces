@@ -9,6 +9,9 @@ public record SweepPointResult(
         double medianRelativeError,
         double iqrRelativeError,
         double suppressionRefusalRate,
-        int dataPoints
+        int dataPoints,
+        Double survivingMedianRelativeError,
+        Double survivingIqrRelativeError,
+        int survivingDataPoints
 ) {
 }

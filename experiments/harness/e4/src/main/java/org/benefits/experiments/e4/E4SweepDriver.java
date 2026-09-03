@@ -17,7 +17,8 @@ public class E4SweepDriver {
         var runner = new SweepPointRunner(seed);
         List<String> lines = new ArrayList<>();
         lines.add("seed,epsilon,population,k,skew,median_relative_error,iqr_relative_error,"
-                + "suppression_refusal_rate,data_points");
+                + "suppression_refusal_rate,surviving_median_relative_error,"
+                + "surviving_iqr_relative_error,surviving_data_points,data_points");
 
         for (var epsilonIndex = 0; epsilonIndex < config.epsilonValues().size(); epsilonIndex++) {
             var epsilon = config.epsilonValues().get(epsilonIndex);
@@ -50,6 +51,9 @@ public class E4SweepDriver {
                 Double.toString(result.medianRelativeError()),
                 Double.toString(result.iqrRelativeError()),
                 Double.toString(result.suppressionRefusalRate()),
+                result.survivingMedianRelativeError() == null ? "" : Double.toString(result.survivingMedianRelativeError()),
+                result.survivingIqrRelativeError() == null ? "" : Double.toString(result.survivingIqrRelativeError()),
+                Integer.toString(result.survivingDataPoints()),
                 Integer.toString(result.dataPoints())
         );
     }

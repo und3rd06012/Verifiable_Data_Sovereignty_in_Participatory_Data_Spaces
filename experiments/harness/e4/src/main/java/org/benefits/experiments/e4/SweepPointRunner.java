@@ -39,6 +39,7 @@ public class SweepPointRunner {
         var pipeline = new PrivacyPipeline(contributionSource, noise, accountant);
 
         List<Double> relativeErrors = new ArrayList<>();
+        List<Double> survivingRelativeErrors = new ArrayList<>();
         var suppressedOrRefused = 0;
 
         for (var query : E4Queries.workload()) {
@@ -59,7 +60,9 @@ public class SweepPointRunner {
                         relativeErrors.add(1.0);
                         suppressedOrRefused++;
                     } else {
-                        relativeErrors.add(Math.abs(observedCount - trueCount) / (double) trueCount);
+                        var relativeError = Math.abs(observedCount - trueCount) / (double) trueCount;
+                        relativeErrors.add(relativeError);
+                        survivingRelativeErrors.add(relativeError);
                     }
                 }
             } else {
@@ -92,18 +95,26 @@ public class SweepPointRunner {
                     } else {
                         var observedTarget = observedByGroup.getOrDefault(targetCategory, 0.0);
                         var observedProportion = observedTarget / observedTotal;
-                        relativeErrors.add(Math.abs(observedProportion - trueProportion) / trueProportion);
+                        var relativeError = Math.abs(observedProportion - trueProportion) / trueProportion;
+                        relativeErrors.add(relativeError);
+                        survivingRelativeErrors.add(relativeError);
                     }
                 }
             }
         }
+
+        Double survivingMedian = survivingRelativeErrors.isEmpty() ? null : Statistics.median(survivingRelativeErrors);
+        Double survivingIqr = survivingRelativeErrors.isEmpty() ? null : Statistics.iqr(survivingRelativeErrors);
 
         return new SweepPointResult(
                 seed, epsilon, population, k, skewed,
                 Statistics.median(relativeErrors),
                 Statistics.iqr(relativeErrors),
                 suppressedOrRefused / (double) relativeErrors.size(),
-                relativeErrors.size()
+                relativeErrors.size(),
+                survivingMedian,
+                survivingIqr,
+                survivingRelativeErrors.size()
         );
     }
 

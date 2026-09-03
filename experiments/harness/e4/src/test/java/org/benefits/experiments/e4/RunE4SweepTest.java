@@ -27,7 +27,8 @@ class RunE4SweepTest {
         var lines = Files.readAllLines(csvPath);
         assertThat(lines.get(0)).isEqualTo(
                 "seed,epsilon,population,k,skew,median_relative_error,iqr_relative_error,"
-                        + "suppression_refusal_rate,data_points");
+                        + "suppression_refusal_rate,surviving_median_relative_error,"
+                        + "surviving_iqr_relative_error,surviving_data_points,data_points");
         // 2 epsilon x 2 population x 2 k x 2 skew = 16 points, plus header.
         assertThat(lines).hasSize(17);
     }

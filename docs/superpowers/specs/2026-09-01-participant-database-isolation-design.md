@@ -193,7 +193,7 @@ with the backend-read topology this ruling was protecting (`CouchDbAuditStore`/
 `CouchDbContributionSource` reading one database) fully preserved via admin-mediated
 replication rather than avoided by rejecting per-participant databases outright.
 
-**Interfaces spec §3, "Read-side"** stands as originally written for `AuditResource` (§4)
+**Interfaces spec §3, "Read-side"** is as originally written for `AuditResource` (§4)
 and `StewardResource` (§5.4), both already implement it correctly. For participant sync
 specifically, the mechanism is now: participants are never handed credentials to the shared
 database at all (stronger than "a connector resource filters server-side", there is no

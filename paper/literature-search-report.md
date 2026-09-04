@@ -41,9 +41,9 @@ Cluster D landed at 3, the floor of the target range, and is reported honestly r
 
 ### Dam, Klausner, Neumaier, and Priebe (2023). A Survey of Dataspace Connector Implementations.
 Type: Comparative survey/short paper. Method: structured qualitative comparison of open-source IDS-compliant dataspace connector implementations (architecture, data model, usage-control language support) rather than a performance benchmark.
-Key findings: maps the landscape of open-source IDS-compliant dataspace connector implementations against IDS Reference Architecture requirements, identifying which connectors actually implement usage-control enforcement versus only claim to.
+Key findings: maps the range of open-source IDS-compliant dataspace connector implementations against IDS Reference Architecture requirements, identifying which connectors actually implement usage-control enforcement versus only claim to.
 Relevance to RQ: establishes that "which connectors are real, running software with verified enforcement" is itself an open comparative question in the literature, the same premise this paper's Chapter 2 extends one layer further (verified technical evaluation, not just feature comparison).
-Quality assessment: peer-reviewed conference paper (CEUR-WS proceedings), non-empirical (survey, not measurement), weaker fit than the other two Cluster A sources, included because it is the closest thing to a systematic connector landscape review currently published.
+Quality assessment: peer-reviewed conference paper (CEUR-WS proceedings), non-empirical (survey, not measurement), weaker fit than the other two Cluster A sources, included because it is the closest thing to a systematic connector survey review currently published.
 Potential use: Related Work (Cluster A subsection), as the framing citation for "connector implementations exist and vary in what they actually enforce."
 Verified via: https://arxiv.org/abs/2309.11282 (arXiv preprint, title/author list confirmed) and https://ceur-ws.org/Vol-3606/paper41.pdf (published version, ITADATA 2023, CEUR Workshop Proceedings Vol-3606, paper 41, ISSN 1613-0073); dblp record https://dblp.org/rec/conf/itadata/DamKNP23.html independently confirms venue and authors.
 

@@ -13,13 +13,13 @@
 ## Global Constraints
 
 - EDC version pinned at exactly 0.18.0, matching every other module in this repo.
-- `leafHash(entry) = SHA-256(0x00 || canonicalBytes(entry))`; `nodeHash(left, right) = SHA-256(0x01 || left || right)` — domain-separated, never duplicate a lone leaf, promote it unhashed instead.
+- `leafHash(entry) = SHA-256(0x00 || canonicalBytes(entry))`; `nodeHash(left, right) = SHA-256(0x01 || left || right)`, domain-separated, never duplicate a lone leaf, promote it unhashed instead.
 - Escape rule for `canonicalBytes`, byte-identical to `KAnonymity.KEY_ESCAPE` in `benefits-privacy`: replace `\` with `\\`, then `|` with `\|`, applied to every joined field before joining with `|`.
 - `prevEpochHash(epochId, merkleRoot, sealedAt) = SHA-256(escape(epochId) | escape(merkleRoot) | escape(sealedAt))`; the first epoch's `prevEpochHash` is the fixed constant `SHA-256("")`.
 - Epoch sealing triggers at `EPOCH_SIZE` unsealed entries, default 50, configurable via `benefits.audit.epochSize`.
-- Audit entries and epochs persist to CouchDB from the start — no in-memory-only store, unlike the phase 3 precedent.
+- Audit entries and epochs persist to CouchDB from the start, no in-memory-only store, unlike the phase 3 precedent.
 - The participant proof endpoint is `GET /audit/{participantRef}`, unauthenticated (stated limitation, no device identity infrastructure exists yet).
-- The TypeScript verifier package (`packages/audit-verify`) has no CouchDB or EDC dependency and no external hashing library — it uses the Web Crypto API (`crypto.subtle`, available in Node 22 and every evergreen browser).
+- The TypeScript verifier package (`packages/audit-verify`) has no CouchDB or EDC dependency and no external hashing library, it uses the Web Crypto API (`crypto.subtle`, available in Node 22 and every evergreen browser).
 - Cross-language hashing conformance vectors live in `conformance/audit-vectors/`, run by both a Java `@TestFactory` and a TypeScript `vitest` suite, following the existing `conformance/vectors/` pattern for consent semantics.
 
 ---
@@ -39,7 +39,7 @@
 - Modify: `tools/lib.sh`
 
 **Interfaces:**
-- Produces: confirmation, recorded in the task report, of (a) which EDC event classes actually fire for one negotiation and one transfer and in what order, (b) whether `EventRouter` dispatch is single- or multi-threaded per subscriber, (c) that a JAX-RS resource registered via `WebService.registerResource` on a new `web.http.audit.*` context is reachable over HTTP in this runtime. Later tasks in this plan build on all three answers being "yes, as expected" — if any is "no", stop and report back before continuing; do not improvise a different mechanism without recording why.
+- Produces: confirmation, recorded in the task report, of (a) which EDC event classes actually fire for one negotiation and one transfer and in what order, (b) whether `EventRouter` dispatch is single- or multi-threaded per subscriber, (c) that a JAX-RS resource registered via `WebService.registerResource` on a new `web.http.audit.*` context is reachable over HTTP in this runtime. Later tasks in this plan build on all three answers being "yes, as expected", if any is "no", stop and report back before continuing; do not improvise a different mechanism without recording why.
 
 This is a de-risking probe, in the same spirit as phase 0's constraint-function probe and phase 3's data-plane probe: prove the two EDC extension points this phase depends on (`EventRouter`, `WebService`) actually work in this specific runtime topology, with real HTTP traffic, before any real audit logic is built on top of them.
 
@@ -51,7 +51,7 @@ Add this line to `gradle/libs.versions.toml`, in the `[libraries]` section, alph
 edc-web-spi = { module = "org.eclipse.edc:web-spi", version.ref = "edc" }
 ```
 
-`web-spi` provides `org.eclipse.edc.web.spi.WebService` and transitively brings `jakarta.ws.rs:jakarta.ws.rs-api`, confirmed present in the local Gradle cache at `org.eclipse.edc:web-spi:0.18.0`'s POM — no separate JAX-RS dependency is needed.
+`web-spi` provides `org.eclipse.edc.web.spi.WebService` and transitively brings `jakarta.ws.rs:jakarta.ws.rs-api`, confirmed present in the local Gradle cache at `org.eclipse.edc:web-spi:0.18.0`'s POM, no separate JAX-RS dependency is needed.
 
 - [ ] **Step 2: Create the module's build file**
 
@@ -71,7 +71,7 @@ dependencies {
 }
 ```
 
-`control-plane-spi` transitively depends on `core-spi` (which declares `EventRouter`/`EventSubscriber`/`Event`), `contract-spi` (the four negotiation event classes), and `transfer-spi` (the two transfer event classes) — confirmed by inspecting `control-plane-spi-0.18.0.pom` directly; no separate aliases are needed for those three modules. `benefits-policy` is a dependency for `BenefitsNamespace.PURPOSE_KEY` and the `Constraints.siblingLiteral` helper, both used starting in Task 6.
+`control-plane-spi` transitively depends on `core-spi` (which declares `EventRouter`/`EventSubscriber`/`Event`), `contract-spi` (the four negotiation event classes), and `transfer-spi` (the two transfer event classes), confirmed by inspecting `control-plane-spi-0.18.0.pom` directly; no separate aliases are needed for those three modules. `benefits-policy` is a dependency for `BenefitsNamespace.PURPOSE_KEY` and the `Constraints.siblingLiteral` helper, both used starting in Task 6.
 
 - [ ] **Step 3: Register the module**
 
@@ -97,7 +97,7 @@ web.http.audit.path=/audit
 benefits.audit.enabled=true
 ```
 
-This follows the existing `web.http.<name>.port` / `web.http.<name>.path` pattern already used for `management`, `protocol`, `control`, `signaling`, and `public` in this same file. `benefits.audit.enabled` is a new flag this phase introduces: both connectors boot off the same `connector.jar` and therefore load `BenefitsAuditExtension` regardless of which properties file started them, but only the provider (the community connector, per the parent spec's tier diagram) accumulates and serves audit entries — the consumer has no `web.http.audit.*` context configured at all, so the extension must not attempt to connect to CouchDB or register a web resource unless this flag is present and true. Task 6 reads it and no-ops otherwise. `consumer.properties` is deliberately left unchanged — its absence there means disabled, matching this file's own precedent of `benefits.requester.*` being consumer-only config with no equivalent key on the provider side.
+This follows the existing `web.http.<name>.port` / `web.http.<name>.path` pattern already used for `management`, `protocol`, `control`, `signaling`, and `public` in this same file. `benefits.audit.enabled` is a new flag this phase introduces: both connectors boot off the same `connector.jar` and therefore load `BenefitsAuditExtension` regardless of which properties file started them, but only the provider (the community connector, per the parent spec's tier diagram) accumulates and serves audit entries, the consumer has no `web.http.audit.*` context configured at all, so the extension must not attempt to connect to CouchDB or register a web resource unless this flag is present and true. Task 6 reads it and no-ops otherwise. `consumer.properties` is deliberately left unchanged, its absence there means disabled, matching this file's own precedent of `benefits.requester.*` being consumer-only config with no equivalent key on the provider side.
 
 - [ ] **Step 5: Add a probe event subscriber**
 
@@ -133,7 +133,7 @@ public class ProbeEventSubscriber implements EventSubscriber {
 }
 ```
 
-If `EventSubscriber.on` does not take an `EventEnvelope<? extends Event>` (confirm the exact signature by inspecting `org.eclipse.edc.spi.event.EventSubscriber` on the compile classpath — `javap` the class file inside the `core-spi-0.18.0.jar` extracted from the Gradle cache under `~/.gradle/caches/modules-2/files-2.1/org.eclipse.edc/core-spi/0.18.0/`), correct this file to match the real signature. Record whichever signature is real in the task report; Task 6 depends on it.
+If `EventSubscriber.on` does not take an `EventEnvelope<? extends Event>` (confirm the exact signature by inspecting `org.eclipse.edc.spi.event.EventSubscriber` on the compile classpath, `javap` the class file inside the `core-spi-0.18.0.jar` extracted from the Gradle cache under `~/.gradle/caches/modules-2/files-2.1/org.eclipse.edc/core-spi/0.18.0/`), correct this file to match the real signature. Record whichever signature is real in the task report; Task 6 depends on it.
 
 - [ ] **Step 6: Add a probe JAX-RS resource**
 
@@ -187,7 +187,7 @@ public class BenefitsAuditExtension implements ServiceExtension {
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
         if (!Boolean.parseBoolean(context.getSetting("benefits.audit.enabled", "false"))) {
-            monitor.info("BENEFITS audit chain disabled (benefits.audit.enabled not set) — skipping");
+            monitor.info("BENEFITS audit chain disabled (benefits.audit.enabled not set), skipping");
             return;
         }
         eventRouter.register(org.eclipse.edc.spi.event.Event.class, new ProbeEventSubscriber(monitor));
@@ -199,7 +199,7 @@ public class BenefitsAuditExtension implements ServiceExtension {
 
 The probe reads the same `benefits.audit.enabled` flag Step 4 adds to `provider.properties` only, and does nothing on the consumer: both connectors boot the same `connector.jar` and therefore load this extension, but `consumer.properties` has no `web.http.audit.*` context configured, so attempting to register a web resource there is exactly the kind of thing that should not be attempted rather than discovered as a startup failure. This mirrors the same gate Task 6 applies to the real extension, applied here first since Task 1's probe script also starts a consumer connector.
 
-If `EventRouter.register` does not accept `Event.class` as a wildcard registration for every event type (it may require one call per concrete event class, e.g. `eventRouter.register(ContractNegotiationFinalized.class, subscriber)`), register the subscriber once per one of the four concrete event classes named in the spec instead, and record which form compiles. If `webService.registerResource(String, Object)` does not match this signature, inspect `org.eclipse.edc.web.spi.WebService` (same jar as `WebServer`, extracted in the probe above) for the real one — EDC's own management-api module is the reference implementation for this registration pattern and is present on the build classpath transitively through `controlplane-base-bom`, so its source can be decompiled with `javap -p` for a working example if the obvious signature does not compile.
+If `EventRouter.register` does not accept `Event.class` as a wildcard registration for every event type (it may require one call per concrete event class, e.g. `eventRouter.register(ContractNegotiationFinalized.class, subscriber)`), register the subscriber once per one of the four concrete event classes named in the spec instead, and record which form compiles. If `webService.registerResource(String, Object)` does not match this signature, inspect `org.eclipse.edc.web.spi.WebService` (same jar as `WebServer`, extracted in the probe above) for the real one, EDC's own management-api module is the reference implementation for this registration pattern and is present on the build classpath transitively through `controlplane-base-bom`, so its source can be decompiled with `javap -p` for a working example if the obvious signature does not compile.
 
 - [ ] **Step 8: Write and run the probe script**
 
@@ -263,7 +263,7 @@ grep "AUDIT_PROBE" /tmp/provider.log || { echo "no AUDIT_PROBE lines found" >&2;
 echo "gate 0 probe passed"
 ```
 
-In `tools/lib.sh`, add the new port to the `PORTS` list so `stop_all` waits for it to be released too — change:
+In `tools/lib.sh`, add the new port to the `PORTS` list so `stop_all` waits for it to be released too, change:
 
 ```bash
 PORTS="19191 19192 19193 19194 19195 19196 19291 29191 29192 29193 29194 29195 29196 29291"
@@ -281,7 +281,7 @@ Expected: `AUDIT_PROBE_OK`, `negotiation: FINALIZED`, at least one `AUDIT_PROBE 
 
 - [ ] **Step 9: Record findings and commit**
 
-In the task report, state plainly: which event class names actually appeared in the log (compare against the four named in spec section 2 — `ContractNegotiationFinalized`, `ContractNegotiationTerminated`, `TransferProcessCompleted`, `TransferProcessTerminated`); whether more than one distinct thread name appeared across multiple probe runs (run the script twice and diff the thread names if uncertain); and confirm the audit web context was reachable without any change beyond Step 4's two properties lines. If EDC required a `data-plane-self-registration`-style extra dependency for the new web context to boot (unlikely, since `management`/`protocol`/etc. already boot the same way with no extra dependency, but confirm), add it here.
+In the task report, state plainly: which event class names actually appeared in the log (compare against the four named in spec section 2, `ContractNegotiationFinalized`, `ContractNegotiationTerminated`, `TransferProcessCompleted`, `TransferProcessTerminated`); whether more than one distinct thread name appeared across multiple probe runs (run the script twice and diff the thread names if uncertain); and confirm the audit web context was reachable without any change beyond Step 4's two properties lines. If EDC required a `data-plane-self-registration`-style extra dependency for the new web context to boot (unlikely, since `management`/`protocol`/etc. already boot the same way with no extra dependency, but confirm), add it here.
 
 ```bash
 git add gradle/libs.versions.toml settings.gradle.kts connector/runtime/build.gradle.kts \
@@ -441,7 +441,7 @@ class AuditHashingTest {
 - [ ] **Step 3: Run the tests to verify they fail**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test`
-Expected: FAIL — `AuditHashing` does not exist yet.
+Expected: FAIL, `AuditHashing` does not exist yet.
 
 - [ ] **Step 4: Write the hashing implementation**
 
@@ -539,7 +539,7 @@ git commit -m "Add audit domain records and canonical hashing"
 
 ---
 
-### Task 3: MerkleTree — root, proof, verify
+### Task 3: MerkleTree, root, proof, verify
 
 **Files:**
 - Create: `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/MerkleTree.java`
@@ -637,7 +637,7 @@ class MerkleTreeTest {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests MerkleTreeTest`
-Expected: FAIL — `MerkleTree` does not exist yet.
+Expected: FAIL, `MerkleTree` does not exist yet.
 
 - [ ] **Step 3: Write the implementation**
 
@@ -724,7 +724,7 @@ public final class MerkleTree {
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests MerkleTreeTest`
-Expected: PASS, all 7 tests. `everyIndexVerifiesAgainstTheRootAtEveryParityFromOneToTwelve` is the load-bearing one — it covers every odd/even parity a real epoch of any size could hit.
+Expected: PASS, all 7 tests. `everyIndexVerifiesAgainstTheRootAtEveryParityFromOneToTwelve` is the load-bearing one, it covers every odd/even parity a real epoch of any size could hit.
 
 - [ ] **Step 5: Commit**
 
@@ -967,7 +967,7 @@ class EpochSealerTest {
 - [ ] **Step 4: Run the tests to verify they fail**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests EpochSealerTest`
-Expected: FAIL — `EpochSealer` does not exist yet.
+Expected: FAIL, `EpochSealer` does not exist yet.
 
 - [ ] **Step 5: Write EpochSealer**
 
@@ -1136,7 +1136,7 @@ class CouchDbAuditStoreIntegrationTest {
     }
 
     // Each test creates its own randomly-named database (above) so tests never collide
-    // with each other, but a database this test creates is this test's to clean up —
+    // with each other, but a database this test creates is this test's to clean up -
     // otherwise every run of this suite leaves a permanent, never-reclaimed database on
     // whatever CouchDB instance it ran against.
     @AfterEach
@@ -1191,7 +1191,7 @@ class CouchDbAuditStoreIntegrationTest {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests CouchDbAuditStoreIntegrationTest`
-Expected: FAIL — `CouchDbAuditStore` does not exist yet (or SKIPPED if CouchDB is not running locally; if so, start it — this repo's CouchDB is run via Docker Compose, check for a `docker-compose.yml` at the repo root and run `docker compose up -d couchdb` before continuing, matching how the phase 3 CouchDB dependency was brought up).
+Expected: FAIL, `CouchDbAuditStore` does not exist yet (or SKIPPED if CouchDB is not running locally; if so, start it, this repo's CouchDB is run via Docker Compose, check for a `docker-compose.yml` at the repo root and run `docker compose up -d couchdb` before continuing, matching how the phase 3 CouchDB dependency was brought up).
 
 - [ ] **Step 3: Write CouchDbAuditStore**
 
@@ -1244,7 +1244,7 @@ public class CouchDbAuditStore implements AuditStore {
     /**
      * Unlike CouchDbContributionSource in phase 3, this store is wired directly into a
      * live connector's startup path (BenefitsAuditExtension, Task 6) and exercised by a
-     * real connector process (Task 10's end-to-end probe) — phase 3's CouchDB reader
+     * real connector process (Task 10's end-to-end probe), phase 3's CouchDB reader
      * never was. Nothing else creates the database first, so this store creates its
      * own, idempotently: 201 means it just did, 412 means another process already did
      * (both are success), anything else is a real failure.
@@ -1347,7 +1347,7 @@ public class CouchDbAuditStore implements AuditStore {
     /**
      * Every selector whose value comes from outside this class (a participant-supplied
      * HTTP path parameter, an EDC-supplied asset id, a server-generated epoch id) is
-     * built here, through ObjectMapper, never through string interpolation — the exact
+     * built here, through ObjectMapper, never through string interpolation, the exact
      * defect class CouchDbContributionSource (phase 3) had to fix. A hand-rolled
      * ".replace(\"\\\"\", \"\\\\\\\"\")" escape looks safe and is not: it only escapes
      * quotes, not backslashes, so a value ending in a backslash or containing a
@@ -1503,12 +1503,12 @@ A CouchDB Mango query needs a matching index to sort by `seq`; if `loadMaxSeq`'s
     }
 ```
 
-called from the constructor before `loadMaxSeq()`. Only add this if the test actually fails on a missing index — CouchDB may pick a usable index automatically for a single-field sort.
+called from the constructor before `loadMaxSeq()`. Only add this if the test actually fails on a missing index, CouchDB may pick a usable index automatically for a single-field sort.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests CouchDbAuditStoreIntegrationTest`
-Expected: PASS, all 3 tests (or correctly SKIPPED if CouchDB genuinely cannot be started in this environment — record which happened in the task report; a skip must not be reported as a pass).
+Expected: PASS, all 3 tests (or correctly SKIPPED if CouchDB genuinely cannot be started in this environment, record which happened in the task report; a skip must not be reported as a pass).
 
 - [ ] **Step 5: Commit**
 
@@ -1520,7 +1520,7 @@ git commit -m "Add CouchDB-backed AuditStore with crash-resumable epoch sealing"
 
 ---
 
-### Task 6: BenefitsAuditEventListener — real event mapping
+### Task 6: BenefitsAuditEventListener, real event mapping
 
 **Files:**
 - Modify: `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/BenefitsAuditExtension.java`
@@ -1533,9 +1533,9 @@ git commit -m "Add CouchDB-backed AuditStore with crash-resumable epoch sealing"
 
 **Interfaces:**
 - Consumes: `EpochSealer.record` (Task 4); `BenefitsNamespace.PURPOSE_KEY`, `Constraints.siblingLiteral` (`benefits-policy`, phase 2); the real accessor names confirmed in Task 1's gate 0 report for `ContractNegotiationFinalized`, `ContractNegotiationTerminated`, `TransferProcessCompleted`, `TransferProcessTerminated`.
-- Produces: `BenefitsAuditEventListener` registered against `EventRouter` for the four confirmed event classes (or, if Task 1 found `EventRouter.register` requires the wildcard `Event.class` form instead, adapt this task's registration to match — the mapping logic inside the listener is the same either way, only `instanceof` branches replace four separate `register` calls).
+- Produces: `BenefitsAuditEventListener` registered against `EventRouter` for the four confirmed event classes (or, if Task 1 found `EventRouter.register` requires the wildcard `Event.class` form instead, adapt this task's registration to match, the mapping logic inside the listener is the same either way, only `instanceof` branches replace four separate `register` calls).
 
-**Read this before writing `onTerminated`:** Task 1's gate 0 probe found that `ContractNegotiationTerminated` does not fire for a policy-refused negotiation — EDC 0.18.0 rejects that case synchronously, before any `ContractNegotiation` entity exists, so there is no entity for the event system to fire against. This event only ever represents a negotiation that was already admitted and later terminated (an explicit management-API termination, or a post-admission lifecycle failure). Spec section 2.2 has the full finding and the empirical evidence. The code below already reflects this in its `plainLanguage` wording and doc comment — do not revert it to language implying this event covers a policy refusal.
+**Read this before writing `onTerminated`:** Task 1's gate 0 probe found that `ContractNegotiationTerminated` does not fire for a policy-refused negotiation, EDC 0.18.0 rejects that case synchronously, before any `ContractNegotiation` entity exists, so there is no entity for the event system to fire against. This event only ever represents a negotiation that was already admitted and later terminated (an explicit management-API termination, or a post-admission lifecycle failure). Spec section 2.2 has the full finding and the empirical evidence. The code below already reflects this in its `plainLanguage` wording and doc comment, do not revert it to language implying this event covers a policy refusal.
 
 - [ ] **Step 1: Write PolicyPurpose**
 
@@ -1569,7 +1569,7 @@ final class PolicyPurpose {
 
 - [ ] **Step 2: Write the failing listener test**
 
-Create `connector/extensions/benefits-audit/src/test/java/org/benefits/audit/BenefitsAuditEventListenerTest.java`. This test exercises the mapping logic directly against constructed event objects rather than a running EDC instance — the running-instance path is Task 10's end-to-end gate.
+Create `connector/extensions/benefits-audit/src/test/java/org/benefits/audit/BenefitsAuditEventListenerTest.java`. This test exercises the mapping logic directly against constructed event objects rather than a running EDC instance, the running-instance path is Task 10's end-to-end gate.
 
 ```java
 package org.benefits.audit;
@@ -1701,7 +1701,7 @@ class BenefitsAuditEventListenerTest {
                 .contractAgreement(secondAgreement).build());
 
         // The transfer belongs to the FIRST negotiation's agreement, even though the
-        // SECOND negotiation (for the same asset) is more recent -- proving
+        // SECOND negotiation (for the same asset) is more recent, proving
         // correlation is keyed by agreement id, not "most recent entry for this
         // asset" (the bug Task 6's reviewer found in the original design).
         var transferEvent = TransferProcessCompleted.Builder.newInstance()
@@ -1719,12 +1719,12 @@ class BenefitsAuditEventListenerTest {
 }
 ```
 
-If any builder method name above does not match the real EDC 0.18.0 API (for example `ContractAgreement.Builder` may name its provider/consumer setters differently, or `Permission.Builder` may not take `.constraint(...)` directly), correct the test to the real builder API — cross-check against how `StewardQuorumFunctionTest.java` or `ConsentConstraintFunctionsTest.java` in `benefits-policy` already construct `Permission`/`AtomicConstraint` objects for their own tests, since those tests already compile against this exact EDC version.
+If any builder method name above does not match the real EDC 0.18.0 API (for example `ContractAgreement.Builder` may name its provider/consumer setters differently, or `Permission.Builder` may not take `.constraint(...)` directly), correct the test to the real builder API, cross-check against how `StewardQuorumFunctionTest.java` or `ConsentConstraintFunctionsTest.java` in `benefits-policy` already construct `Permission`/`AtomicConstraint` objects for their own tests, since those tests already compile against this exact EDC version.
 
 - [ ] **Step 3: Run the test to verify it fails**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests BenefitsAuditEventListenerTest`
-Expected: FAIL — `BenefitsAuditEventListener` does not exist yet.
+Expected: FAIL, `BenefitsAuditEventListener` does not exist yet.
 
 - [ ] **Step 4: Write BenefitsAuditEventListener**
 
@@ -1747,7 +1747,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * TransferProcessEvent carries no counter-party or policy accessor (confirmed by
  * inspecting the compiled class directly), so a transfer entry correlates its actor
  * and statedPurpose from the negotiation that produced its agreement, keyed by
- * agreement id (spec section 6) — correlating by asset id instead is ambiguous
+ * agreement id (spec section 6), correlating by asset id instead is ambiguous
  * whenever the same asset is negotiated more than once, which an earlier version of
  * this class did and a task reviewer caught. The cache is in-memory only and does
  * not survive a restart; a transfer completing after a restart between its
@@ -1759,7 +1759,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * synchronously, before any ContractNegotiation entity exists, so no event of any
  * kind fires for that case. This handler only ever sees a negotiation that was
  * already admitted into the provider's state machine and later terminated (an
- * explicit management-API termination, or a post-admission lifecycle failure) —
+ * explicit management-API termination, or a post-admission lifecycle failure) -
  * never a k-anonymity, epsilon-budget, steward-quorum, purpose, or recipient-class
  * refusal at initial offer validation. Do not describe this entry's plainLanguage as
  * a "refusal" in a way that implies it covers that case.
@@ -1816,7 +1816,7 @@ public class BenefitsAuditEventListener {
 }
 ```
 
-Correlation is entirely internal to this class — an in-memory `Map` populated in `onFinalized` and read in `recordTransfer`, keyed by the agreement id both `ContractAgreement.getId()` (negotiation side) and `TransferProcessEvent.getContractId()` (transfer side) share. It does not touch `EpochSealer` or `AuditStore` at all; no new method on either is needed for this task.
+Correlation is entirely internal to this class, an in-memory `Map` populated in `onFinalized` and read in `recordTransfer`, keyed by the agreement id both `ContractAgreement.getId()` (negotiation side) and `TransferProcessEvent.getContractId()` (transfer side) share. It does not touch `EpochSealer` or `AuditStore` at all; no new method on either is needed for this task.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
@@ -1825,7 +1825,7 @@ Expected: PASS, all 4 tests (including `transferCorrelatesByItsOwnAgreementEvenW
 
 - [ ] **Step 6: Wire the real listener into the extension and delete the probes**
 
-Delete `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeEventSubscriber.java` and `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeAuditResource.java` — their job (proving `EventRouter` and `WebService` both work here) is done.
+Delete `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeEventSubscriber.java` and `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/ProbeAuditResource.java`, their job (proving `EventRouter` and `WebService` both work here) is done.
 
 Replace `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/BenefitsAuditExtension.java` with:
 
@@ -1867,7 +1867,7 @@ public class BenefitsAuditExtension implements ServiceExtension {
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
         if (!Boolean.parseBoolean(context.getSetting("benefits.audit.enabled", "false"))) {
-            monitor.info("BENEFITS audit chain disabled (benefits.audit.enabled not set) — skipping");
+            monitor.info("BENEFITS audit chain disabled (benefits.audit.enabled not set), skipping");
             return;
         }
         var epochSize = Integer.parseInt(context.getSetting("benefits.audit.epochSize", "50"));
@@ -1904,7 +1904,7 @@ public class BenefitsAuditExtension implements ServiceExtension {
 
     private <T extends Event> EventSubscriber envelopeSubscriber(java.util.function.Consumer<T> handler) {
         // EventSubscriber.on is confirmed (Task 1's gate 0 report) to be a generic
-        // method — <E extends Event> void on(EventEnvelope<E>) — not a method taking
+        // method, <E extends Event> void on(EventEnvelope<E>), not a method taking
         // a wildcarded parameter. A lambda expression cannot implement an interface
         // method that declares its own type parameter (there is no lambda syntax for
         // <E>), so this must be an anonymous class, not `envelope -> ...`.
@@ -1919,11 +1919,11 @@ public class BenefitsAuditExtension implements ServiceExtension {
 }
 ```
 
-`EventRouter.register(Class<E>, EventSubscriber)` was verified directly against `EventRouterImpl`'s bytecode (`~/.gradle/caches/.../org.eclipse.edc/runtime-core/0.18.0/`) to filter delivery by `registeredClass.isAssignableFrom(envelope.getPayload().getClass())` before invoking each subscriber — so each of the four `register` calls above only ever delivers its own event type to its own `envelopeSubscriber`, and the unchecked cast inside it is sound. This was checked because Task 1's report only confirmed the wildcard `register(Event.class, ...)` form (which matches everything); registering four subscribers under four different specific classes and trusting each to receive only its own type was not directly probed, so it was verified here instead of assumed.
+`EventRouter.register(Class<E>, EventSubscriber)` was verified directly against `EventRouterImpl`'s bytecode (`~/.gradle/caches/.../org.eclipse.edc/runtime-core/0.18.0/`) to filter delivery by `registeredClass.isAssignableFrom(envelope.getPayload().getClass())` before invoking each subscriber, so each of the four `register` calls above only ever delivers its own event type to its own `envelopeSubscriber`, and the unchecked cast inside it is sound. This was checked because Task 1's report only confirmed the wildcard `register(Event.class, ...)` form (which matches everything); registering four subscribers under four different specific classes and trusting each to receive only its own type was not directly probed, so it was verified here instead of assumed.
 
-The `benefits-audit` database name is `<benefits.couchdb.database>-audit` (default `benefits-audit`), kept separate from the `benefits` database phase 3's `CouchDbContributionSource` reads contribution records from, since audit documents (`auditEntry`, `auditEpoch`) are a different concern than contribution records (`contribution`) and mixing them would make every Mango query in both stores need an extra `type` filter to avoid cross-contamination — they already have one, so this is a defense-in-depth separation, not a strict necessity, but it costs nothing.
+The `benefits-audit` database name is `<benefits.couchdb.database>-audit` (default `benefits-audit`), kept separate from the `benefits` database phase 3's `CouchDbContributionSource` reads contribution records from, since audit documents (`auditEntry`, `auditEpoch`) are a different concern than contribution records (`contribution`) and mixing them would make every Mango query in both stores need an extra `type` filter to avoid cross-contamination, they already have one, so this is a defense-in-depth separation, not a strict necessity, but it costs nothing.
 
-If `AuditResource` (referenced above) does not exist yet, that is expected — it is Task 7. This task will not compile until Task 7 is complete; that is acceptable within a single task's own commit only if Task 7 is the very next task in this plan, which it is. If your workflow requires every task to compile and test green in isolation, write a placeholder `AuditResource` in this task instead:
+If `AuditResource` (referenced above) does not exist yet, that is expected, it is Task 7. This task will not compile until Task 7 is complete; that is acceptable within a single task's own commit only if Task 7 is the very next task in this plan, which it is. If your workflow requires every task to compile and test green in isolation, write a placeholder `AuditResource` in this task instead:
 
 ```java
 package org.benefits.audit;
@@ -1942,7 +1942,7 @@ and let Task 7 replace it with the real implementation.
 
 - [ ] **Step 7: Make the shared connector-starting tooling ensure CouchDB is running**
 
-From this task onward, the provider connector cannot boot at all without CouchDB reachable — `CouchDbAuditStore`'s constructor (Task 5) connects immediately. Phases 0-3's own scripts (`tools/run-case.sh`, `probe-transfer.sh`, `probe-aggregate-transfer.sh`, and this phase's own probes) all start connectors through the single shared `start_connector` function in `tools/lib.sh`, so fixing it there once, rather than in every script, is what keeps this from silently breaking every existing test in the repo the next time any of them runs on this branch.
+From this task onward, the provider connector cannot boot at all without CouchDB reachable, `CouchDbAuditStore`'s constructor (Task 5) connects immediately. Phases 0-3's own scripts (`tools/run-case.sh`, `probe-transfer.sh`, `probe-aggregate-transfer.sh`, and this phase's own probes) all start connectors through the single shared `start_connector` function in `tools/lib.sh`, so fixing it there once, rather than in every script, is what keeps this from silently breaking every existing test in the repo the next time any of them runs on this branch.
 
 In `tools/lib.sh`, add this function above `start_connector`:
 
@@ -1973,9 +1973,9 @@ start_connector() {
   local name=$1 config=$2 mgmt_port=$3
 ```
 
-This runs for both the provider and the consumer even though only the provider actually uses CouchDB (Step 4's `benefits.audit.enabled` flag keeps the consumer's copy of the extension a no-op) — a single reachability check is cheap, and keeping `start_connector` unconditional is simpler than threading "does this specific properties file need CouchDB" through every caller.
+This runs for both the provider and the consumer even though only the provider actually uses CouchDB (Step 4's `benefits.audit.enabled` flag keeps the consumer's copy of the extension a no-op), a single reachability check is cheap, and keeping `start_connector` unconditional is simpler than threading "does this specific properties file need CouchDB" through every caller.
 
-Run: `./tools/probe-audit-events.sh` again (Task 1's gate 0 probe) to confirm `ensure_couchdb` does not break it — it should still pass exactly as it did in Task 1, since that probe's own `BenefitsAuditExtension` copy has been replaced by this task's real one, which still honors `benefits.audit.enabled` on the provider.
+Run: `./tools/probe-audit-events.sh` again (Task 1's gate 0 probe) to confirm `ensure_couchdb` does not break it, it should still pass exactly as it did in Task 1, since that probe's own `BenefitsAuditExtension` copy has been replaced by this task's real one, which still honors `benefits.audit.enabled` on the provider.
 
 - [ ] **Step 8: Compile and run the full module test suite**
 
@@ -1997,7 +1997,7 @@ git commit -m "Wire real event-to-entry mapping into the audit extension, remove
 
 ---
 
-### Task 7: AuditResource — the participant proof endpoint
+### Task 7: AuditResource, the participant proof endpoint
 
 **Files:**
 - Create: `connector/extensions/benefits-audit/src/main/java/org/benefits/audit/AuditResource.java` (replacing Task 6's placeholder, if one was used)
@@ -2061,7 +2061,7 @@ class AuditResourceTest {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test --tests AuditResourceTest`
-Expected: FAIL — `AuditResource.forParticipant` does not exist yet (or the placeholder from Task 6 does not compile against this test).
+Expected: FAIL, `AuditResource.forParticipant` does not exist yet (or the placeholder from Task 6 does not compile against this test).
 
 - [ ] **Step 3: Write AuditResource**
 
@@ -2142,7 +2142,7 @@ public class AuditResource {
 }
 ```
 
-This calls `store.entriesFor(epochId, true)`, an overload that does not exist yet — `AuditStore.entriesFor(String)` filters by `actor`, but rebuilding an epoch's leaf list needs every entry whose `epoch` field equals a given epoch id, in seq order, which is a different filter. Rather than overload a method whose single-argument form already means something else, add a differently named method instead:
+This calls `store.entriesFor(epochId, true)`, an overload that does not exist yet, `AuditStore.entriesFor(String)` filters by `actor`, but rebuilding an epoch's leaf list needs every entry whose `epoch` field equals a given epoch id, in seq order, which is a different filter. Rather than overload a method whose single-argument form already means something else, add a differently named method instead:
 
 In `AuditStore.java`, add to the interface:
 
@@ -2160,7 +2160,7 @@ In `InMemoryAuditStore.java`, add:
     }
 ```
 
-In `CouchDbAuditStore.java`, add (reuses the same `dynamicSelector` helper `entriesFor` already uses — build the selector through it, never through string concatenation, since a hand-rolled escape was a real Critical finding on this exact class of method):
+In `CouchDbAuditStore.java`, add (reuses the same `dynamicSelector` helper `entriesFor` already uses, build the selector through it, never through string concatenation, since a hand-rolled escape was a real Critical finding on this exact class of method):
 
 ```java
     @Override
@@ -2172,7 +2172,7 @@ In `CouchDbAuditStore.java`, add (reuses the same `dynamicSelector` helper `entr
 
 Then in `AuditResource.java`, replace the two calls to `store.entriesFor(epochId, true)` (in `leafHashesFor` and `indexOfSeq`) with `store.entriesInEpoch(epochId)`.
 
-Add one integration test to `CouchDbAuditStoreIntegrationTest.java` (Task 5), alongside its existing `sealEpochPersistsTheEpochAndStampsMemberEntries` test — `entriesInEpoch` is new production code on the path Task 6 already wires into a live connector, and `entriesFor`'s equivalent CouchDB behavior already has integration coverage in that same file, so this method should too rather than being verified only against `InMemoryAuditStore`:
+Add one integration test to `CouchDbAuditStoreIntegrationTest.java` (Task 5), alongside its existing `sealEpochPersistsTheEpochAndStampsMemberEntries` test, `entriesInEpoch` is new production code on the path Task 6 already wires into a live connector, and `entriesFor`'s equivalent CouchDB behavior already has integration coverage in that same file, so this method should too rather than being verified only against `InMemoryAuditStore`:
 
 ```java
     @Test
@@ -2196,7 +2196,7 @@ Expected: PASS, both tests.
 - [ ] **Step 5: Run the full module suite**
 
 Run: `./gradlew :connector:extensions:benefits-audit:test`
-Expected: PASS, every test in the module (this also re-runs Tasks 2-6's tests, confirming nothing this task touched broke them — `AuditStore`'s interface grew by one method twice, in this task and Task 6, and both implementations must still compile).
+Expected: PASS, every test in the module (this also re-runs Tasks 2-6's tests, confirming nothing this task touched broke them, `AuditStore`'s interface grew by one method twice, in this task and Task 6, and both implementations must still compile).
 
 - [ ] **Step 6: Commit**
 
@@ -2211,7 +2211,7 @@ git commit -m "Add the participant proof endpoint, GET /audit/{participantRef}"
 
 ---
 
-### Task 8: packages/audit-verify — the TypeScript participant verifier
+### Task 8: packages/audit-verify, the TypeScript participant verifier
 
 **Files:**
 - Create: `packages/audit-verify/package.json`
@@ -2225,7 +2225,7 @@ git commit -m "Add the participant proof endpoint, GET /audit/{participantRef}"
 - Test: `packages/audit-verify/test/chain.test.ts`
 
 **Interfaces:**
-- Consumes: nothing from earlier tasks — this package has no dependency on any Java module and only agrees with it by the shared hashing rule from spec sections 3.2/3.3, verified independently by Task 9's cross-language conformance vectors.
+- Consumes: nothing from earlier tasks, this package has no dependency on any Java module and only agrees with it by the shared hashing rule from spec sections 3.2/3.3, verified independently by Task 9's cross-language conformance vectors.
 - Produces: `escape`, `canonicalBytes`, `leafHash`, `nodeHash`, `prevEpochHash`, `GENESIS_PREV_EPOCH_HASH` (hashing.ts); `verifyInclusion` (merkle.ts); `verifyChain` (chain.ts). Task 9's TypeScript conformance runner imports `leafHash` directly by name.
 
 - [ ] **Step 1: Scaffold the package**
@@ -2328,7 +2328,7 @@ describe('prevEpochHash', () => {
 - [ ] **Step 3: Run the tests to verify they fail**
 
 Run: `cd packages/audit-verify && npm install && npx vitest run test/hashing.test.ts`
-Expected: FAIL — `src/hashing.ts` does not exist yet.
+Expected: FAIL, `src/hashing.ts` does not exist yet.
 
 - [ ] **Step 4: Write hashing.ts**
 
@@ -2462,7 +2462,7 @@ describe('verifyInclusion', () => {
 - [ ] **Step 7: Run the test to verify it fails**
 
 Run: `npx vitest run test/merkle.test.ts`
-Expected: FAIL — `src/merkle.ts` does not exist yet.
+Expected: FAIL, `src/merkle.ts` does not exist yet.
 
 - [ ] **Step 8: Write merkle.ts**
 
@@ -2553,7 +2553,7 @@ describe('verifyChain', () => {
 - [ ] **Step 11: Run the test to verify it fails**
 
 Run: `npx vitest run test/chain.test.ts`
-Expected: FAIL — `src/chain.ts` does not exist yet.
+Expected: FAIL, `src/chain.ts` does not exist yet.
 
 - [ ] **Step 12: Write chain.ts and index.ts**
 
@@ -2628,7 +2628,7 @@ Each vector fixes a small list of entries and the expected leaf hash of the firs
 
 - [ ] **Step 1: Compute the vectors' expected values**
 
-Vector values must be computed, not guessed — write a short throwaway script using the Java implementation from Task 2/3 (already built and tested) to print real SHA-256 hex digests, then paste those exact values into the vector files. Do not hand-invent hex strings.
+Vector values must be computed, not guessed, write a short throwaway script using the Java implementation from Task 2/3 (already built and tested) to print real SHA-256 hex digests, then paste those exact values into the vector files. Do not hand-invent hex strings.
 
 ```bash
 cat > /tmp/PrintVectors.java <<'JAVA'
@@ -2675,7 +2675,7 @@ javac -cp connector/extensions/benefits-audit/build/classes/java/main /tmp/Print
 java -cp /tmp:connector/extensions/benefits-audit/build/classes/java/main PrintVectors
 ```
 
-Run this and capture its six output lines before writing the vector files below — the `firstLeafHash` and `root` values in each JSON file below are placeholders (`REPLACE_WITH_COMPUTED_VALUE`) that must be replaced with this script's real output.
+Run this and capture its six output lines before writing the vector files below, the `firstLeafHash` and `root` values in each JSON file below are placeholders (`REPLACE_WITH_COMPUTED_VALUE`) that must be replaced with this script's real output.
 
 - [ ] **Step 2: Write the vector files**
 
@@ -2766,7 +2766,7 @@ Create `conformance/audit-vectors/av006-backslash-in-actor.json`:
 }
 ```
 
-Replace every `REPLACE_WITH_COMPUTED_VALUE` with the real hex digest from Step 1's script output before continuing — a vector file with a placeholder value left in it is a plan defect, not a passable test.
+Replace every `REPLACE_WITH_COMPUTED_VALUE` with the real hex digest from Step 1's script output before continuing, a vector file with a placeholder value left in it is a plan defect, not a passable test.
 
 - [ ] **Step 3: Write the Java conformance runner**
 
@@ -2898,7 +2898,7 @@ git commit -m "Add cross-language audit hashing conformance vectors"
 
 **Interfaces:**
 - Consumes: everything from Tasks 1-9 running together in a real connector process.
-- Produces: the phase's Gate 4 result — a real negotiation and transfer through the running connector, a sealed epoch, `GET /audit/{participantRef}` returning that participant's entries and proofs, and the TypeScript verifier from Task 8 confirming both inclusion and chain integrity given only that HTTP response.
+- Produces: the phase's Gate 4 result, a real negotiation and transfer through the running connector, a sealed epoch, `GET /audit/{participantRef}` returning that participant's entries and proofs, and the TypeScript verifier from Task 8 confirming both inclusion and chain integrity given only that HTTP response.
 
 - [ ] **Step 1: Write the verification script**
 
@@ -2962,12 +2962,12 @@ Running a `.ts` module directly with plain `node` requires either Node's built-i
 import { leafHash, verifyInclusion, verifyChain } from '../packages/audit-verify/dist/index.js';
 ```
 
-and note in the task report that `packages/audit-verify` must be built (`npm run build`, from that package directory) before this script runs. Use whichever of the two import paths actually resolves under this repo's installed Node version — try the `dist/index.js` form first, since it does not depend on experimental TypeScript support.
+and note in the task report that `packages/audit-verify` must be built (`npm run build`, from that package directory) before this script runs. Use whichever of the two import paths actually resolves under this repo's installed Node version, try the `dist/index.js` form first, since it does not depend on experimental TypeScript support.
 
 - [ ] **Step 2: Write the end-to-end probe script**
 
 Create `tools/probe-audit-e2e.sh`. This drives BOTH a negotiation and a real transfer
-— an earlier draft of this script covered negotiation only, which a task reviewer
+- an earlier draft of this script covered negotiation only, which a task reviewer
 caught as falling short of what this gate (and the design spec's own Gate 4
 definition) actually promises to prove. The transfer section below reuses the
 identical, already-proven sink-server and transfer-request shape
@@ -3076,7 +3076,7 @@ stop_sink() {
 trap 'stop_sink; stop_all' EXIT
 stop_all
 ensure_couchdb
-# Wipe any prior run's audit state first — otherwise leftover entries for actor
+# Wipe any prior run's audit state first, otherwise leftover entries for actor
 # "consumer" from an earlier run of this script, or from Task 6's own probe (which
 # uses the same participant id), inflate this run's sealed-entry count and make the
 # "2 sealed entries" expectation below unreliable. Task 6's probe established this
@@ -3086,7 +3086,7 @@ curl -s -o /dev/null -X DELETE "http://admin:benefits@localhost:5984/benefits-au
 # real events to accumulate before this probe can observe a seal. The asset is
 # BenefitsAggregate-typed (backed by a seeded ReleaseArtifact) from the start, not a
 # plain "test" type, so the same negotiation this script drives can also be
-# transferred afterward — a "test"-type asset has no registered DataSourceFactory and
+# transferred afterward, a "test"-type asset has no registered DataSourceFactory and
 # a transfer against it would fail at the data plane step.
 start_connector provider "$ROOT/connector/runtime/provider.properties" 19193 \
   -Dbenefits.audit.epochSize=1 -Dbenefits.seed.artifacts="$WORK/artifacts.json"
@@ -3149,12 +3149,12 @@ echo
 node "$ROOT/tools/verify-audit-response.mjs" "http://localhost:19197/audit" consumer
 ```
 
-`consumer` is confirmed correct, not assumed: Task 6's own probe run recorded real `AuditEntry` documents with `actor=consumer` for exactly this negotiation flow (see `docs/superpowers/plans/...` Task 6 history, or just re-derive it — `negotiate()` in `tools/lib.sh` sends the consumer's own `counterPartyId` claim as `"provider"` to the provider, but the PROVIDER's own `ContractNegotiationFinalized.getCounterPartyId()` reports the REQUESTER's participant id, which is `consumer.properties`'s `edc.participant.id=consumer`). `AuditResource` filters strictly by `actor` equality, so this must be exact. The transfer correlates to the same `actor` via the agreement-id cache (spec section 6, fixed in Task 6), since `event.getContractId()` here is the same `AGREEMENT` value the negotiation produced.
+`consumer` is confirmed correct, not assumed: Task 6's own probe run recorded real `AuditEntry` documents with `actor=consumer` for exactly this negotiation flow (see `docs/superpowers/plans/...` Task 6 history, or just re-derive it, `negotiate()` in `tools/lib.sh` sends the consumer's own `counterPartyId` claim as `"provider"` to the provider, but the PROVIDER's own `ContractNegotiationFinalized.getCounterPartyId()` reports the REQUESTER's participant id, which is `consumer.properties`'s `edc.participant.id=consumer`). `AuditResource` filters strictly by `actor` equality, so this must be exact. The transfer correlates to the same `actor` via the agreement-id cache (spec section 6, fixed in Task 6), since `event.getContractId()` here is the same `AGREEMENT` value the negotiation produced.
 
 - [ ] **Step 3: Run the probe**
 
 Run: `chmod +x tools/probe-audit-e2e.sh && ./gradlew :connector:runtime:shadowJar && ./tools/probe-audit-e2e.sh`
-Expected: `negotiation: FINALIZED`, `transfer: COMPLETED`, a non-empty JSON response from the audit endpoint, and `verified 2 sealed entries across 2 epoch(s)` as the final line — one epoch for the negotiation-finalized entry, one for the transfer-completed entry, since `epochSize=1` seals each individually. `verifyChain`'s link between those two real epochs (not a synthetic one, unlike Task 4/8's unit tests) is exactly the property a negotiation-only run could never exercise.
+Expected: `negotiation: FINALIZED`, `transfer: COMPLETED`, a non-empty JSON response from the audit endpoint, and `verified 2 sealed entries across 2 epoch(s)` as the final line, one epoch for the negotiation-finalized entry, one for the transfer-completed entry, since `epochSize=1` seals each individually. `verifyChain`'s link between those two real epochs (not a synthetic one, unlike Task 4/8's unit tests) is exactly the property a negotiation-only run could never exercise.
 
 - [ ] **Step 4: Commit**
 

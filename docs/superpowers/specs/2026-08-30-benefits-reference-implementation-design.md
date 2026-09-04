@@ -186,15 +186,15 @@ purpose, recipient class, field set, k-anonymity, or epsilon budget) is
 rejected by EDC 0.18.0 synchronously, inside the DSP protocol handler,
 before a `ContractNegotiation` entity is created. No entity means no
 state machine transition, and EDC's event system only fires from state
-machine transitions — so `EventRouter` never publishes anything for that
+machine transitions, so `EventRouter` never publishes anything for that
 rejection. Confirmed empirically: a real policy-refused negotiation,
 forced against a running provider, produced a 400 response and zero
 corresponding lines in the provider's event log.
 
-**The audit log therefore does not cover the C1 suite's refusal cases** —
+**The audit log therefore does not cover the C1 suite's refusal cases** -
 `quorum-missing`, `quorum-one-steward-twice`, `purpose-mismatch`,
 `recipient-class-mismatch`, `field-outside-grant`,
-`expired-grant-field-excluded`, `k-below-threshold`, `budget-exceeded` —
+`expired-grant-field-excluded`, `k-below-threshold`, `budget-exceeded` -
 which is precisely the "policy decision" this project's steward-quorum,
 k-anonymity, and epsilon-budget machinery exists to make. What the audit
 log does cover: every negotiation admitted into the provider's state
@@ -203,7 +203,7 @@ machine (successful or later terminated) and every transfer attempt.
 A cheaper fix was considered and rejected: having a constraint function
 record its own refusal into the audit log the moment it returns `false`.
 That would restore coverage at the cost of the very property this
-section's claim depends on — the log would then contain entries an
+section's claim depends on, the log would then contain entries an
 application component chose to self-report, not entries the connector's
 own event stream independently proves happened, for exactly the
 refusal cases where independent proof matters most. Phase 4's own design
@@ -410,7 +410,7 @@ reported as a median over the query set with an interquartile range.
 The **low end device profile** is a single CPU core throttled to
 roughly 1 GHz with 1 GB of available memory, chosen to approximate the
 class of handset the target population actually owns. **Revised in
-phase 4**: fixing the exact throttle there turned out to be premature —
+phase 4**: fixing the exact throttle there turned out to be premature -
 E2, the experiment phase 5's device fleet feeds, does not exist until
 phase 5, and E1/E4 draw on device-tier and privacy-tier infrastructure
 this phase also does not touch. The throttle is fixed in phase 7
@@ -560,7 +560,7 @@ academic-paper skills rather than by an implementation plan at all.
 | 1 | consent-core, conformance vectors, design doc generation | vectors pass, real CouchDB rejects unconsented writes |
 | 2 | consent-odrl, benefits-policy, steward-quorum | C1 consent cases pass, negotiation refused without quorum |
 | 3 | privacy-pipeline | known answer tests, C1 privacy cases pass, budget exhaustion refuses |
-| 4 | audit-chain, audit-verify | mutated entries, mutated roots, and reordered epochs each detected 100% of the time at the mechanism level (phase 4's own spec, Gate 3) — the formal E3 experiment (parameter sweep, low-end device profile, reportable proof-size/verification-time figures) runs in phase 7 with the other experiments, not here; phase 4's own spec section 11 scoped this deliberately, and this row is corrected to match rather than leaving the original terse "E3 tamper detection at 100%" phrasing to be misread as the full experiment |
+| 4 | audit-chain, audit-verify | mutated entries, mutated roots, and reordered epochs each detected 100% of the time at the mechanism level (phase 4's own spec, Gate 3), the formal E3 experiment (parameter sweep, low-end device profile, reportable proof-size/verification-time figures) runs in phase 7 with the other experiments, not here; phase 4's own spec section 11 scoped this deliberately, and this row is corrected to match rather than leaving the original terse "E3 tamper detection at 100%" phrasing to be misread as the full experiment |
 | 5 | device-sim fleet | E2 revocation under partition, zero leaked records |
 | 6 | participant-web, steward-portal | manual click through, paper screenshots |
 | 7 | E1, E4, G1, G2, figure generation | results reproduce from seed |

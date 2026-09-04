@@ -1,7 +1,7 @@
 import type { ConsentGrant, ContributionRecord } from '@benefits/consent-core';
 import { createLocalDb } from './pouchdb';
 
-// Local grant state lives in a plain array, not PouchDB -- a participant's
+// Local grant state lives in a plain array, not PouchDB, a participant's
 // own consent grants are small, always fully present locally (never
 // partial), and revoke() needs to mutate one in place synchronously from
 // the client's point of view. Contributed records go through PouchDB
@@ -19,7 +19,7 @@ export class ParticipantClient {
   private readonly db: PouchDB.Database;
   private localGrants: ConsentGrant[] = [];
   // Loaded from the `_local/sentIds` PouchDB doc on first use (see
-  // loadSentIds()) -- `_local/` documents are excluded from PouchDB/CouchDB
+  // loadSentIds()), `_local/` documents are excluded from PouchDB/CouchDB
   // replication, so this survives a page reload (unlike a plain in-memory
   // field) without ever leaking the sent-marker into the shared database.
   private sentIdsCache: Set<string> | null = null;
@@ -101,7 +101,7 @@ export class ParticipantClient {
       sentIds.add(id);
     }
     // Purely local, single-writer state (never replicated), so a simple
-    // get-then-put is sufficient -- no concurrent writer can race this.
+    // get-then-put is sufficient, no concurrent writer can race this.
     let rev: string | undefined;
     try {
       rev = (await this.db.get<SentIdsDoc>(SENT_IDS_DOC_ID))._rev;

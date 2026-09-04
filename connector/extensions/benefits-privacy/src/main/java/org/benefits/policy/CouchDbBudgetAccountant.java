@@ -16,7 +16,7 @@ import java.util.Base64;
  * reserve() uses a read-check-PUT-with-_rev-retry-on-409 loop: the budget check must
  * happen fresh on every retry attempt, not once before the loop, or a concurrent
  * reservation that lands between this call's check and a later attempt's write would
- * let both succeed and overspend -- exactly the violation BudgetAccountant's own doc
+ * let both succeed and overspend, exactly the violation BudgetAccountant's own doc
  * comment says reserve must never allow.
  */
 public class CouchDbBudgetAccountant implements BudgetAccountant {

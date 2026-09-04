@@ -1,7 +1,7 @@
 {
   "name": "benefits",
   "private": true,
-  "workspaces": ["packages/*", "apps/*", "experiments/harness/*"],
+  "workspaces": ["packages/*", "apps/*", "experiments/harness/*", "services/*"],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"

@@ -16,7 +16,7 @@ export async function syncDevice(device: Device, remoteUrl: string): Promise<{ p
 // "User preference first" (spec section 5), made precise there after an
 // earlier draft of this function conflated it with last-write-wins:
 // identity, not recency, decides. The device's own CURRENT local copy of
-// the document always wins, unconditionally -- never compared by
+// the document always wins, unconditionally, never compared by
 // timestamp against a rival, since a rival's claimed edit time cannot be
 // trusted (every rival in this design is a harness injection, never a
 // second genuine user choice). This also sidesteps needing to trust
@@ -44,12 +44,12 @@ export async function resolveConflicts(device: Device, remoteUrl: string): Promi
     // Re-write the remote document fresh from the device's own local
     // content, as a new revision descending from whichever revision
     // CouchDB currently reports as "current" (`doc._rev`). A plain PUT
-    // requires *some* real ancestor to avoid a 409 -- confirmed
+    // requires *some* real ancestor to avoid a 409, confirmed
     // empirically that omitting `_rev` entirely 409s against a document
     // that already exists, so `doc._rev` (always a valid, real revision at
     // this point) is supplied deliberately; which existing branch it
     // descends from doesn't matter for correctness, since it is the
-    // content -- the device's own -- that must win, not the ancestry.
+    // content, the device's own, that must win, not the ancestry.
     // Superseding `doc._rev` this way means it is no longer a leaf, so it
     // does not need (and cannot correctly receive) an explicit delete;
     // every OTHER conflicting revision remains an independent branch and

@@ -21,7 +21,7 @@ public interface StewardAuthorizationStore {
      * Atomically appends a review, creating a fresh authorization (with the given
      * datasetHash) if none exists yet for this release request id. If an authorization
      * already exists, the given datasetHash is ignored in favour of the one already
-     * stored -- datasetHash is fixed at first creation, not updated on later appends.
+     * stored, datasetHash is fixed at first creation, not updated on later appends.
      */
     StewardAuthorization appendReview(String releaseRequestId, String datasetHash, StewardReview review);
 
@@ -32,7 +32,7 @@ public interface StewardAuthorizationStore {
     /**
      * Appends an appeal contesting an existing veto. Throws EdcException if no
      * authorization exists yet for this release request id, or if no veto by
-     * appeal.vetoStewardId() is recorded against it -- an appeal cannot create the
+     * appeal.vetoStewardId() is recorded against it, an appeal cannot create the
      * veto it contests.
      */
     StewardAuthorization appendAppeal(String releaseRequestId, StewardAppeal appeal);

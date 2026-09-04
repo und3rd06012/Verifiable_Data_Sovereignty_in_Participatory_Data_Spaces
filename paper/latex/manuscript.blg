@@ -1,0 +1,67 @@
+This is BibTeX, Version 0.99d (TeX Live 2023/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: manuscript.aux
+The style file: mdpi.bst
+Database file #1: references.bib
+Warning--string name "apr" is undefined
+--line 6 of file references.bib
+Warning--string name "jun" is undefined
+--line 37 of file references.bib
+Warning--string name "jul" is undefined
+--line 57 of file references.bib
+Warning--string name "jun" is undefined
+--line 190 of file references.bib
+Warning--string name "may" is undefined
+--line 200 of file references.bib
+Warning--string name "oct" is undefined
+--line 211 of file references.bib
+Warning--string name "sep" is undefined
+--line 223 of file references.bib
+Warning--string name "apr" is undefined
+--line 234 of file references.bib
+Warning--string name "apr" is undefined
+--line 243 of file references.bib
+Warning--string name "jun" is undefined
+--line 293 of file references.bib
+You've used 29 entries,
+            2887 wiz_defined-function locations,
+            746 strings with 10099 characters,
+and the built_in function-call counts, 12598 in all, are:
+= -- 1084
+> -- 850
+< -- 20
++ -- 371
+- -- 229
+* -- 1000
+:= -- 1943
+add.period$ -- 112
+call.type$ -- 29
+change.case$ -- 32
+chr.to.int$ -- 29
+cite$ -- 29
+duplicate$ -- 558
+empty$ -- 961
+format.name$ -- 298
+if$ -- 2692
+int.to.chr$ -- 1
+int.to.str$ -- 29
+missing$ -- 22
+newline$ -- 172
+num.names$ -- 87
+pop$ -- 301
+preamble$ -- 0
+purify$ -- 29
+quote$ -- 0
+skip$ -- 416
+stack$ -- 0
+substring$ -- 457
+swap$ -- 136
+text.length$ -- 7
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 203
+warning$ -- 0
+while$ -- 92
+width$ -- 0
+write$ -- 409
+(There were 10 warnings)

@@ -1,0 +1,139 @@
+% figstyle.tex, shared style for BENEFITS publication schematics.
+% Journal figure conventions: flat muted colours, thin strokes, small
+% arrowheads, sans-serif labels, line-art icons (no gradients, no 3D).
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[sfdefault]{inter}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc, fit, backgrounds,
+                shapes.geometric, shapes.symbols, shapes.multipart}
+
+% palette
+\definecolor{ink}{HTML}{111111}
+\definecolor{muted}{HTML}{555555}
+\definecolor{gridline}{HTML}{9CA3AF}
+\definecolor{blue}{HTML}{3B82F6}
+\definecolor{bluefill}{HTML}{BFDBFE}
+\definecolor{teal}{HTML}{0D9488}
+\definecolor{tealfill}{HTML}{BFF3EC}
+\definecolor{orange}{HTML}{EA580C}
+\definecolor{orangefill}{HTML}{FFE0C7}
+\definecolor{green}{HTML}{16A34A}
+\definecolor{greenfill}{HTML}{C9F2D4}
+\definecolor{grayfill}{HTML}{F1F1EE}
+
+\newcommand{\sub}[1]{{\footnotesize #1}}
+% small technology logo (height, filename without extension, under logos/)
+\newcommand{\techlogo}[2][5mm]{\includegraphics[height=#1]{logos/#2}}
+% small inline line-icon above/next to a title
+\newcommand{\smallicon}[2][ink]{\tikz[baseline=-0.6ex]\pic[#1, scale=1.0] {#2};}
+% tech logo on a white chip (keeps blue logos visible on colored boxes)
+\newcommand{\techlogochip}[2][5mm]{\tikz[baseline=-0.6ex]\node[fill=white, inner sep=1.2pt]{\includegraphics[height=#1]{logos/#2}};}
+
+% node styles
+\tikzset{
+  >=Stealth,
+  proc/.style={draw=blue!75!black, line width=1.1pt, fill=blue, 
+               align=center, inner sep=4.5pt, font=\sffamily\small, text=white},
+  sys/.style={draw=teal!75!black, line width=1.1pt, fill=teal, 
+              align=center, inner sep=4.5pt, font=\sffamily\small, text=white},
+  data/.style={draw=orange!75!black, line width=1.1pt, fill=orange, 
+               align=center, inner sep=4.5pt, font=\sffamily\small, text=white},
+  okstyle/.style={draw=green!75!black, line width=1.1pt, fill=green, 
+                  align=center, inner sep=4.5pt, font=\sffamily\small, text=white},
+  bad/.style={draw=orange!75!black, line width=1.1pt, fill=orange, 
+              align=center, inner sep=4.5pt, font=\sffamily\small, text=white},
+  neutral/.style={draw=ink!70, line width=1.0pt, fill=white, 
+                  align=center, inner sep=4.5pt, font=\sffamily\small, text=ink},
+  diam/.style={draw=ink!75, line width=0.9pt, fill=white, shape=diamond, aspect=1.9,
+               align=center, inner sep=1.5pt, font=\sffamily\small, text=ink},
+  zone/.style={draw=gridline, line width=0.8pt, fill=grayfill},
+  zlabel/.style={font=\sffamily\small\bfseries, text=muted, fill=grayfill, inner sep=2pt},
+  sbadge/.style={draw=orange, line width=0.9pt, fill=orange, text=white,
+                 inner sep=1.5pt, font=\sffamily\small\bfseries},
+  bbadge/.style={draw=blue, line width=0.9pt, fill=blue, text=white,
+                 inner sep=1.5pt, font=\sffamily\small\bfseries},
+  arr/.style={-{Stealth[length=2.4mm, width=2.0mm]}, line width=0.9pt, draw=ink!80},
+  dashedarr/.style={-{Stealth[length=2.4mm, width=2.0mm]}, line width=0.8pt, draw=muted, dashed},
+  lbl/.style={font=\sffamily\footnotesize, text=muted, fill=white, inner sep=1pt},
+  sub/.style={font=\sffamily\footnotesize, text=muted},
+  browser/.style={draw=blue!75!black, line width=1.1pt, fill=blue, rounded corners=6pt,
+                 align=center, inner sep=5pt, font=\sffamily\small, text=white,
+                 minimum width=2.3cm, minimum height=2.0cm,
+                 path picture={
+                   \draw[draw=white, line width=0.7pt]
+                     ([yshift=-2.6mm]path picture bounding box.north west)
+                     ([yshift=-2.6mm]path picture bounding box.north east);
+                   \fill[white] ([xshift=-1.8mm, yshift=-2.6mm]path picture bounding box.north) circle (0.5mm);
+                   \fill[white] ([yshift=-2.6mm]path picture bounding box.north) circle (0.5mm);
+                   \fill[white] ([xshift=1.8mm, yshift=-2.6mm]path picture bounding box.north) circle (0.5mm);
+                 }},
+  phone/.style={draw=blue!75!black, line width=1.1pt, fill=blue, rounded corners=10pt,
+                align=center, inner sep=5pt, font=\sffamily\small, text=white,
+                minimum width=2.3cm, minimum height=3.0cm,
+                path picture={
+                  \draw[draw=white, line width=0.7pt]
+                    ([xshift=-1.8mm, yshift=-2.2mm]path picture bounding box.north)
+                    ([xshift=1.8mm, yshift=-2.2mm]path picture bounding box.north);
+                  \draw[draw=white, line width=0.7pt]
+                    ([yshift=2.4mm]path picture bounding box.south) circle (1.2mm);
+                }},
+}
+
+% line icons
+\tikzset{
+  pics/user/.style={code={
+    \fill (0,0.22) circle (0.12);
+    \fill (-0.30,0.08) arc (180:360:0.30 and 0.22) -- cycle;
+  }},
+  pics/userpair/.style={code={
+    \fill (0,0.22) circle (0.12);
+    \fill (-0.30,0.08) arc (180:360:0.30 and 0.22) -- cycle;
+    \fill (0.62,0.22) circle (0.12);
+    \fill (0.32,0.08) arc (180:360:0.30 and 0.22) -- cycle;
+  }},
+  pics/db/.style={code={
+    \draw[line width=0.8pt] (0,0.20) ellipse (0.30 and 0.09);
+    \draw[line width=0.8pt] (0,0.00) ellipse (0.30 and 0.09);
+    \draw[line width=0.8pt] (-0.30,0.20) -- (-0.30,-0.20);
+    \draw[line width=0.8pt] (0.30,0.20) -- (0.30,-0.20);
+    \draw[line width=0.8pt] (-0.30,-0.20) arc (180:360:0.30 and 0.09);
+  }},
+  pics/server/.style={code={
+    \draw[line width=0.8pt] (-0.30,-0.20) rectangle (0.30,0.20);
+    \draw[line width=0.8pt] (-0.30,-0.06) -- (0.30,-0.06);
+    \draw[line width=0.8pt] (-0.30,0.06) -- (0.30,0.06);
+    \fill (-0.13,-0.13) circle (0.030);
+    \fill (0.00,-0.13) circle (0.030);
+    \fill (0.13,-0.13) circle (0.030);
+  }},
+  pics/doc/.style={code={
+    \draw[line width=0.8pt] (-0.22,-0.26) rectangle (0.22,0.26);
+    \draw[line width=0.8pt] (0.06,0.26) -- (0.06,0.10) -- (0.22,0.10);
+    \draw[line width=0.6pt] (-0.11,0.04) -- (0.11,0.04);
+    \draw[line width=0.6pt] (-0.11,-0.06) -- (0.11,-0.06);
+    \draw[line width=0.6pt] (-0.11,-0.16) -- (0.11,-0.16);
+  }},
+  pics/shield/.style={code={
+    \draw[line width=0.8pt] (0,-0.26) -- (0.22,-0.15) -- (0.22,0.06)
+      .. controls (0.22,0.19) and (0.10,0.29) .. (0,0.31)
+      .. controls (-0.10,0.29) and (-0.22,0.19) .. (-0.22,0.06)
+     -- (-0.22,-0.15) -- cycle;
+    \draw[line width=0.8pt] (-0.09,-0.03) -- (-0.03,0.04) -- (0.11,-0.13);
+  }},
+  pics/lock/.style={code={
+    \draw[line width=0.8pt] (-0.10,-0.02) -- (-0.10,0.06) arc (180:360:0.10 and 0.12) -- (0.10,-0.02);
+    \draw[line width=0.8pt] (-0.17,-0.02) rectangle (0.17,0.18);
+    \draw[line width=0.8pt] (0,0.02) -- (0,0.10);
+    \fill (0,0.04) circle (0.025);
+  }},
+  pics/check/.style={code={
+    \draw[line width=1.1pt] (-0.14,0) -- (-0.04,0.10) -- (0.16,-0.14);
+  }},
+  pics/cross/.style={code={
+    \draw[line width=0.9pt] (-0.10,-0.10) -- (0.10,0.10);
+    \draw[line width=0.9pt] (-0.10,0.10) -- (0.10,-0.10);
+  }},
+}

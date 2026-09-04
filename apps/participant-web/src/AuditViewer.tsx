@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AUDIT_BASE_URL } from './config';
+import { GATEWAY_URL } from './config';
 import type { Session } from './App';
 
 type AuditEntry = { seq: number; timestamp: string; eventType: string; datasetRef: string; plainLanguage: string };
@@ -11,9 +11,8 @@ export function AuditViewer({ session }: { session: Session }) {
 
   async function load() {
     setError('');
-    const auth = 'Basic ' + btoa(`${session.participantRef}:${session.password}`);
-    const response = await fetch(`${AUDIT_BASE_URL}/${encodeURIComponent(session.participantRef)}`, {
-      headers: { authorization: auth }
+    const response = await fetch(`${GATEWAY_URL}/audit/${encodeURIComponent(session.participantRef)}`, {
+      headers: { authorization: `Bearer ${session.token}` }
     });
     if (response.status === 403) {
       setError('Not authorized to view this audit trail.');

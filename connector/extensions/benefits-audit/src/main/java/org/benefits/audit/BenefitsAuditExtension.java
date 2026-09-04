@@ -35,7 +35,7 @@ public class BenefitsAuditExtension implements ServiceExtension {
     public void initialize(ServiceExtensionContext context) {
         var monitor = context.getMonitor();
         if (!Boolean.parseBoolean(context.getSetting("benefits.audit.enabled", "false"))) {
-            monitor.info("BENEFITS audit chain disabled (benefits.audit.enabled not set) — skipping");
+            monitor.info("BENEFITS audit chain disabled (benefits.audit.enabled not set), skipping");
             return;
         }
         var epochSize = Integer.parseInt(context.getSetting("benefits.audit.epochSize", "50"));
@@ -74,7 +74,7 @@ public class BenefitsAuditExtension implements ServiceExtension {
 
     private <T extends Event> EventSubscriber envelopeSubscriber(java.util.function.Consumer<T> handler) {
         // EventSubscriber.on is confirmed (Task 1's gate 0 report) to be a generic
-        // method — <E extends Event> void on(EventEnvelope<E>) — not a method taking
+        // method, <E extends Event> void on(EventEnvelope<E>), not a method taking
         // a wildcarded parameter. A lambda expression cannot implement an interface
         // method that declares its own type parameter (there is no lambda syntax for
         // <E>), so this must be an anonymous class, not `envelope -> ...`.

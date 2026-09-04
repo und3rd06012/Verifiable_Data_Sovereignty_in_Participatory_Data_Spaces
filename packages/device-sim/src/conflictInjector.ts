@@ -7,25 +7,25 @@ import { randomBytes } from 'node:crypto';
 //
 // Producing a genuine sibling conflict (rather than a normal update, or a
 // write CouchDB simply rejects) needs `?new_edits=false` with a *fresh*
-// revision id CouchDB has never seen -- confirmed directly against a
+// revision id CouchDB has never seen, confirmed directly against a
 // running CouchDB 3.5.2 instance (see task-7-report.md for the raw HTTP
 // transcripts):
 //
 //   - A normal PUT always produces a linear update (or a 409 if the given
-//     `_rev` is stale) -- CouchDB requires the new revision to descend from
+//     `_rev` is stale), CouchDB requires the new revision to descend from
 //     the current one, so there is no way to fabricate a sibling this way.
 //   - `?new_edits=false` bypasses that ancestry check: CouchDB inserts
 //     whatever revision id you supply as a new leaf, with no requirement
 //     that it be a descendant of anything already in the tree.
 //   - Reusing the document's *existing* `_rev` verbatim (same generation,
 //     same hash) is a no-op: CouchDB recognizes it as a revision it
-//     already has and silently discards the new body -- confirmed
+//     already has and silently discards the new body, confirmed
 //     empirically, this does NOT create a conflict.
 //   - Supplying a brand-new random hash at generation `current + 1` (or
 //     generation 1 if the document does not exist remotely yet, i.e.
 //     `current` is 0) creates an unrelated branch with no shared ancestry
 //     to the existing leaf. CouchDB has no way to reconcile the two, so
-//     both become leaves of the revision tree -- a genuine conflict,
+//     both become leaves of the revision tree, a genuine conflict,
 //     reported in `_conflicts` exactly as PouchDB/CouchDB would report one
 //     arising from two independent replicas.
 export async function injectConflict(remoteUrl: string, docId: string, conflictingBody: object): Promise<void> {

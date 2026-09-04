@@ -15,7 +15,7 @@ import java.util.List;
  * Creates a CouchDB user via the standard /_users/org.couchdb.user:<name> PUT
  * convention, authenticated as a CouchDB admin. A PUT to an already-existing user
  * document without its current _rev is rejected by CouchDB with 409 and does NOT
- * apply the given password -- so 201 and 409 are distinguished via the returned
+ * apply the given password, so 201 and 409 are distinguished via the returned
  * Outcome rather than collapsed into a single "success" (the caller must not claim
  * a password was set when it wasn't).
  */

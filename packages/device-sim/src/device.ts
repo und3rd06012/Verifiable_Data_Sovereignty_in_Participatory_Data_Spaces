@@ -1,7 +1,7 @@
 import type { ConsentGrant, ContributionRecord } from '@benefits/consent-core';
 import { createLocalDb } from './pouchdb.js';
 
-// Local grant state lives in a plain array, not PouchDB -- a device's own
+// Local grant state lives in a plain array, not PouchDB, a device's own
 // consent grants are small, always fully present locally (never partial),
 // and revoke() needs to mutate one in place synchronously from the
 // device's point of view. Contributed records go through PouchDB because

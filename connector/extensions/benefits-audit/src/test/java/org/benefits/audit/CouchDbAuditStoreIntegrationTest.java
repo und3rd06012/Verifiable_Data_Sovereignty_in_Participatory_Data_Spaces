@@ -45,7 +45,7 @@ class CouchDbAuditStoreIntegrationTest {
     }
 
     // Each test creates its own randomly-named database (above) so tests never collide
-    // with each other, but a database this test creates is this test's to clean up —
+    // with each other, but a database this test creates is this test's to clean up -
     // otherwise every run of this suite leaves a permanent, never-reclaimed database on
     // whatever CouchDB instance it ran against.
     @AfterEach

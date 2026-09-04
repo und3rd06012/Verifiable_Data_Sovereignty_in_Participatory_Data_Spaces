@@ -24,3 +24,16 @@ else
   cat /tmp/provision-steward-response.json >&2
   exit 1
 fi
+
+
+# optional: enroll TOTP through the auth gateway so the first login already
+# requires a second factor. Set GATEWAY_URL (e.g. https://host/api) to use it.
+if [ -n "${GATEWAY_URL:-}" ] && curl -skf "$GATEWAY_URL/healthz" >/dev/null 2>&1; then
+  ENROLL=$(curl -sk -X POST "$GATEWAY_URL/auth/enroll" -H 'content-type: application/json'     -d "{\"username\":\"$STEWARD_ID\",\"password\":\"$PASSWORD\",\"method\":\"totp\"}")
+  SECRET=$(printf '%s' "$ENROLL" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("secret",""))' 2>/dev/null || true)
+  URI=$(printf '%s' "$ENROLL" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("otpauthUri",""))' 2>/dev/null || true)
+  if [ -n "$SECRET" ]; then
+    echo "TOTP secret:     $SECRET"
+    echo "TOTP otpauth URI: $URI"
+  fi
+fi

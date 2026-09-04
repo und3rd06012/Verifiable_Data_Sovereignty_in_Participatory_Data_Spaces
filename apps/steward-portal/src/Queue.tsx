@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { STEWARD_API_BASE_URL } from './config';
+import { GATEWAY_URL } from './config';
 import type { Session } from './App';
 
 type StewardSignature = { stewardId: string; signature: string; signedAt: string };
@@ -13,7 +13,7 @@ type ReleaseRequest = { releaseRequestId: string; purpose: string; recipientClas
 type QueueEntry = { request: ReleaseRequest; authorization: StewardAuthorization };
 
 function authHeader(session: Session): string {
-  return 'Basic ' + btoa(`${session.stewardId}:${session.password}`);
+  return 'Bearer ' + session.token;
 }
 
 export function Queue({ session }: { session: Session }) {
@@ -21,7 +21,7 @@ export function Queue({ session }: { session: Session }) {
   const [status, setStatus] = useState('');
 
   async function load() {
-    const response = await fetch(`${STEWARD_API_BASE_URL}/queue`, { headers: { authorization: authHeader(session) } });
+    const response = await fetch(`${GATEWAY_URL}/steward/queue`, { headers: { authorization: authHeader(session) } });
     if (response.status === 403) {
       setStatus('Not authorized (is this a steward account?)');
       return;
@@ -32,7 +32,7 @@ export function Queue({ session }: { session: Session }) {
   useEffect(() => { load(); }, []);
 
   async function act(requestId: string, action: 'co-sign' | 'veto' | 'review' | 'appeal', body: Record<string, unknown>) {
-    await fetch(`${STEWARD_API_BASE_URL}/${encodeURIComponent(requestId)}/${action}`, {
+    await fetch(`${GATEWAY_URL}/steward/${encodeURIComponent(requestId)}/${action}`, {
       method: 'POST',
       headers: { authorization: authHeader(session), 'content-type': 'application/json' },
       body: JSON.stringify(body)

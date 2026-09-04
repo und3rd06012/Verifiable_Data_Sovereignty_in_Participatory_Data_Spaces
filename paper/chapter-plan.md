@@ -1,4 +1,4 @@
-# BENEFITS MDPI Systems Extension — Chapter Plan
+# BENEFITS MDPI Systems Extension, Chapter Plan
 
 **Produced by:** academic-paper skill, plan mode, 2026-09-03.
 **Base paper:** SIDS 2026 (`/home/und3rd06012/Downloads/SIDS_2026/[EDIT_THIS]conference_101719.tex`), "Verifiable Data Sovereignty for Vulnerable Populations in Participatory Data Spaces," IEEE conference format, EU Horizon Europe GA no. 101179032.
@@ -58,7 +58,7 @@ Evidence, stated honestly including non-obvious findings:
 - E2: revocation propagates and reaches consistency within bounded ticks even at low connectivity; zero leaked records across the swept grid.
 - E3: proof size and inclusion-verification time grow with epoch size; tamper detection at 100% at the mechanism level.
 - E4: accuracy-vs-epsilon tradeoff curves, using the surviving-statistic columns specifically (the plain columns are pinned at a sentinel value across most of the swept grid, a defect this session's own earlier fix waves solved).
-- G1: the real veto policy has substantially lower quorum failure than a hypothetical stricter one (minimum divergence 0.555 across all measured points at veto_share=0.3, N=20) — validates the current design's availability/accountability tradeoff. This exact finding required two real design corrections during this session's figure-generation work (wrong filter degenerating both arms to identical zero, then wrong plotted quantity excluding Arm B's dominant failure mode) before it was measured correctly.
+- G1: the real veto policy has substantially lower quorum failure than a hypothetical stricter one (minimum divergence 0.555 across all measured points at veto_share=0.3, N=20), validates the current design's availability/accountability tradeoff. This exact finding required two real design corrections during this session's figure-generation work (wrong filter degenerating both arms to identical zero, then wrong plotted quantity excluding Arm B's dominant failure mode) before it was measured correctly.
 - G2: exclusion bias from heterogeneous consent grows with heterogeneity while ordinary DP noise does not.
 
 ### 6. Discussion

@@ -1146,6 +1146,6 @@ git commit -m "feat(analysis): add generate_all.py, the full figure-generation e
 ## Final verification (part of the last task's own checklist, not a separate task)
 
 Confirm nothing outside `experiments/analysis/` was touched by this whole
-plan: `git diff --stat <plan-start-commit> HEAD -- . ':!experiments/analysis'`
+plan: `git diff --stat <plan-start-commit> HEAD, . ':!experiments/analysis'`
 should be empty, since this sub-project only reads already-committed CSVs
 and writes new files under one new directory.

@@ -111,7 +111,7 @@ stop_sink() {
 trap 'stop_sink; stop_all' EXIT
 stop_all
 ensure_couchdb
-# Wipe any prior run's audit state first — otherwise leftover entries for actor
+# Wipe any prior run's audit state first, otherwise leftover entries for actor
 # "consumer" from an earlier run of this script, or from Task 6's own probe (which
 # uses the same participant id), inflate this run's sealed-entry count and make the
 # "2 sealed entries" expectation below unreliable. Task 6's probe established this
@@ -121,7 +121,7 @@ curl -s -o /dev/null -X DELETE "http://admin:benefits@localhost:5984/benefits-au
 # real events to accumulate before this probe can observe a seal. The asset is
 # BenefitsAggregate-typed (backed by a seeded ReleaseArtifact) from the start, not a
 # plain "test" type, so the same negotiation this script drives can also be
-# transferred afterward — a "test"-type asset has no registered DataSourceFactory and
+# transferred afterward, a "test"-type asset has no registered DataSourceFactory and
 # a transfer against it would fail at the data plane step.
 start_connector provider "$ROOT/connector/runtime/provider.properties" 19193 \
   -Dbenefits.audit.epochSize=1 -Dbenefits.seed.artifacts="$WORK/artifacts.json"

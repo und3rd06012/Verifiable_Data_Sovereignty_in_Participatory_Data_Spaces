@@ -1,0 +1,83 @@
+services:
+  couchdb:
+    image: couchdb:3.4
+    environment:
+      COUCHDB_USER: ${COUCHDB_USER:-admin}
+      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD:-change-me}
+    ports:
+      - "127.0.0.1:5984:5984"
+    volumes:
+      - couchdb-data:/opt/couchdb/data
+    networks: [internal]
+
+  init:
+    image: curlimages/curl:8.9.1
+    depends_on: [couchdb]
+    command:
+      - /bin/sh
+      - -c
+      - |
+        until curl -sf -u ${COUCHDB_USER:-admin}:${COUCHDB_PASSWORD:-change-me} http://couchdb:5984/_up >/dev/null; do sleep 1; done
+        for db in benefits _users _replicator; do
+          curl -s -u ${COUCHDB_USER:-admin}:${COUCHDB_PASSWORD:-change-me} -X PUT "http://couchdb:5984/$$db" >/dev/null
+        done
+        echo "couchdb databases ready"
+    networks: [internal]
+
+  connector:
+    image: eclipse-temurin:17-jre
+    depends_on: [init]
+    volumes:
+      - ../../connector/runtime/build/libs/connector.jar:/app/connector.jar:ro
+      - ../../connector/runtime/provider.properties:/app/provider.properties:ro
+    command: >
+      java
+      -Dbenefits.releaseRequests.enabled=true
+      -Dbenefits.stewardApi.enabled=true
+      -Dbenefits.privacy.persistence.enabled=true
+      -Dbenefits.steward.persistence.enabled=true
+      -Dbenefits.couchdb.url=http://couchdb:5984
+      -Dbenefits.couchdb.user=${COUCHDB_USER:-admin}
+      -Dbenefits.couchdb.password=${COUCHDB_PASSWORD:-change-me}
+      -Dedc.fs.config=/app/provider.properties
+      -jar /app/connector.jar
+    networks: [internal]
+
+  auth-gateway:
+    build: ../../services/auth-gateway
+    depends_on: [couchdb, connector]
+    environment:
+      PORT: "8080"
+      COUCHDB_URL: http://couchdb:5984
+      COUCHDB_ADMIN_USER: ${COUCHDB_USER:-admin}
+      COUCHDB_ADMIN_PASSWORD: ${COUCHDB_PASSWORD:-change-me}
+      STEWARD_API_URL: http://connector:19199/steward
+      AUDIT_API_URL: http://connector:19197/audit
+      TOTP_ISSUER: BENEFITS
+      SESSION_TTL_HOURS: "8"
+      DEV_MODE: "false"
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-*}
+      EMAIL_WEBHOOK_URL: ${EMAIL_WEBHOOK_URL:-}
+      SMS_WEBHOOK_URL: ${SMS_WEBHOOK_URL:-}
+    networks: [internal]
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on: [auth-gateway]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../../apps/participant-web/dist:/srv/participant:ro
+      - ../../apps/participant-mobile/build/web:/srv/mobile:ro
+      - ../../apps/steward-portal/dist:/srv/steward:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ./nginx/htpasswd:/etc/nginx/htpasswd:ro
+    networks: [internal]
+
+volumes:
+  couchdb-data:
+
+networks:
+  internal:

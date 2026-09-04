@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
 import 'audit_screen.dart';
 import 'consent_screen.dart';
 import 'dashboard_screen.dart';
+import 'db_factory.dart';
 import 'login_screen.dart';
 import 'outbox.dart';
 import 'participant_client.dart';
@@ -25,7 +25,7 @@ class _BenefitsAppState extends State<BenefitsApp> {
   int _tab = 0;
 
   Future<void> _initClient(Session session) async {
-    final db = await openDatabase('participant-${session.participantRef}.db');
+    final db = await openAppDatabase('participant-${session.participantRef}.db');
     final outbox = await Outbox.open(db);
     setState(() {
       _client = ParticipantClient(session.participantRef, outbox);
@@ -44,7 +44,25 @@ class _BenefitsAppState extends State<BenefitsApp> {
           : _client == null
               ? const Center(child: CircularProgressIndicator())
               : Scaffold(
-                  appBar: AppBar(title: const Text('BENEFITS participant')),
+                  appBar: AppBar(
+                    title: const Text('BENEFITS participant'),
+                    actions: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF2F6FED),
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => setState(() {
+                            _session = null;
+                            _client = null;
+                          }),
+                          child: const Text('Log out'),
+                        ),
+                      ),
+                    ],
+                  ),
                   body: IndexedStack(
                     index: _tab,
                     children: [

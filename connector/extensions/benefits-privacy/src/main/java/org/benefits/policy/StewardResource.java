@@ -22,7 +22,7 @@ public class StewardResource {
 
     // Tightened to a safe subset of CouchDB's own database-name rules
     // (^[a-z][a-z0-9_$()+/-]*$) now that provisioning always creates a
-    // "participant-<ref>" database -- a ref that fails this check could
+    // "participant-<ref>" database, a ref that fails this check could
     // never be provisioned successfully.
     private static final Pattern SAFE_PARTICIPANT_REF = Pattern.compile("^[a-z][a-z0-9_-]*$");
 
@@ -161,8 +161,8 @@ public class StewardResource {
         }
         // Database/security/design-doc/replication first, the CouchDB user (and its
         // freshly generated password) last. CouchDB's _security document accepts a
-        // username that doesn't exist yet -- it's just a string checked against the
-        // authenticated caller at request time -- so this ordering is safe, and it means
+        // username that doesn't exist yet, it's just a string checked against the
+        // authenticated caller at request time, so this ordering is safe, and it means
         // a failure before the user is created leaves nothing irrecoverable to retry: no
         // password was ever generated, so a retry simply starts over. The reverse order
         // would risk creating the user (with a password only this response would ever

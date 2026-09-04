@@ -15,7 +15,7 @@ describe('ParticipantClient', () => {
 
   // ParticipantClient (unlike device-sim's Device) uses a STABLE local
   // database name keyed only by participantRef, since a real participant's
-  // IndexedDB database must persist across sessions -- so 'p-001' resolves
+  // IndexedDB database must persist across sessions, so 'p-001' resolves
   // to the same underlying database on every construction. Explicitly
   // destroying it after each test keeps these otherwise-independent test
   // cases from accumulating each other's records.

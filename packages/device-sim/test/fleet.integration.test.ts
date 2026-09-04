@@ -9,7 +9,7 @@ const DB_NAME = 'benefits-device-sim-fleet-test';
 const REMOTE_URL = `http://admin:benefits@localhost:5984/${DB_NAME}`;
 
 // `describe.skipIf` below is evaluated synchronously while the test file is
-// collected -- well before an async `beforeAll` hook would ever run -- so
+// collected, well before an async `beforeAll` hook would ever run, so
 // the reachability check has to happen here, via top-level await, not
 // inside `beforeAll` (same fix as sync.integration.test.ts's own comment
 // on this: with the check only inside `beforeAll`, the suite reports
@@ -70,7 +70,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
     // DIFFERENT purpose ('advocacy' instead of 'service-improvement') and
     // queues a second record under that purpose. This proves the sweep
     // matches the full (field, purpose, recipientClass) triple, not just
-    // the field name -- the specific over-sweep scenario the leak-prevention
+    // the field name, the specific over-sweep scenario the leak-prevention
     // rule's global constraint calls out (reviewer finding from Task 6:
     // its own tests covered "field absent -> not swept" but not "field
     // present under a different purpose/recipientClass -> not swept").
@@ -102,7 +102,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
 
     // Device 1: an injected conflict, exactly as Task 7 proved works. The
     // rival's localEditedAt is deliberately LATER than the device's own
-    // edit (same reasoning as Task 7's discriminating test) -- resolution
+    // edit (same reasoning as Task 7's discriminating test), resolution
     // is identity-based, not last-write-wins, so the device's edit must
     // still win here even though the rival "claims" to be more recent.
     const conflictDocId = 'fleet-conflict-doc';
@@ -132,7 +132,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
       });
     }
 
-    // Every device eventually comes online and syncs -- the duty cycle
+    // Every device eventually comes online and syncs, the duty cycle
     // drives whether each device is online at a given tick, but this gate
     // proves the end state after everyone has had a chance to sync, not
     // the timing itself (phase 7's job).
@@ -147,7 +147,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
     // Zero leaked records: device 0's revoked-and-swept record (the
     // service-improvement one) must not appear anywhere in CouchDB. Filtered
     // by declaredPurpose too, now that device 0 contributes two records
-    // sharing the same participantRef -- the swept one and the over-sweep
+    // sharing the same participantRef, the swept one and the over-sweep
     // one below, which is expected to reach CouchDB.
     const leaked = allRemoteDocs.rows.filter((row) => {
       const doc = row.doc as unknown as { participantRef?: string; declaredPurpose?: string };
@@ -172,7 +172,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
     }
 
     // The conflict device's document reflects its own local edit (fields:5),
-    // not the injected rival (fields:1) -- user preference first, end to end.
+    // not the injected rival (fields:1), user preference first, end to end.
     const conflictDoc = await remote.get(conflictDocId) as unknown as { fields: { 'service.satisfaction': number } };
     expect(conflictDoc.fields['service.satisfaction']).toBe(5);
   }, 30000);

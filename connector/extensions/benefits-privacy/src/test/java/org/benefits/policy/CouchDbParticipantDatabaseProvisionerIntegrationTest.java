@@ -43,7 +43,7 @@ class CouchDbParticipantDatabaseProvisionerIntegrationTest {
         var outcome = provisioner.provision(participantRef);
         createdDatabases.add(provisioner.databaseNameFor(participantRef));
         assertThat(outcome).isEqualTo(CouchDbParticipantDatabaseProvisioner.Outcome.CREATED);
-        // provision() only creates the database/_security/design-doc -- the CouchDB user
+        // provision() only creates the database/_security/design-doc, the CouchDB user
         // itself is CouchDbUserProvisioner's job (Task 4 wires both together). Provision
         // one here directly so this test can authenticate as the real participant, not admin.
         provisionCouchDbUser(participantRef, "pw-own");
@@ -64,7 +64,7 @@ class CouchDbParticipantDatabaseProvisionerIntegrationTest {
                 .header("authorization", otherAuth).GET().build(), HttpResponse.BodyHandlers.ofString());
         assertThat(otherRead.statusCode()).isEqualTo(403);
 
-        // Nor can the participant read the shared "benefits" database -- the exact
+        // Nor can the participant read the shared "benefits" database, the exact
         // property this plan exists to guarantee. The "benefits" database already exists
         // on the CouchDB instance these tests run against (created by tools/lib.sh's
         // bootstrap, which every test in this module already assumes is in place).

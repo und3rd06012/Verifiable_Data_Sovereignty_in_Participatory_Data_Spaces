@@ -12,7 +12,7 @@ class SyncResult {
 /// section 1.2). A record is marked sent only after its own individual PUT
 /// succeeds, one at a time, not as a whole-batch operation on a single
 /// "replication complete" event the way device-sim's original TypeScript sync
-/// does -- this avoids that implementation's own parked gap (a single failed
+/// does, this avoids that implementation's own parked gap (a single failed
 /// document among several would have marked the whole batch sent regardless).
 Future<SyncResult> syncOutbox(Outbox outbox, String remoteUrl, String authHeader) async {
   final pending = await outbox.unsent();

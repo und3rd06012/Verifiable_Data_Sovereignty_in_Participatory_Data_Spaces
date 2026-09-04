@@ -155,7 +155,7 @@ Quality assessment: Harvard Data Science Review, DOI-verified, peer-reviewed, wi
 Potential use: Introduction (motivating "privacy budget has a real, contested accuracy cost" framing), Related Work (Cluster C), Discussion (dialogue with SIDS 2026's own privacy-budget-vs-utility open question).
 DOI: 10.1162/99608f92.529e3cb9. Verified via Crossref API: title, all 14 authors, journal "Harvard Data Science Review", year 2022 all matched, cross-checked against arXiv preprint https://arxiv.org/abs/2204.08986.
 
-### Prasser, Eicher, Spengler, Bild, and Kuhn (2020). Flexible data anonymization using ARX—Current status and challenges ahead.
+### Prasser, Eicher, Spengler, Bild, and Kuhn (2020). Flexible data anonymization using ARX-Current status and challenges ahead.
 Type: Tool/systems paper. Method: describes ARX, an open-source anonymization tool implementing k-anonymity and related models (l-diversity, t-closeness, k-map) alongside a differential-privacy mode, with built-in utility metrics for evaluating the information-loss cost of a chosen anonymization configuration.
 Key findings: an actively maintained, real k-anonymity tool with an explicit utility-cost evaluation layer bridging structural anonymization (k-anonymity) and formal DP, evaluated across multiple real-world anonymization scenarios.
 Relevance to RQ: a direct comparison point for this paper's k=5 structural baseline stage, the k-anonymity half of its k-anonymity + Laplace-DP pipeline, and a real tool that combines both mechanisms the way this paper's own pipeline does.

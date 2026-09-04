@@ -121,7 +121,7 @@ through scripts and tests:
   release-request queue and can review, co-sign, veto, or appeal a veto on
   each request, and provisions new participants (a CouchDB account plus
   their own isolated database, replicated server-side into the shared
-  aggregate -- see `docs/superpowers/specs/2026-09-01-participant-database-isolation-design.md`).
+  aggregate, see `docs/superpowers/specs/2026-09-01-participant-database-isolation-design.md`).
 
 The connector gains two new HTTP ports for these apps to talk to: 19198
 (release requests) and 19199 (steward actions). Exercising the

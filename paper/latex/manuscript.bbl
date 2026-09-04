@@ -21,7 +21,8 @@ Abowd, J.M.; Ashmead, R.; Cumings-Menon, R.; Garfinkel, S.; Heineck, M.; Heiss,
 Steinbuss, S.; Otto, B.; Teuscher, A.; Pettenpohl, H.
 \newblock {IDS Reference Architecture Model 4 (IDS-RAM 4)}.
 \newblock Technical report, International Data Spaces Association,  2022.
-\newblock {\url{https://doi.org/10.5281/zenodo.5105529}}.
+\newblock [Online]. Available:
+  \url{https://github.com/International-Data-Spaces-Association/IDS-RAM_4_0}.
 
 \bibitem[{Gaia-X European Association for Data and Cloud AISBL}(2022)]{gaiax}
 {Gaia-X European Association for Data and Cloud AISBL}.
@@ -123,7 +124,7 @@ Crosby, S.A.; Wallach, D.S.
 \newblock In Proceedings of the Proc. 18th USENIX Secur. Symp.,  2009, pp.
   317--334.
 \newblock [Online]. Available:
-  \url{https://dl.acm.org/doi/10.5555/1855768.1855788}.
+  \url{https://www.usenix.org/legacy/event/sec09/tech/full_papers/crosby.pdf}.
 
 \bibitem[Laurie et~al.(2013)Laurie, Langley, and Kasper]{laurie2013}
 Laurie, B.; Langley, A.; Kasper, E.

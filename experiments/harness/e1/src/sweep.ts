@@ -49,7 +49,7 @@ async function installArm(
 
 // A single _bulk_docs call above this size was verified live to crash CouchDB
 // itself under the low-end device profile's 1 GB memory limit, independent of
-// which arm is being measured or how the target database was created -- an
+// which arm is being measured or how the target database was created, an
 // isolated write of 5000 freshly-generated documents into an empty database
 // OOM-killed the container outright, while 1000 completed comfortably (memory
 // only). Separately, the signature arm's per-document Ed25519 verification
@@ -131,7 +131,7 @@ export async function runSweep(opts: SweepOptions): Promise<void> {
       // cell: recreating per cell (567 delete/create cycles for the full
       // sweep) was verified live to exhaust a 1 CPU/1 GB CouchDB container
       // via cumulative churn overhead well before any single large batch
-      // did -- the container's Erlang VM was OOM-killed (os_mon closed)
+      // did, the container's Erlang VM was OOM-killed (os_mon closed)
       // around the 260th cycle, at a batch size of only 100. Recreating per
       // tier still prevents batch size from being confounded with database
       // growth (each tier starts empty and only accumulates the up-to-27

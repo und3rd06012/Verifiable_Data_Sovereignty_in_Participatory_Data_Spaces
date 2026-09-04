@@ -4,11 +4,11 @@
 
 **Goal:** Give every participant their own private CouchDB database instead of raw credentials to the shared `benefits` database, closing the read-boundary gap phase 6's final whole-branch review found, without a gateway and without changing what the shared database's existing readers (audit chain, contribution source, privacy pipeline) see.
 
-**Architecture:** `StewardResource.provisionParticipant` gains two steps beyond creating the CouchDB user: create a private `participant-<ref>` database (locked to that one user via `_security`, gated by the same participant-identity `validate_doc_update` check the shared database already uses), and configure a continuous, admin-mediated CouchDB replication job feeding it into `benefits`. Both client apps repoint their remote sync URL from `benefits` to their own `participant-<ref>` database -- one line each.
+**Architecture:** `StewardResource.provisionParticipant` gains two steps beyond creating the CouchDB user: create a private `participant-<ref>` database (locked to that one user via `_security`, gated by the same participant-identity `validate_doc_update` check the shared database already uses), and configure a continuous, admin-mediated CouchDB replication job feeding it into `benefits`. Both client apps repoint their remote sync URL from `benefits` to their own `participant-<ref>` database, one line each.
 
 **Tech Stack:** Java 21 (EDC connector, `java.net.http.HttpClient`, Jackson `ObjectMapper`), CouchDB 3.x's native `_security` and `_replicator` HTTP APIs, Node/esbuild (already-existing `packages/consent-couchdb` tooling, extended with one export script), TypeScript (`apps/participant-web`), Dart (`apps/participant-mobile`).
 
-**Spec:** docs/superpowers/specs/2026-09-01-participant-database-isolation-design.md (amends docs/superpowers/specs/2026-09-01-benefits-interfaces-design.md §2/§3 -- read both)
+**Spec:** docs/superpowers/specs/2026-09-01-participant-database-isolation-design.md (amends docs/superpowers/specs/2026-09-01-benefits-interfaces-design.md §2/§3, read both)
 
 ## Global Constraints
 
@@ -17,8 +17,8 @@
 - Every CouchDB I/O exception becomes `EdcException`; every `InterruptedException` re-interrupts the thread then rethrows as `EdcException` (established pattern, `CouchDbUserProvisioner` is the reference example).
 - No emojis, no em-dashes, anywhere in code, docs, or commit messages.
 - No LLM/AI-tooling attribution fingerprints in any commit.
-- Verify CouchDB behavior live against a real instance rather than trusting documentation -- established practice throughout phase 6's review process, and explicitly required here for the `_replicator` API and whether replication invokes the target database's `validate_doc_update` (spec §5, §8).
-- `participantRef` values provisioned through this endpoint must be valid CouchDB database name components once this plan lands (Task 4 tightens the existing validation regex for this reason -- see Task 4 for the exact new pattern and why).
+- Verify CouchDB behavior live against a real instance rather than trusting documentation, established practice throughout phase 6's review process, and explicitly required here for the `_replicator` API and whether replication invokes the target database's `validate_doc_update` (spec §5, §8).
+- `participantRef` values provisioned through this endpoint must be valid CouchDB database name components once this plan lands (Task 4 tightens the existing validation regex for this reason, see Task 4 for the exact new pattern and why).
 
 ---
 
@@ -31,10 +31,10 @@
 - Test: `packages/consent-couchdb/test/design-doc-resource.test.ts`
 
 **Interfaces:**
-- Consumes: `buildDesignDoc()` from `packages/consent-couchdb/src/build-design-doc.ts` (already exists, unchanged -- returns `{_id: string, validate_doc_update: string}`).
+- Consumes: `buildDesignDoc()` from `packages/consent-couchdb/src/build-design-doc.ts` (already exists, unchanged, returns `{_id: string, validate_doc_update: string}`).
 - Produces: `connector/extensions/benefits-privacy/src/main/resources/consent-design-doc.json`, a static JSON file with the same `{_id, validate_doc_update}` shape, readable as a Java classpath resource at `/consent-design-doc.json`. Task 2 consumes this.
 
-`buildDesignDoc()` calls `esbuild.buildSync` at call time -- it only works inside a Node process. The Java connector cannot invoke it at runtime (no Node/esbuild dependency in the connector, and provisioning must be a single synchronous HTTP call). So its output gets exported once, as a build artifact checked into git, and re-exported by hand whenever `packages/consent-core/src/evaluate.ts` or `build-design-doc.ts` changes. A same-language test (Node/vitest, no CouchDB or Java needed) catches drift between the checked-in file and what `buildDesignDoc()` currently produces.
+`buildDesignDoc()` calls `esbuild.buildSync` at call time, it only works inside a Node process. The Java connector cannot invoke it at runtime (no Node/esbuild dependency in the connector, and provisioning must be a single synchronous HTTP call). So its output gets exported once, as a build artifact checked into git, and re-exported by hand whenever `packages/consent-core/src/evaluate.ts` or `build-design-doc.ts` changes. A same-language test (Node/vitest, no CouchDB or Java needed) catches drift between the checked-in file and what `buildDesignDoc()` currently produces.
 
 - [ ] **Step 1: Write the export script**
 
@@ -63,7 +63,7 @@ In `packages/consent-couchdb/package.json`, add to `"scripts"`:
 - [ ] **Step 3: Run it and verify the output**
 
 Run: `npm run export-design-doc --workspace=@benefits/consent-couchdb`
-Expected: prints the output path; `connector/extensions/benefits-privacy/src/main/resources/consent-design-doc.json` now exists with `_id: "_design/consent"` and a `validate_doc_update` string field containing the bundled JS (same content `buildDesignDoc()` already produces for every other consumer of this function -- `identity.integration.test.ts`, `demo-s1.sh`, etc.).
+Expected: prints the output path; `connector/extensions/benefits-privacy/src/main/resources/consent-design-doc.json` now exists with `_id: "_design/consent"` and a `validate_doc_update` string field containing the bundled JS (same content `buildDesignDoc()` already produces for every other consumer of this function, `identity.integration.test.ts`, `demo-s1.sh`, etc.).
 
 - [ ] **Step 4: Write the drift-detection test**
 
@@ -90,7 +90,7 @@ describe('consent-design-doc.json (checked-in export for the Java connector)', (
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `npm test --workspace=@benefits/consent-couchdb`
-Expected: PASS, including the new `design-doc-resource.test.ts` test. If it fails because `dist/build-design-doc.js` is stale, run `npm run build --workspace=@benefits/consent-couchdb` first -- the export script's own `npm run build &&` prefix handles this for the export step, but the test reads `src/build-design-doc.ts` directly (via `vitest`'s TS support), so it always compares against current source, not a stale `dist/`.
+Expected: PASS, including the new `design-doc-resource.test.ts` test. If it fails because `dist/build-design-doc.js` is stale, run `npm run build --workspace=@benefits/consent-couchdb` first, the export script's own `npm run build &&` prefix handles this for the export step, but the test reads `src/build-design-doc.ts` directly (via `vitest`'s TS support), so it always compares against current source, not a stale `dist/`.
 
 - [ ] **Step 6: Commit**
 
@@ -111,9 +111,9 @@ git commit -m "feat(consent-couchdb): export the design-doc bundle as a checked-
 
 **Interfaces:**
 - Consumes: `connector/extensions/benefits-privacy/src/main/resources/consent-design-doc.json` (Task 1) as a classpath resource.
-- Produces: `CouchDbParticipantDatabaseProvisioner` -- constructor `(String baseUrl, String adminUser, String adminPassword, ObjectMapper mapper)`; `String databaseNameFor(String participantRef)` returning `"participant-" + participantRef`; `Outcome provision(String participantRef)` returning `CREATED` or `ALREADY_EXISTS`, throwing `EdcException` on any I/O failure. Task 4 consumes both methods.
+- Produces: `CouchDbParticipantDatabaseProvisioner`, constructor `(String baseUrl, String adminUser, String adminPassword, ObjectMapper mapper)`; `String databaseNameFor(String participantRef)` returning `"participant-" + participantRef`; `Outcome provision(String participantRef)` returning `CREATED` or `ALREADY_EXISTS`, throwing `EdcException` on any I/O failure. Task 4 consumes both methods.
 
-Creates a participant's own private CouchDB database, locks its `_security` to exactly that one participant, and installs the same identity-check design document the shared database already carries -- installed here per-database instead of once, so it still stops a participant's document from *claiming* a different `participantRef` even though `_security` already stops anyone else from writing here at all.
+Creates a participant's own private CouchDB database, locks its `_security` to exactly that one participant, and installs the same identity-check design document the shared database already carries, installed here per-database instead of once, so it still stops a participant's document from *claiming* a different `participantRef` even though `_security` already stops anyone else from writing here at all.
 
 - [ ] **Step 1: Write the class**
 
@@ -209,7 +209,7 @@ public class CouchDbParticipantDatabaseProvisioner {
                 .header("authorization", adminAuthHeader).header("content-type", "application/json")
                 .PUT(bodyOf(designDoc)));
         // 409 here means the identical design doc is already installed from a prior
-        // provisioning call -- its content never varies per participant, so this is a
+        // provisioning call, its content never varies per participant, so this is a
         // no-op, not a failure (unlike CouchDbUserProvisioner's password case, there is
         // no distinct value at risk of being silently un-applied).
         if (response.statusCode() != 200 && response.statusCode() != 201 && response.statusCode() != 409) {
@@ -268,7 +268,7 @@ class CouchDbParticipantDatabaseProvisionerIntegrationTest {
 
         var outcome = provisioner.provision(participantRef);
         assertThat(outcome).isEqualTo(CouchDbParticipantDatabaseProvisioner.Outcome.CREATED);
-        // provision() only creates the database/_security/design-doc -- the CouchDB user
+        // provision() only creates the database/_security/design-doc, the CouchDB user
         // itself is CouchDbUserProvisioner's job (Task 4 wires both together). Provision
         // one here directly so this test can authenticate as the real participant, not admin.
         provisionCouchDbUser(participantRef, "pw-own");
@@ -314,7 +314,7 @@ class CouchDbParticipantDatabaseProvisionerIntegrationTest {
 
 Ensure CouchDB is running (`tools/lib.sh`'s `ensure_couchdb`, or `docker compose -f deploy/docker-compose.yml up -d couchdb`).
 Run: `./gradlew :connector:extensions:benefits-privacy:test --tests CouchDbParticipantDatabaseProvisionerIntegrationTest`
-Expected: PASS. If any status code assumption in Step 1 is wrong (this project's established practice is to verify CouchDB behavior live, not trust documentation) -- e.g. database creation returns something other than 201/412, or `_security` behaves differently -- fix the implementation to match what CouchDB actually does, not the other way around.
+Expected: PASS. If any status code assumption in Step 1 is wrong (this project's established practice is to verify CouchDB behavior live, not trust documentation), e.g. database creation returns something other than 201/412, or `_security` behaves differently, fix the implementation to match what CouchDB actually does, not the other way around.
 
 - [ ] **Step 4: Add a forged-identity test (spec §5's primary boundary)**
 
@@ -359,8 +359,8 @@ git commit -m "feat(benefits-privacy): provision an isolated, identity-gated dat
 - Test: `connector/extensions/benefits-privacy/src/test/java/org/benefits/policy/CouchDbReplicationProvisionerIntegrationTest.java`
 
 **Interfaces:**
-- Consumes: nothing from earlier tasks in this plan (independent of Task 2's database shape -- it replicates between any two named databases).
-- Produces: `CouchDbReplicationProvisioner` -- constructor `(String baseUrl, String adminUser, String adminPassword, ObjectMapper mapper)`; `void ensureReplication(String sourceDb, String targetDb)`, idempotent, throwing `EdcException` on failure. Task 4 consumes this.
+- Consumes: nothing from earlier tasks in this plan (independent of Task 2's database shape, it replicates between any two named databases).
+- Produces: `CouchDbReplicationProvisioner`, constructor `(String baseUrl, String adminUser, String adminPassword, ObjectMapper mapper)`; `void ensureReplication(String sourceDb, String targetDb)`, idempotent, throwing `EdcException` on failure. Task 4 consumes this.
 
 Configures a continuous, one-way CouchDB replication job via the `_replicator` database, admin-credentialed on both source and target, so `CouchDbAuditStore`/`CouchDbContributionSource` keep seeing every participant's writes land in the single shared `benefits` database without the participant ever holding credentials to it.
 
@@ -491,7 +491,7 @@ class CouchDbReplicationProvisionerIntegrationTest {
 }
 ```
 
-Check whether this module already has `awaitility` as a test dependency (grep `build.gradle.kts` for `awaitility`); if not, either add it (`testImplementation("org.awaitility:awaitility:<verify current version against Maven Central>")`) or replace the `await().atMost(...)` block with a plain manual retry loop (`for` loop with `Thread.sleep(500)` up to 30 iterations, asserting inside) to avoid adding a new test dependency for one test -- prefer the manual loop if `awaitility` isn't already present, to keep this change minimal.
+Check whether this module already has `awaitility` as a test dependency (grep `build.gradle.kts` for `awaitility`); if not, either add it (`testImplementation("org.awaitility:awaitility:<verify current version against Maven Central>")`) or replace the `await().atMost(...)` block with a plain manual retry loop (`for` loop with `Thread.sleep(500)` up to 30 iterations, asserting inside) to avoid adding a new test dependency for one test, prefer the manual loop if `awaitility` isn't already present, to keep this change minimal.
 
 - [ ] **Step 3: Run against real CouchDB and iterate on any real behavior mismatch**
 
@@ -521,7 +521,7 @@ git commit -m "feat(benefits-privacy): admin-mediated continuous replication int
 - Consumes: `CouchDbParticipantDatabaseProvisioner` (Task 2), `CouchDbReplicationProvisioner` (Task 3).
 - Produces: `StewardResource`'s constructor gains two parameters (see Step 1). Task 6 (live click-through) exercises this end to end; no other task consumes it directly.
 
-`StewardResource`'s existing `SAFE_PARTICIPANT_REF` pattern (`^[a-zA-Z0-9_.@-]+$`) allows characters CouchDB database names reject (uppercase letters, `.`, `@`) -- CouchDB database names must match `^[a-z][a-z0-9_$()+/-]*$`. Now that provisioning always creates a database named `participant-<ref>`, the pattern is tightened to a safe subset of both: `^[a-z][a-z0-9_-]*$` (lowercase letter first, then lowercase letters, digits, `_`, or `-`). This is a real, disclosed behavior change from the already-reviewed validation this plan builds on top of -- necessary because a `participantRef` that fails the new check can no longer be provisioned successfully at all, not an incidental tightening.
+`StewardResource`'s existing `SAFE_PARTICIPANT_REF` pattern (`^[a-zA-Z0-9_.@-]+$`) allows characters CouchDB database names reject (uppercase letters, `.`, `@`), CouchDB database names must match `^[a-z][a-z0-9_$()+/-]*$`. Now that provisioning always creates a database named `participant-<ref>`, the pattern is tightened to a safe subset of both: `^[a-z][a-z0-9_-]*$` (lowercase letter first, then lowercase letters, digits, `_`, or `-`). This is a real, disclosed behavior change from the already-reviewed validation this plan builds on top of, necessary because a `participantRef` that fails the new check can no longer be provisioned successfully at all, not an incidental tightening.
 
 - [ ] **Step 1: Update `StewardResource`**
 
@@ -533,7 +533,7 @@ to:
 ```java
     // Tightened to a safe subset of CouchDB's own database-name rules
     // (^[a-z][a-z0-9_$()+/-]*$) now that provisioning always creates a
-    // "participant-<ref>" database -- a ref that fails this check could
+    // "participant-<ref>" database, a ref that fails this check could
     // never be provisioned successfully.
     private static final Pattern SAFE_PARTICIPANT_REF = Pattern.compile("^[a-z][a-z0-9_-]*$");
 ```
@@ -560,7 +560,7 @@ Add two fields and constructor parameters, and update `provisionParticipant`:
     }
 ```
 
-(Rename the existing `provisioner` field/parameter to `userProvisioner` throughout the class for clarity now that there are three provisioners -- update every reference, including inside `provisionParticipant`.)
+(Rename the existing `provisioner` field/parameter to `userProvisioner` throughout the class for clarity now that there are three provisioners, update every reference, including inside `provisionParticipant`.)
 
 Replace `provisionParticipant`'s body:
 ```java
@@ -579,8 +579,8 @@ Replace `provisionParticipant`'s body:
         }
         // Database/security/design-doc/replication first, the CouchDB user (and its
         // freshly generated password) last. CouchDB's _security document accepts a
-        // username that doesn't exist yet -- it's just a string checked against the
-        // authenticated caller at request time -- so this ordering is safe, and it means
+        // username that doesn't exist yet, it's just a string checked against the
+        // authenticated caller at request time, so this ordering is safe, and it means
         // a failure before the user is created leaves nothing irrecoverable to retry: no
         // password was ever generated, so a retry simply starts over. The reverse order
         // would risk creating the user (with a password only this response would ever
@@ -661,7 +661,7 @@ In the `benefits.stewardApi.enabled` block, extend the `StewardResource` constru
     }
 ```
 
-(This requires the `benefits` database to already exist on the live CouchDB instance for the replication step to succeed -- `tools/lib.sh`'s `ensure_couchdb`/`configure_couchdb` already creates it, so running this test through the same setup path other integration tests in this module already assume is sufficient; no new setup code needed in the test itself.)
+(This requires the `benefits` database to already exist on the live CouchDB instance for the replication step to succeed, `tools/lib.sh`'s `ensure_couchdb`/`configure_couchdb` already creates it, so running this test through the same setup path other integration tests in this module already assume is sufficient; no new setup code needed in the test itself.)
 
 - [ ] **Step 4: Run the full module test suite**
 
@@ -673,7 +673,7 @@ Expected: BUILD SUCCESSFUL, all tests pass including the updated `StewardResourc
 
 None of these exercise `provisionParticipant` (they pass `null` for the provisioner today since they only test review/coSign/veto/appeal/queue), so add two more `null` arguments each, matching the existing pattern:
 
-`StewardResourceTest.java:24` and `:46` -- change
+`StewardResourceTest.java:24` and `:46`, change
 ```java
 new StewardResource(authorizationStore, requestStore, ALWAYS_STEWARD_S1, null);
 ```
@@ -690,7 +690,7 @@ and
 new StewardResource(authorizationStore, requestStore, ALWAYS_UNAUTHENTICATED, null, null, null);
 ```
 
-`StewardResourceConcurrencyIntegrationTest.java:32` and `:33` -- same change, `null` becomes `null, null, null` in both `new StewardResource(...)` calls.
+`StewardResourceConcurrencyIntegrationTest.java:32` and `:33`, same change, `null` becomes `null, null, null` in both `new StewardResource(...)` calls.
 
 - [ ] **Step 6: Compile and run the full connector to confirm nothing else breaks**
 
@@ -717,7 +717,7 @@ git commit -m "feat(benefits-privacy): provision participants with an isolated d
 - Modify: `apps/participant-mobile/lib/session.dart`
 
 **Interfaces:**
-- Consumes: nothing new -- both files already construct a database URL from `session`/props; this task only changes which database name they target.
+- Consumes: nothing new, both files already construct a database URL from `session`/props; this task only changes which database name they target.
 - Produces: nothing later tasks depend on directly; Task 6 exercises the result live.
 
 - [ ] **Step 1: `apps/participant-web/src/ConsentCards.tsx`**
@@ -735,7 +735,7 @@ to:
   ) + '/participant-' + session.participantRef;
 ```
 
-No other change to this file. `resolveConflicts()` (`packages/consent-web-client/src/sync.ts`) needs no change at all -- it already reads whatever `remoteUrl` it's given, and reading a participant's own database is legitimate once this repoints it there.
+No other change to this file. `resolveConflicts()` (`packages/consent-web-client/src/sync.ts`) needs no change at all, it already reads whatever `remoteUrl` it's given, and reading a participant's own database is legitimate once this repoints it there.
 
 - [ ] **Step 2: `apps/participant-mobile/lib/session.dart`**
 
@@ -757,7 +757,7 @@ Run: `flutter analyze` from `apps/participant-mobile/`
 Expected: clean, no warnings.
 
 Run: `flutter test` from `apps/participant-mobile/`
-Expected: existing suite (Task 13/14's tests) still passes -- none of them assert on the literal database name, per the existing test files' contents, but confirm this rather than assume it.
+Expected: existing suite (Task 13/14's tests) still passes, none of them assert on the literal database name, per the existing test files' contents, but confirm this rather than assume it.
 
 - [ ] **Step 4: Commit**
 
@@ -770,19 +770,19 @@ git commit -m "fix(participant-web,participant-mobile): sync to the participant'
 
 ### Task 6: Live end-to-end verification
 
-**Files:** none (verification only -- no source changes expected; if verification surfaces a real defect, fix it in the file it belongs to and note the deviation in the report).
+**Files:** none (verification only, no source changes expected; if verification surfaces a real defect, fix it in the file it belongs to and note the deviation in the report).
 
 **Interfaces:**
 - Consumes: everything from Tasks 1-5.
-- Produces: nothing -- this is the plan's proof that the fix works, mirroring the original interfaces plan's Task 15 (the last task being a live-verified deliverable, not new source).
+- Produces: nothing, this is the plan's proof that the fix works, mirroring the original interfaces plan's Task 15 (the last task being a live-verified deliverable, not new source).
 
 - [ ] **Step 1: Stand up the full stack**
 
-Reuse the exact recipe from `.superpowers/sdd/2026-09-01-benefits-interfaces/task-15-report.md` and the final fix wave's report (`final-fix-wave-report.md`) for building the connector jar, starting CouchDB via `tools/lib.sh`, and the `-D` flags needed (`benefits.releaseRequests.enabled=true`, `benefits.stewardApi.enabled=true`, `benefits.privacy.persistence.enabled=true`, `benefits.steward.persistence.enabled=true` -- the fourth flag `provider.properties`'s comment documents per the final fix wave's I5 fix).
+Reuse the exact recipe from `.superpowers/sdd/2026-09-01-benefits-interfaces/task-15-report.md` and the final fix wave's report (`final-fix-wave-report.md`) for building the connector jar, starting CouchDB via `tools/lib.sh`, and the `-D` flags needed (`benefits.releaseRequests.enabled=true`, `benefits.stewardApi.enabled=true`, `benefits.privacy.persistence.enabled=true`, `benefits.steward.persistence.enabled=true`, the fourth flag `provider.properties`'s comment documents per the final fix wave's I5 fix).
 
 - [ ] **Step 2: Provision two participants via the steward portal, live in a browser**
 
-Using Chrome DevTools MCP tools (as prior live click-throughs in this branch have done): log into `apps/steward-portal`, provision two participants (e.g. `p-verify-1`, `p-verify-2` -- both must match the tightened `^[a-z][a-z0-9_-]*$` pattern from Task 4). Confirm each provisioning call succeeds and returns a password.
+Using Chrome DevTools MCP tools (as prior live click-throughs in this branch have done): log into `apps/steward-portal`, provision two participants (e.g. `p-verify-1`, `p-verify-2`, both must match the tightened `^[a-z][a-z0-9_-]*$` pattern from Task 4). Confirm each provisioning call succeeds and returns a password.
 
 - [ ] **Step 3: Confirm database isolation directly against CouchDB**
 
@@ -790,11 +790,11 @@ Via `curl`: confirm `GET http://p-verify-1:<their-password>@localhost:5984/benef
 
 - [ ] **Step 4: Run the participant-web click-through, live, end to end**
 
-Start `apps/participant-web` (`npm run dev`), log in as `p-verify-1`. Grant a consent, confirm it appears. Switch to Privacy Dashboard, confirm it shows there too (exercises the shared-`ParticipantClient` fix from an earlier round in this branch). Switch back to Consent, confirm it's still there. Click "Sync now" -- this is the step that failed in the final fix wave's C1 verification, blocked by exactly the gap this plan fixes. Confirm it now reports a genuine pushed count with no error. Confirm via `curl` (admin credentials) that the document actually landed in the shared `benefits` database (proving replication worked, not just that the local push succeeded).
+Start `apps/participant-web` (`npm run dev`), log in as `p-verify-1`. Grant a consent, confirm it appears. Switch to Privacy Dashboard, confirm it shows there too (exercises the shared-`ParticipantClient` fix from an earlier round in this branch). Switch back to Consent, confirm it's still there. Click "Sync now", this is the step that failed in the final fix wave's C1 verification, blocked by exactly the gap this plan fixes. Confirm it now reports a genuine pushed count with no error. Confirm via `curl` (admin credentials) that the document actually landed in the shared `benefits` database (proving replication worked, not just that the local push succeeded).
 
 - [ ] **Step 5: Run the participant-mobile click-through**
 
-If `apps/participant-mobile` has a way to run in this environment (check whether Flutter platform scaffolding exists yet -- if not, this step is blocked by a separate, already-known gap (I8 from the final review) and should be reported as such, not worked around): grant a consent, sync, and confirm via `curl` that it lands in `benefits` the same way.
+If `apps/participant-mobile` has a way to run in this environment (check whether Flutter platform scaffolding exists yet, if not, this step is blocked by a separate, already-known gap (I8 from the final review) and should be reported as such, not worked around): grant a consent, sync, and confirm via `curl` that it lands in `benefits` the same way.
 
 - [ ] **Step 6: Report**
 

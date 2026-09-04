@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a simulated fleet of offline-first participant devices (real PouchDB, real duty cycles, real replication against real CouchDB) that proves consent revocation propagates correctly under partition with zero leaked records, and that a controlled, injected replication conflict resolves under a "user preference first" rule — the mechanism experiment E2 measures.
+**Goal:** Build a simulated fleet of offline-first participant devices (real PouchDB, real duty cycles, real replication against real CouchDB) that proves consent revocation propagates correctly under partition with zero leaked records, and that a controlled, injected replication conflict resolves under a "user preference first" rule, the mechanism experiment E2 measures.
 
 **Architecture:** A small addition to phase 0's `packages/consent-core` (a `revokedAt` field, mirroring the existing `expiresAt` semantics exactly) plus one new package, `packages/device-sim`, containing a `Device` class (local PouchDB, an outbox, online/offline state, a revoke action), a duty-cycle scheduler, harness-side conflict injection (a direct write to CouchDB bypassing the device, since a single-writer device has nothing to organically conflict with), and a "keep my own latest edit" conflict resolver.
 
@@ -13,17 +13,17 @@
 ## Global Constraints
 
 - `ConsentGrant.revokedAt` is `string | null`, required (not optional), evaluated by `hasGrant` exactly the way `expiresAt` already is: `revokedAt !== null && revokedAt <= nowIso` makes the grant inactive.
-- `meet()` combines `revokedAt` via the same `earliest()` helper `expiresAt` already uses — earliest (most restrictive) wins.
+- `meet()` combines `revokedAt` via the same `earliest()` helper `expiresAt` already uses, earliest (most restrictive) wins.
 - All 15 existing conformance vectors get `"revokedAt": null` added to every grant; this must not change any existing vector's `expected` value.
-- The in-memory PouchDB adapter (`pouchdb-adapter-memory`) is required for every simulated device — no LevelDB, no IndexedDB, no native dependency.
+- The in-memory PouchDB adapter (`pouchdb-adapter-memory`) is required for every simulated device, no LevelDB, no IndexedDB, no native dependency.
 - "Leaked record" is defined precisely (spec section 4): a record that was in a device's own outbox, unsent, at the moment of revocation, whose embedded consent covers the revoked grant, and that later reaches CouchDB anyway. Records already synced before revocation are never touched or re-checked.
-- Conflicts are produced only by harness-side direct writes to CouchDB (spec section 5) — never by simulating a second device per participant.
-- "User preference first" conflict resolution: the device's own CURRENT local copy wins outright, whole-document, unconditionally, by identity — never by comparing timestamps against a rival, and never by trusting PouchDB's own revision ordering.
+- Conflicts are produced only by harness-side direct writes to CouchDB (spec section 5), never by simulating a second device per participant.
+- "User preference first" conflict resolution: the device's own CURRENT local copy wins outright, whole-document, unconditionally, by identity, never by comparing timestamps against a rival, and never by trusting PouchDB's own revision ordering.
 - No comments beyond a non-obvious WHY.
 
 ---
 
-### Task 1: Gate 0 — PouchDB replication probe
+### Task 1: Gate 0, PouchDB replication probe
 
 **Files:**
 - Create: `packages/device-sim/package.json`
@@ -33,7 +33,7 @@
 - Create: `tools/probe-device-sim-replicate.mjs`
 
 **Interfaces:**
-- Produces: `createLocalDb(name: string): PouchDB.Database` and `createRemoteDb(url: string): PouchDB.Database`, both from `src/pouchdb.ts` — every later task's `Device` class is built on these two functions.
+- Produces: `createLocalDb(name: string): PouchDB.Database` and `createRemoteDb(url: string): PouchDB.Database`, both from `src/pouchdb.ts`, every later task's `Device` class is built on these two functions.
 
 This is a de-risking probe, in the same spirit as every prior phase's Task 1: no PouchDB dependency exists in this repo yet. Prove real push replication against real CouchDB works, and that a document replicated this way is validated by `consent-couchdb`'s actual design document (not a mock), before building anything else on top of it.
 
@@ -78,7 +78,7 @@ Create `packages/device-sim/tsconfig.json`:
 }
 ```
 
-Run `npm install` from the repo root (the npm workspace picks this package up automatically, matching `packages/audit-verify`'s precedent). If any of the pinned versions above do not actually exist on the npm registry, use the latest 9.x/matching `@types/*` version instead and record the real version you used in your report — these were not independently verified before writing this plan the way EDC's versions were in earlier phases.
+Run `npm install` from the repo root (the npm workspace picks this package up automatically, matching `packages/audit-verify`'s precedent). If any of the pinned versions above do not actually exist on the npm registry, use the latest 9.x/matching `@types/*` version instead and record the real version you used in your report, these were not independently verified before writing this plan the way EDC's versions were in earlier phases.
 
 - [ ] **Step 2: Write the PouchDB composition**
 
@@ -95,7 +95,7 @@ PouchDB.plugin(httpAdapter);
 PouchDB.plugin(replicationPlugin);
 
 // The in-memory adapter is explicit and required (spec section 3, Global
-// Constraints) -- this is a fleet of simulated devices in a test
+// Constraints), this is a fleet of simulated devices in a test
 // environment, not real device storage, and pulling in a native
 // LevelDB dependency (the default on Node for the batteries-included
 // `pouchdb` package) would be pure cost for no benefit here.
@@ -108,7 +108,7 @@ export function createRemoteDb(url: string): PouchDB.Database {
 }
 ```
 
-If `PouchDB.plugin` or the constructor signature above does not match what actually compiles against the installed `pouchdb-core` types, adjust to match the real API — this is exactly the kind of thing this gate exists to confirm empirically rather than assume.
+If `PouchDB.plugin` or the constructor signature above does not match what actually compiles against the installed `pouchdb-core` types, adjust to match the real API, this is exactly the kind of thing this gate exists to confirm empirically rather than assume.
 
 - [ ] **Step 3: Write and run the probe**
 
@@ -127,7 +127,7 @@ PouchDB.plugin(replicationPlugin);
 const local = new PouchDB('probe-local', { adapter: 'memory' });
 // If embedding credentials in the URL does not work against the installed
 // pouchdb-adapter-http version (Node's native fetch forbids this, per
-// consent-couchdb's own integration test comment -- pouchdb-adapter-http
+// consent-couchdb's own integration test comment, pouchdb-adapter-http
 // may or may not use native fetch internally), pass credentials via the
 // remote PouchDB constructor's `auth` option instead:
 // new PouchDB(url, { auth: { username: 'admin', password: 'benefits' } })
@@ -305,7 +305,7 @@ Then add one test to the `describe('meet', ...)` block:
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `cd packages/consent-core && npx vitest run test/evaluate.test.ts test/meet.test.ts`
-Expected: FAIL — `revokedAt` does not exist on `ConsentGrant` yet, and the new assertions have nothing to check against.
+Expected: FAIL, `revokedAt` does not exist on `ConsentGrant` yet, and the new assertions have nothing to check against.
 
 - [ ] **Step 3: Add revokedAt to the type and both functions**
 
@@ -357,7 +357,7 @@ In `packages/consent-core/src/meet.ts`, in `meet()`, add `revokedAt` to the comp
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `cd packages/consent-core && npx vitest run test/evaluate.test.ts test/meet.test.ts`
-Expected: PASS. This will also break `test/conformance.test.ts` (it reads vector files that don't have `revokedAt` yet, which now fails TypeScript's structural check when the vector JSON is cast to `ConsentGrant`-shaped data) — that's expected and fixed in Task 3, not this one. Confirm the two files above pass in isolation; do not attempt to fix `conformance.test.ts` in this task.
+Expected: PASS. This will also break `test/conformance.test.ts` (it reads vector files that don't have `revokedAt` yet, which now fails TypeScript's structural check when the vector JSON is cast to `ConsentGrant`-shaped data), that's expected and fixed in Task 3, not this one. Confirm the two files above pass in isolation; do not attempt to fix `conformance.test.ts` in this task.
 
 - [ ] **Step 5: Commit**
 
@@ -379,11 +379,11 @@ git commit -m "Add revokedAt to ConsentGrant, mirroring expiresAt semantics exac
 
 **Interfaces:**
 - Consumes: `ConsentGrant.revokedAt` (Task 2).
-- Produces: nothing new — `packages/consent-core/test/conformance.test.ts` and `packages/consent-couchdb/test/couchdb.integration.test.ts` both already iterate every file in `conformance/vectors/` generically (confirmed by reading both files: neither hard-codes a vector list or count), so neither test file needs any code change. This task's job is purely the vector files themselves.
+- Produces: nothing new, `packages/consent-core/test/conformance.test.ts` and `packages/consent-couchdb/test/couchdb.integration.test.ts` both already iterate every file in `conformance/vectors/` generically (confirmed by reading both files: neither hard-codes a vector list or count), so neither test file needs any code change. This task's job is purely the vector files themselves.
 
 - [ ] **Step 1: Batch-add `revokedAt: null` to every grant in all 15 existing vectors**
 
-Write a short one-off Node script (do not commit it — this is a one-time migration, not part of the shipped test suite) to do this reliably rather than by hand, since some vectors (check `v009-multi-field-ordering.json` in particular) have more than one grant in their `grants` array and a manual edit risks missing one:
+Write a short one-off Node script (do not commit it, this is a one-time migration, not part of the shipped test suite) to do this reliably rather than by hand, since some vectors (check `v009-multi-field-ordering.json` in particular) have more than one grant in their `grants` array and a manual edit risks missing one:
 
 ```javascript
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -485,10 +485,10 @@ Expected: PASS, 17 vectors now (15 existing plus 2 new), all green.
 
 - [ ] **Step 3: Rebuild and re-verify consent-couchdb's design document against real CouchDB**
 
-`build-design-doc.ts` bundles `evaluate.ts`'s actual source at build time, so it picks up Task 2's change automatically — but the built bundle needs regenerating and the integration test needs a real CouchDB to run against.
+`build-design-doc.ts` bundles `evaluate.ts`'s actual source at build time, so it picks up Task 2's change automatically, but the built bundle needs regenerating and the integration test needs a real CouchDB to run against.
 
 Run: `ensure_couchdb || docker compose -f deploy/docker-compose.yml up -d couchdb`, then `cd packages/consent-couchdb && npm run build && npx vitest run test/couchdb.integration.test.ts`
-Expected: PASS, all 17 vectors (plus the existing tampered-consent test) decided identically by the real CouchDB `validate_doc_update` as by the pure TypeScript function — including the two new revoked-grant vectors, proving the server-side S1 gate enforces revocation exactly like expiry, not just the pure function.
+Expected: PASS, all 17 vectors (plus the existing tampered-consent test) decided identically by the real CouchDB `validate_doc_update` as by the pure TypeScript function, including the two new revoked-grant vectors, proving the server-side S1 gate enforces revocation exactly like expiry, not just the pure function.
 
 - [ ] **Step 4: Commit**
 
@@ -499,7 +499,7 @@ git commit -m "Add revokedAt to all conformance vectors, add two revocation vect
 
 ---
 
-### Task 4: The Device class — local storage, outbox, revoke action
+### Task 4: The Device class, local storage, outbox, revoke action
 
 **Files:**
 - Create: `packages/device-sim/src/device.ts`
@@ -563,7 +563,7 @@ describe('Device', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cd packages/device-sim && npx vitest run test/device.test.ts`
-Expected: FAIL — `Device` does not exist yet.
+Expected: FAIL, `Device` does not exist yet.
 
 - [ ] **Step 3: Write Device**
 
@@ -573,7 +573,7 @@ Create `packages/device-sim/src/device.ts`:
 import type { ConsentGrant, ContributionRecord } from '@benefits/consent-core';
 import { createLocalDb } from './pouchdb';
 
-// Local grant state lives in a plain array, not PouchDB -- a device's own
+// Local grant state lives in a plain array, not PouchDB, a device's own
 // consent grants are small, always fully present locally (never partial),
 // and revoke() needs to mutate one in place synchronously from the
 // device's point of view. Contributed records go through PouchDB because
@@ -641,7 +641,7 @@ git commit -m "Add Device: local PouchDB storage, outbox, and a revoke action"
 - Test: `packages/device-sim/test/dutyCycle.test.ts`
 
 **Interfaces:**
-- Consumes: nothing from earlier tasks — pure, seedable scheduling logic.
+- Consumes: nothing from earlier tasks, pure, seedable scheduling logic.
 - Produces: `class DutyCycle { constructor(onlineProbability: number, rng?: () => number); isOnline(): boolean; tick(): void; }`. Task 8's end-to-end gate drives many ticks across a fleet using this class.
 
 - [ ] **Step 1: Write the failing tests**
@@ -688,7 +688,7 @@ describe('DutyCycle', () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `cd packages/device-sim && npx vitest run test/dutyCycle.test.ts`
-Expected: FAIL — `DutyCycle` does not exist yet.
+Expected: FAIL, `DutyCycle` does not exist yet.
 
 - [ ] **Step 3: Write DutyCycle**
 
@@ -699,7 +699,7 @@ Create `packages/device-sim/src/dutyCycle.ts`:
 // varies onlineProbability against connectivity duty cycles matched to
 // the target population without touching this class. The rng is
 // injectable so tests (and phase 7's fixed-seed reproducibility
-// requirement) are deterministic -- the parent spec requires every
+// requirement) are deterministic, the parent spec requires every
 // experiment to run from fixed seeds.
 export class DutyCycle {
   private online = false;
@@ -734,7 +734,7 @@ git commit -m "Add DutyCycle, a seedable online/offline scheduler"
 
 ---
 
-### Task 6: The outbox sweep — leak prevention on revoke
+### Task 6: The outbox sweep, leak prevention on revoke
 
 **Files:**
 - Modify: `packages/device-sim/src/device.ts`
@@ -744,7 +744,7 @@ git commit -m "Add DutyCycle, a seedable online/offline scheduler"
 - Consumes: `Device.unsentRecords`, `Device.localDb` (Task 4).
 - Produces: `Device.revoke` now also deletes matching unsent records from the local outbox, returning the count deleted: `revoke(...): Promise<{ sweptCount: number }>`. Task 8's end-to-end gate asserts on this to confirm the sweep actually ran, not just that CouchDB ends up clean by coincidence.
 
-This is the mechanism spec section 4 defines as "leak prevention": revocation must sweep the outbox at the moment it happens, not rely on the server to catch a record that was legitimately valid when created. A record's embedded consent is checked field-by-field against the revoked grant's exact `(field, purpose, recipientClass)` triple — the same triple `hasGrant` matches on.
+This is the mechanism spec section 4 defines as "leak prevention": revocation must sweep the outbox at the moment it happens, not rely on the server to catch a record that was legitimately valid when created. A record's embedded consent is checked field-by-field against the revoked grant's exact `(field, purpose, recipientClass)` triple, the same triple `hasGrant` matches on.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -788,7 +788,7 @@ Add to `packages/device-sim/test/device.test.ts`:
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `cd packages/device-sim && npx vitest run test/device.test.ts`
-Expected: FAIL — `revoke` currently returns `void`, not `{ sweptCount }`, and does not touch `unsentRecords`.
+Expected: FAIL, `revoke` currently returns `void`, not `{ sweptCount }`, and does not touch `unsentRecords`.
 
 - [ ] **Step 3: Implement the sweep**
 
@@ -819,7 +819,7 @@ Replace `revoke` in `packages/device-sim/src/device.ts`:
   }
 ```
 
-`record._rev` needs to be present on what `unsentRecords()` returns — confirm this is true (it comes straight from `allDocs({ include_docs: true })`, whose `doc` field includes `_rev`); if it is not, adjust `unsentRecords()` to preserve it rather than stripping it.
+`record._rev` needs to be present on what `unsentRecords()` returns, confirm this is true (it comes straight from `allDocs({ include_docs: true })`, whose `doc` field includes `_rev`); if it is not, adjust `unsentRecords()` to preserve it rather than stripping it.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -846,11 +846,11 @@ git commit -m "Sweep unsent outbox records on revoke, closing the leak the phase
 - Consumes: `createRemoteDb` (Task 1); `Device.localDb`, `Device.unsentRecords` (Task 4/6).
 - Produces: `syncDevice(device: Device, remoteUrl: string): Promise<{ pushed: number }>`; `injectConflict(remoteUrl: string, docId: string, conflictingBody: object): Promise<void>`; `resolveConflicts(device: Device, remoteUrl: string): Promise<{ resolvedCount: number }>`. Task 8's end-to-end gate calls all three.
 
-**Read this before writing `resolveConflicts`:** spec section 5's rule, made precise there, is identity, not recency: the device's own CURRENT local copy of a conflicted document always wins, unconditionally — do not compare timestamps between the device's edit and a rival's, even though each document below carries a `localEditedAt` field. That field exists for realism (a real device would stamp one), not as an input to the resolution algorithm; a rival's self-reported `localEditedAt` cannot be trusted, which is exactly why "user preference first" is identity-based rather than last-write-wins. The test in Step 1 deliberately gives the injected rival a LATER `localEditedAt` than the device's own edit specifically to catch an implementation that compares timestamps instead of identity — do not adjust the test data to make a timestamp-comparison implementation pass.
+**Read this before writing `resolveConflicts`:** spec section 5's rule, made precise there, is identity, not recency: the device's own CURRENT local copy of a conflicted document always wins, unconditionally, do not compare timestamps between the device's edit and a rival's, even though each document below carries a `localEditedAt` field. That field exists for realism (a real device would stamp one), not as an input to the resolution algorithm; a rival's self-reported `localEditedAt` cannot be trusted, which is exactly why "user preference first" is identity-based rather than last-write-wins. The test in Step 1 deliberately gives the injected rival a LATER `localEditedAt` than the device's own edit specifically to catch an implementation that compares timestamps instead of identity, do not adjust the test data to make a timestamp-comparison implementation pass.
 
 - [ ] **Step 1: Write the failing integration test**
 
-Create `packages/device-sim/test/sync.integration.test.ts`. This needs a real CouchDB — it is an integration test, following the same `assumeTrue`-style skip-if-unreachable convention `CouchDbAuditStoreIntegrationTest` established in phase 4, adapted to vitest (vitest has no built-in `assumeTrue`; use `it.skipIf`):
+Create `packages/device-sim/test/sync.integration.test.ts`. This needs a real CouchDB, it is an integration test, following the same `assumeTrue`-style skip-if-unreachable convention `CouchDbAuditStoreIntegrationTest` established in phase 4, adapted to vitest (vitest has no built-in `assumeTrue`; use `it.skipIf`):
 
 ```typescript
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -914,7 +914,7 @@ describe.skipIf(!couchDbReachable)('syncDevice', () => {
     });
 
     // Simulate the partition: a rival revision lands on the server, claiming
-    // a LATER localEditedAt than the device's own edit -- deliberately, to
+    // a LATER localEditedAt than the device's own edit, deliberately, to
     // prove resolution is identity-based, not a last-write-wins comparison.
     // If this test used an earlier rival timestamp instead, it would pass
     // under either algorithm and prove nothing about which one is actually
@@ -943,12 +943,12 @@ describe.skipIf(!couchDbReachable)('syncDevice', () => {
 });
 ```
 
-If constructing `createRemoteDb` via a dynamic `import()` inside the test above is awkward, import it normally at the top of the file instead — it was written this way only to keep the diff minimal against the interface list; use whichever form is idiomatic.
+If constructing `createRemoteDb` via a dynamic `import()` inside the test above is awkward, import it normally at the top of the file instead, it was written this way only to keep the diff minimal against the interface list; use whichever form is idiomatic.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `cd packages/device-sim && npx vitest run test/sync.integration.test.ts`
-Expected: FAIL (or SKIPPED if CouchDB is not reachable — start it first: `ensure_couchdb` from `tools/lib.sh`, or `docker compose -f deploy/docker-compose.yml up -d couchdb`; do not accept a skip as this task's final state) — `syncDevice`/`injectConflict`/`resolveConflicts` do not exist yet.
+Expected: FAIL (or SKIPPED if CouchDB is not reachable, start it first: `ensure_couchdb` from `tools/lib.sh`, or `docker compose -f deploy/docker-compose.yml up -d couchdb`; do not accept a skip as this task's final state), `syncDevice`/`injectConflict`/`resolveConflicts` do not exist yet.
 
 - [ ] **Step 3: Write sync.ts and conflictInjector.ts**
 
@@ -969,7 +969,7 @@ export async function syncDevice(device: Device, remoteUrl: string): Promise<{ p
 // "User preference first" (spec section 5), made precise there after an
 // earlier draft of this function conflated it with last-write-wins:
 // identity, not recency, decides. The device's own CURRENT local copy of
-// the document always wins, unconditionally -- never compared by
+// the document always wins, unconditionally, never compared by
 // timestamp against a rival, since a rival's claimed edit time cannot be
 // trusted (every rival in this design is a harness injection, never a
 // second genuine user choice). This also sidesteps needing to trust
@@ -995,7 +995,7 @@ export async function resolveConflicts(device: Device, remoteUrl: string): Promi
     }
 
     // Re-write the remote document fresh from the device's own local
-    // content -- a new revision that supersedes every existing one, so no
+    // content, a new revision that supersedes every existing one, so no
     // assumption is needed about whether a _rev string survives
     // replication unchanged. Then delete every other revision (the
     // formerly-current one and every conflict) to converge the document.
@@ -1043,12 +1043,12 @@ export async function injectConflict(remoteUrl: string, docId: string, conflicti
 }
 ```
 
-The `new_edits=false` / conflicting-revision-tree mechanics above are the part most likely to need correction against real CouchDB behavior — CouchDB requires a document's new revision to be a valid descendant of an existing `_rev` for a normal PUT, so producing a genuine sibling conflict (not just a normal update, and not a rejected write) may need `?new_edits=false` with an explicit `_revisions` history object rather than a bare `_rev`, or two independent PouchDB-side `put`s to two different local databases that are then both replicated to the same remote without either having seen the other first. If the test in Step 1 does not actually produce a non-empty `_conflicts` array on the remote document after `syncDevice` runs, this is gate 3's own uncertainty (spec section 8, open question 2) — investigate CouchDB's real conflict-creation mechanics directly (its documentation, or by experimenting against the running `deploy/docker-compose.yml` instance) rather than guessing further, and correct this file to match what actually produces a real conflict.
+The `new_edits=false` / conflicting-revision-tree mechanics above are the part most likely to need correction against real CouchDB behavior, CouchDB requires a document's new revision to be a valid descendant of an existing `_rev` for a normal PUT, so producing a genuine sibling conflict (not just a normal update, and not a rejected write) may need `?new_edits=false` with an explicit `_revisions` history object rather than a bare `_rev`, or two independent PouchDB-side `put`s to two different local databases that are then both replicated to the same remote without either having seen the other first. If the test in Step 1 does not actually produce a non-empty `_conflicts` array on the remote document after `syncDevice` runs, this is gate 3's own uncertainty (spec section 8, open question 2), investigate CouchDB's real conflict-creation mechanics directly (its documentation, or by experimenting against the running `deploy/docker-compose.yml` instance) rather than guessing further, and correct this file to match what actually produces a real conflict.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `cd packages/device-sim && npx vitest run test/sync.integration.test.ts`
-Expected: PASS, both tests, against a real CouchDB (confirm this in your report — not skipped).
+Expected: PASS, both tests, against a real CouchDB (confirm this in your report, not skipped).
 
 - [ ] **Step 5: Commit**
 
@@ -1068,7 +1068,7 @@ git commit -m "Add push replication, conflict injection, and user-preference-fir
 
 **Interfaces:**
 - Consumes: everything from Tasks 1-7.
-- Produces: the phase's Gate 4 result — a fleet of simulated devices, a real duty cycle, some revoking mid-partition and some hitting an injected conflict, ending with zero leaked records and zero unresolved conflicts, verified against real CouchDB.
+- Produces: the phase's Gate 4 result, a fleet of simulated devices, a real duty cycle, some revoking mid-partition and some hitting an injected conflict, ending with zero leaked records and zero unresolved conflicts, verified against real CouchDB.
 
 - [ ] **Step 1: Write the end-to-end fleet test**
 
@@ -1142,7 +1142,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
 
     // Device 1: an injected conflict, exactly as Task 7 proved works. The
     // rival's localEditedAt is deliberately LATER than the device's own
-    // edit (same reasoning as Task 7's discriminating test) -- resolution
+    // edit (same reasoning as Task 7's discriminating test), resolution
     // is identity-based, not last-write-wins, so the device's edit must
     // still win here even though the rival "claims" to be more recent.
     const conflictDocId = 'fleet-conflict-doc';
@@ -1172,7 +1172,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
       });
     }
 
-    // Every device eventually comes online and syncs -- the duty cycle
+    // Every device eventually comes online and syncs, the duty cycle
     // drives whether each device is online at a given tick, but this gate
     // proves the end state after everyone has had a chance to sync, not
     // the timing itself (phase 7's job).
@@ -1199,7 +1199,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
     }
 
     // The conflict device's document reflects its own local edit (fields:5),
-    // not the injected rival (fields:1) -- user preference first, end to end.
+    // not the injected rival (fields:1), user preference first, end to end.
     const conflictDoc = await remote.get(conflictDocId) as unknown as { fields: { 'service.satisfaction': number } };
     expect(conflictDoc.fields['service.satisfaction']).toBe(5);
   }, 30000);
@@ -1209,7 +1209,7 @@ describe.skipIf(!couchDbReachable)('device fleet end to end', () => {
 - [ ] **Step 2: Run the test**
 
 Run: `cd packages/device-sim && npx vitest run test/fleet.integration.test.ts`
-Expected: PASS, against a real CouchDB (start it first if needed). If the leaked-records assertion fails, that is Gate 4 failing for real — do not adjust the assertion to make it pass; find and fix the actual defect in the sweep or sync path.
+Expected: PASS, against a real CouchDB (start it first if needed). If the leaked-records assertion fails, that is Gate 4 failing for real, do not adjust the assertion to make it pass; find and fix the actual defect in the sweep or sync path.
 
 - [ ] **Step 3: Write the shell probe wrapper**
 

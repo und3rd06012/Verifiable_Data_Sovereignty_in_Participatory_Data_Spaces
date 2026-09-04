@@ -87,7 +87,7 @@ Added a new paragraph after the existing suppression-rate reporting:
 
 ## Verification notes
 
-- Grepped both files for em-dashes (`—`) and double hyphens (`--`): none found.
+- Grepped both files for em-dashes (`-`) and double hyphens (`--`): none found.
 - Confirmed `katrakazas2026` resolves in `references.bib` and matches the existing `(Katrakazas and Ntib, 2026)` citation format used throughout both chapters.
 - All IQR figures in FIX 6 were recomputed to match the linear-interpolation (NumPy/pandas default, R type 7) convention used by the project's own `Statistics.iqr`/`.quantile()` code, not an alternative (e.g. Tukey-hinge) method, so they are consistent with how the committed CSV IQR columns and figure scripts compute the same statistic.
 - FIX 2's "real production capability" claim was confirmed directly against the Java source, not only the design spec: `consentCovers`/`consentGrants` appear in `connector/extensions/benefits-privacy/src/main/java/org/benefits/policy/Contribution.java` and `PrivacyPipeline.java`.

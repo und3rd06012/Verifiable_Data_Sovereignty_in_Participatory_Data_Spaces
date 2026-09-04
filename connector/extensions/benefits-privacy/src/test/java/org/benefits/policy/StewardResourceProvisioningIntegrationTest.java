@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Regression coverage for review-round fix 1: re-provisioning an already-provisioned
  * participant must not hand back a freshly generated password with a 201 as if it had
- * been set -- CouchDB's PUT to an existing _users document without its current _rev
+ * been set, CouchDB's PUT to an existing _users document without its current _rev
  * returns 409 and leaves the stored password untouched, so StewardResource must report
  * that honestly instead of claiming success with credentials that will never authenticate.
  */

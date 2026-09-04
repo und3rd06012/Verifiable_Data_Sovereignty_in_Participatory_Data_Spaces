@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { STEWARD_API_BASE_URL } from './config';
+import { GATEWAY_URL } from './config';
 import type { Session } from './App';
 
 export function ProvisionParticipant({ session }: { session: Session }) {
@@ -8,8 +8,8 @@ export function ProvisionParticipant({ session }: { session: Session }) {
 
   async function provision(e: React.FormEvent) {
     e.preventDefault();
-    const auth = 'Basic ' + btoa(`${session.stewardId}:${session.password}`);
-    const response = await fetch(`${STEWARD_API_BASE_URL}/participants/${encodeURIComponent(participantRef)}/provision`, {
+    const auth = 'Bearer ' + session.token;
+    const response = await fetch(`${GATEWAY_URL}/steward/participants/${encodeURIComponent(participantRef)}/provision`, {
       method: 'POST',
       headers: { authorization: auth }
     });

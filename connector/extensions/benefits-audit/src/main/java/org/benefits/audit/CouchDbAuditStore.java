@@ -65,7 +65,7 @@ public class CouchDbAuditStore implements AuditStore {
     /**
      * Unlike CouchDbContributionSource in phase 3, this store is wired directly into a
      * live connector's startup path (BenefitsAuditExtension, Task 6) and exercised by a
-     * real connector process (Task 10's end-to-end probe) — phase 3's CouchDB reader
+     * real connector process (Task 10's end-to-end probe), phase 3's CouchDB reader
      * never was. Nothing else creates the database first, so this store creates its
      * own, idempotently: 201 means it just did, 412 means another process already did
      * (both are success), anything else is a real failure.
@@ -168,7 +168,7 @@ public class CouchDbAuditStore implements AuditStore {
     /**
      * Every selector whose value comes from outside this class (a participant-supplied
      * HTTP path parameter, an EDC-supplied asset id, a server-generated epoch id) is
-     * built here, through ObjectMapper, never through string interpolation — the exact
+     * built here, through ObjectMapper, never through string interpolation, the exact
      * defect class CouchDbContributionSource (phase 3) had to fix. A hand-rolled
      * ".replace(\"\\\"\", \"\\\\\\\"\")" escape looks safe and is not: it only escapes
      * quotes, not backslashes, so a value ending in a backslash or containing a

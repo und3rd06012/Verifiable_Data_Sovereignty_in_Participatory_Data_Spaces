@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * TransferProcessEvent carries no counter-party or policy accessor (confirmed by
  * inspecting the compiled class directly), so a transfer entry correlates its actor
  * and statedPurpose from the negotiation that produced its agreement, keyed by
- * agreement id (spec section 6) — correlating by asset id instead is ambiguous
+ * agreement id (spec section 6), correlating by asset id instead is ambiguous
  * whenever the same asset is negotiated more than once, which an earlier version of
  * this class did and a task reviewer caught. The cache is in-memory only and does
  * not survive a restart; a transfer completing after a restart between its
@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * synchronously, before any ContractNegotiation entity exists, so no event of any
  * kind fires for that case. This handler only ever sees a negotiation that was
  * already admitted into the provider's state machine and later terminated (an
- * explicit management-API termination, or a post-admission lifecycle failure) —
+ * explicit management-API termination, or a post-admission lifecycle failure) -
  * never a k-anonymity, epsilon-budget, steward-quorum, purpose, or recipient-class
  * refusal at initial offer validation. Do not describe this entry's plainLanguage as
  * a "refusal" in a way that implies it covers that case.

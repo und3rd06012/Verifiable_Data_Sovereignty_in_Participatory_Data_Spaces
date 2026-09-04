@@ -111,14 +111,14 @@ echo "gate 0 probe passed"
 #
 # "audit-probe-definition" above was published with assetsSelector: [] (matches every
 # asset), so every asset published from here on is automatically covered by it under
-# the same "benefits-policy" policy — no extra contract definitions are needed. Each
+# the same "benefits-policy" policy, no extra contract definitions are needed. Each
 # ContractRequest below is built directly (bypassing tools/contract-request.py's
 # catalog-scraping, which is unsuited to a catalog holding more than one asset) so each
 # negotiation targets exactly the asset intended.
 # -----------------------------------------------------------------------------------
 
 # The catalog assigns each dataset's offer a composite id (base64 contract-definition id,
-# base64 asset id, base64 random uuid, colon-joined) generated fresh per catalog request —
+# base64 asset id, base64 random uuid, colon-joined) generated fresh per catalog request -
 # it is not the raw policy definition id ("benefits-policy" would 404 at negotiation time
 # once more than one dataset exists in the catalog, discovered while building this probe).
 # So each request below fetches the catalog and reads the real offer id for its own target

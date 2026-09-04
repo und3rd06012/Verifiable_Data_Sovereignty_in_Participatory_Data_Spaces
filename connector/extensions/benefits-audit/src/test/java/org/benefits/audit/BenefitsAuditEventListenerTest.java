@@ -127,7 +127,7 @@ class BenefitsAuditEventListenerTest {
                 .contractAgreement(secondAgreement).build());
 
         // The transfer belongs to the FIRST negotiation's agreement, even though the
-        // SECOND negotiation (for the same asset) is more recent -- proving
+        // SECOND negotiation (for the same asset) is more recent, proving
         // correlation is keyed by agreement id, not "most recent entry for this
         // asset" (the bug Task 6's reviewer found in the original design).
         var transferEvent = TransferProcessCompleted.Builder.newInstance()

@@ -76,7 +76,7 @@ class CouchDbReplicationProvisionerIntegrationTest {
                 HttpResponse.BodyHandlers.ofString());
         assertReplicatedWithin(targetDb, docId, 30);
 
-        // ...but a _design/* document (written here as admin, for test purposes -- a
+        // ...but a _design/* document (written here as admin, for test purposes, a
         // participant can never write one) does not.
         var designBody = mapper.createObjectNode();
         designBody.putObject("views");

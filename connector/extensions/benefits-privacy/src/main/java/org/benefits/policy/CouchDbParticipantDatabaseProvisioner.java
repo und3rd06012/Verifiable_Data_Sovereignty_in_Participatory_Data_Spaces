@@ -16,7 +16,7 @@ import java.util.Base64;
 /**
  * Creates a participant's own private CouchDB database, locks its _security to
  * exactly that one participant, and installs the same identity-check design
- * document the shared database already carries -- installed here per-database
+ * document the shared database already carries, installed here per-database
  * instead of once, so it still stops a participant's document from claiming a
  * different participantRef even though _security already stops anyone else from
  * writing here at all.
@@ -97,7 +97,7 @@ public class CouchDbParticipantDatabaseProvisioner {
                 .header("authorization", adminAuthHeader).header("content-type", "application/json")
                 .PUT(bodyOf(designDoc)));
         // 409 here means the identical design doc is already installed from a prior
-        // provisioning call -- its content never varies per participant, so this is a
+        // provisioning call, its content never varies per participant, so this is a
         // no-op, not a failure (unlike CouchDbUserProvisioner's password case, there is
         // no distinct value at risk of being silently un-applied).
         if (response.statusCode() != 200 && response.statusCode() != 201 && response.statusCode() != 409) {

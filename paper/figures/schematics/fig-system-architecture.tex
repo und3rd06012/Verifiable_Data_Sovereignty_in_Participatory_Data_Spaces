@@ -1,0 +1,86 @@
+% fig-system-architecture.tex
+% Full system architecture: participant devices, community connector
+% (aggregate, privacy pipeline, EDC, audit, steward portal), data space,
+% and the shared conformance contract.
+\documentclass[border=10pt]{standalone}
+\input{figstyle}
+
+\begin{document}
+\resizebox{17cm}{!}{%
+\begin{tikzpicture}[every node/.style={font=\sffamily, text=ink}]
+
+% tier 1: participant devices
+\node[browser] (web) at (-6.9,3.2)
+  {{\techlogo{react}}\\[1mm] Web app\\ \sub{React}};
+\node[phone, right=4mm of web] (mobile)
+  {{\techlogo{flutter}}\\[1mm] Mobile app\\ \sub{Flutter}};
+\node[proc, text width=3.4cm] (outbox) at (-5.6,0.6)
+  {{\techlogo{pouchdb}}\\[1mm] PouchDB outbox\\ \sub{offline-first}};
+\node[data, text width=2.8cm] (pdb) at (-5.6,-1.4)
+  {{\techlogo[6mm]{couchdb}\hspace{1mm}\smallicon[white]{db}}\\[1mm] Private CouchDB\\ \sub{validate\_doc\_update}};
+\node[sbadge, anchor=north east] (s1) at ([xshift=-1mm, yshift=-1mm] pdb.north east) {S1};
+
+\draw[arr] (web.south) -- (web.south |- outbox.north);
+\draw[arr] (mobile.south) -- (mobile.south |- outbox.north);
+\draw[arr] (outbox) -- (pdb);
+
+% tier 2: community connector
+\node[data, text width=2.5cm, right=1.8cm of pdb] (agg)
+  {{\techlogo[6mm]{couchdb}\hspace{1mm}\smallicon[white]{db}}\\[1mm] Shared aggregate\\ \sub{one DB per participant}};
+\node[sys, text width=2.6cm, right=6mm of agg] (priv)
+  {{\smallicon[white]{shield}}\\[1mm] Privacy pipeline\\ \sub{$k$-anon, Laplace, $\varepsilon$-budget}};
+\node[proc, text width=2.6cm, right=6mm of priv] (edc)
+  {{\techlogochip{eclipseide}\hspace{1mm}\techlogochip{java}}\\[1mm] EDC connector\\ \sub{v0.18, ODRL constraints}};
+\node[proc, text width=2.4cm] (stew) at (5.8,0.8)
+  {{\smallicon[white]{userpair}}\\[1mm] Steward portal\\ \sub{co-sign}};
+\node[okstyle, text width=2.4cm] (audit) at (5.8,-3.5)
+  {{\smallicon[white]{doc}}\\[1mm] Audit chain\\ \sub{Merkle proofs}};
+
+\draw[arr] (agg) -- (priv);
+\draw[arr] (priv) -- (edc);
+\draw[arr] (stew) -- (edc) node[lbl, pos=0.5, right=1mm] {co-sign};
+\draw[arr] (edc) -- (audit) node[lbl, pos=0.5, right=1mm] {seals};
+
+% tier 3: data space
+\node[proc, text width=2.4cm, right=2.2cm of edc] (req)
+  {{\smallicon[white]{user}}\\[1mm] Requester org.\\ \sub{purpose, class, fields}};
+\node[bbadge, anchor=north west] (s2) at ([xshift=1mm, yshift=-1mm] req.north west) {S2};
+\node[cloud, draw=teal!75!black, line width=1.1pt, fill=teal, cloud puffs=9, aspect=2.2,
+      minimum width=2.6cm, minimum height=1.1cm, align=center,
+      font=\sffamily\footnotesize, text=white, above=6mm of req] (cloud)
+  {IDSA dataspace};
+
+% cross-tier edges
+\draw[arr] (pdb) -- (agg)
+  node[lbl, pos=0.5, above=1mm] {replicated};
+\draw[arr] (edc) -- (req)
+  node[lbl, pos=0.5, above=1mm] {release};
+
+% zone frames
+\begin{scope}[on background layer]
+  \node[zone, fit=(web)(mobile)(outbox)(pdb)(s1), inner sep=10pt] (z1) {};
+  \node[zone, fit=(agg)(priv)(edc)(stew)(audit), inner sep=10pt] (z2) {};
+  \node[zone, fit=(req)(cloud)(s2), inner sep=10pt] (z3) {};
+\end{scope}
+
+\node[zlabel, anchor=north west] at ([xshift=6pt, yshift=-1pt] z1.north west) {Participant devices};
+\node[zlabel, anchor=north west] at ([xshift=6pt, yshift=-1pt] z2.north west) {Community connector};
+\node[zlabel, anchor=north west] at ([xshift=6pt, yshift=-1pt] z3.north west) {Data space};
+
+% conformance contract
+\coordinate (barC) at ($(z1.west |- z2.south) - (0,1.6)$);
+\path let \p1=(z1.west), \p2=(z3.east) in
+  node[zone, align=center, font=\sffamily\footnotesize, text=ink,
+       minimum width={\dimexpr\x2-\x1\relax}, minimum height=1.3cm] (vec) at (barC)
+    {{\techlogo[6mm]{typescript}\hspace{1mm}\techlogo[6mm]{java}}\\[1mm]
+     Shared conformance vectors: 17 JSON cases. Byte-identical verdicts in
+     TypeScript (S1) and Java (S2)};
+
+\draw[dashedarr] (pdb.south) -- (pdb.south |- vec.north)
+  node[lbl, pos=0.5, right=1mm] {tests S1};
+\draw[dashedarr] (audit.south) -- (audit.south |- vec.north)
+  node[lbl, pos=0.5, right=1mm] {tests S2};
+
+\end{tikzpicture}%
+}
+\end{document}

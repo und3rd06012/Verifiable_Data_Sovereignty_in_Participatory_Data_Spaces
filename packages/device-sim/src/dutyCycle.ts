@@ -2,7 +2,7 @@
 // varies onlineProbability against connectivity duty cycles matched to
 // the target population without touching this class. The rng is
 // injectable so tests (and phase 7's fixed-seed reproducibility
-// requirement) are deterministic -- the parent spec requires every
+// requirement) are deterministic, the parent spec requires every
 // experiment to run from fixed seeds.
 export class DutyCycle {
   private online = false;

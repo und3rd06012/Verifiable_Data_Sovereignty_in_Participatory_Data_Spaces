@@ -1,0 +1,157 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --border: #dde1e6;
+  --text: #1a1f2b;
+  --muted: #5b6470;
+  --accent: #2f6fed;
+  --accent-text: #ffffff;
+  --danger: #c0392b;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#root {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+h1, h2, h3 {
+  line-height: 1.25;
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  max-width: 360px;
+  margin: 2rem auto;
+}
+
+form h1 {
+  font-size: 1.15rem;
+  text-align: center;
+  margin: 0 0 0.25rem;
+}
+
+form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+input, select {
+  font: inherit;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+input:focus, select:focus, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-text);
+  margin: 0.15rem 0.4rem 0.15rem 0;
+}
+
+button:hover {
+  filter: brightness(1.06);
+}
+
+nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+}
+
+nav button {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+}
+
+nav button.active {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+li {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+}
+
+li form, li select {
+  margin-top: 0.5rem;
+}
+
+li form {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0;
+  border: none;
+  background: transparent;
+  max-width: none;
+  margin: 0.5rem 0 0;
+}
+
+li button {
+  margin: 0.25rem 0.4rem 0 0;
+}
+
+code {
+  background: #eef1f5;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+}
+
+p {
+  color: var(--muted);
+}

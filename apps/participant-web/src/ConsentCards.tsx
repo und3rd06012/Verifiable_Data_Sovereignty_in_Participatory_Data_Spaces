@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ParticipantClient, syncDevice, resolveConflicts } from '@benefits/consent-web-client';
 import type { ConsentGrant } from '@benefits/consent-core';
-import { COUCHDB_BASE_URL } from './config';
+import { GATEWAY_URL } from './config';
+import { bearerFetch } from './auth';
 import type { Session } from './App';
 
 export function ConsentCards({ session, client }: { session: Session; client: ParticipantClient }) {
@@ -12,9 +13,7 @@ export function ConsentCards({ session, client }: { session: Session; client: Pa
     setGrants(client.grants());
   }, [client]);
 
-  const remoteUrl = COUCHDB_BASE_URL.replace(
-    '://', `://${encodeURIComponent(session.participantRef)}:${encodeURIComponent(session.password)}@`
-  ) + '/participant-' + encodeURIComponent(session.participantRef);
+  const remoteUrl = `${GATEWAY_URL}/couch/participant-${encodeURIComponent(session.participantRef)}`;
 
   async function grant(field: string, purpose: string, recipientClass: 'community' | 'provider' | 'statistics') {
     await client.grantConsent({
@@ -32,8 +31,8 @@ export function ConsentCards({ session, client }: { session: Session; client: Pa
 
   async function sync() {
     setStatus('syncing...');
-    const { pushed } = await syncDevice(client, remoteUrl);
-    const { resolvedCount } = await resolveConflicts(client, remoteUrl);
+    const { pushed } = await syncDevice(client, remoteUrl, bearerFetch(session.token));
+    const { resolvedCount } = await resolveConflicts(client, remoteUrl, bearerFetch(session.token));
     setStatus(`pushed ${pushed} record${pushed === 1 ? '' : 's'}, resolved ${resolvedCount} conflict${resolvedCount === 1 ? '' : 's'}`);
   }
 

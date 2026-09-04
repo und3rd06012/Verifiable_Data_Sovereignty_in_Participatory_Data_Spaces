@@ -1,0 +1,69 @@
+% fig-enforcement-points.tex
+% The two enforcement points (S1 TypeScript, S2 Java/EDC) pinned by one
+% shared conformance contract.
+\documentclass[border=10pt]{standalone}
+\input{figstyle}
+
+\begin{document}
+\begin{tikzpicture}[every node/.style={font=\sffamily, text=ink}]
+
+% :::::::::::::::::::: shared contract
+\node[okstyle, text width=5.2cm] (contract) at (0,5.7)
+  {{\smallicon[white]{doc}}\\[1mm] One consent rule set\\ \sub{17 consent cases + audit vectors}};
+
+% ::::::::::::::::::: left: S1 TypeScript
+\node[proc, text width=3.4cm] (ts1) at (-3.6,3.0)
+  {{\techlogochip{typescript}}\\[1mm] consent-core\\ \sub{evaluate.ts}};
+\node[proc, text width=3.4cm, below=8mm of ts1] (ts2)
+  {{\techlogo[6mm]{couchdb}}\\[1mm] consent-couchdb\\ \sub{bundles the evaluator as a CouchDB design doc}};
+\node[data, text width=3.4cm, below=8mm of ts2] (ts3)
+  {{\techlogo[6mm]{couchdb}}\\[1mm] CouchDB\\ \sub{validate\_doc\_update}};
+\node[okstyle, text width=3.4cm, below=8mm of ts3] (ts4)
+  {{\smallicon[white]{check}}\\[1mm] Verdict\\ \sub{allow / refuse + reason}};
+
+\draw[arr] (ts1) -- (ts2);
+\draw[arr] (ts2) -- (ts3);
+\draw[arr] (ts3) -- (ts4);
+
+right: S2 Java / EDC
+\node[proc, text width=3.4cm] (j1) at (3.6,3.0)
+  {{\techlogochip{java}}\\[1mm] ConsentEvaluator.java\\ \sub{faithful transcription}};
+\node[proc, text width=3.4cm, below=8mm of j1] (j2)
+  {{\smallicon[white]{lock}}\\[1mm] ODRL constraints\\ \sub{Purpose, RecipientClass\\ FieldSet, Quorum}};
+\node[proc, text width=3.4cm, below=8mm of j2] (j3)
+  {{\techlogochip{eclipseide}}\\[1mm] EDC policy engine\\ \sub{release boundary}};
+\node[okstyle, text width=3.4cm, below=8mm of j3] (j4)
+  {{\smallicon[white]{check}}\\[1mm] Decision\\ \sub{permit / refuse}};
+
+\draw[arr] (j1) -- (j2);
+\draw[arr] (j2) -- (j3);
+\draw[arr] (j3) -- (j4);
+
+contract feeds both
+\draw[arr] (contract.south west) -- (ts1.north);
+\draw[arr] (contract.south east) -- (j1.north);
+
+vectors pin both
+\node[neutral, text width=9.6cm] (vec)
+  at ($(ts4.south)!0.5!(j4.south) - (0,1.9)$)
+  {Consent and audit vectors run by both suites. Expected values are
+   byte-identical. Any disagreement is a defect in the departing implementation};
+
+\draw[dashedarr] (vec.north west) -- (ts4.south)
+  node[lbl, pos=0.5, left=1mm] {17 cases};
+\draw[dashedarr] (vec.north east) -- (j4.south)
+  node[lbl, pos=0.5, right=1mm] {17 cases};
+
+zone frames
+\begin{scope}[on background layer]
+  \node[zone, fit=(ts1)(ts2)(ts3)(ts4), inner xsep=10pt, inner ysep=18pt] (z1) {};
+  \node[zone, fit=(j1)(j2)(j3)(j4), inner xsep=10pt, inner ysep=18pt] (z2) {};
+\end{scope}
+
+\node[zlabel, anchor=north west] at ([xshift=6pt, yshift=-1pt] z1.north west)
+  {S1: participant device (TypeScript)};
+\node[zlabel, anchor=north west] at ([xshift=6pt, yshift=-1pt] z2.north west)
+  {S2: release boundary (EDC)};
+
+\end{tikzpicture}
+\end{document}

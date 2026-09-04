@@ -1,0 +1,53 @@
+% fig-release-flow.tex
+% Release decision flow: consent match, steward quorum, privacy budget.
+\documentclass[border=10pt]{standalone}
+\input{figstyle}
+
+\begin{document}
+\hyphenpenalty=10000 \exhyphenpenalty=10000
+\begin{tikzpicture}[every node/.style={font=\sffamily, text=ink}]
+
+main flow
+\node[data, text width=5.0cm] (req)
+  {{\smallicon[white]{doc}}\\[1mm] Release request\\ \sub{purpose, recipient class, fields}};
+\node[proc, text width=5.0cm, below=7mm of req] (claims)
+  {{\smallicon[white]{user}}\\[1mm] ParticipantAgent claims\\ \sub{purpose, recipient class, fields}};
+\node[proc, text width=5.0cm, below=7mm of claims] (consent)
+  {{\smallicon[white]{lock}}\\[1mm] Consent match\\ \sub{purpose eq, recipient eq\\ fields $\subseteq$ grants}};
+\node[diam, text width=2.4cm, below=8mm of consent] (d1)
+  {All fields\\consented?};
+\node[proc, text width=4.6cm, below=10mm of d1] (quorum)
+  {{\smallicon[white]{userpair}}\\[1mm] Steward quorum\\ \sub{distinct co-signatures $\geq q$}};
+\node[diam, text width=2.4cm, below=8mm of quorum] (d2)
+  {Quorum\\met?};
+\node[proc, text width=4.6cm, below=10mm of d2] (priv)
+  {{\smallicon[white]{shield}}\\[1mm] Privacy constraints\\ \sub{$k \geq k_{\min}$, $\varepsilon$-budget $\geq$ cost}};
+\node[diam, text width=2.4cm, below=8mm of priv] (d3)
+  {Budget\\available?};
+\node[okstyle, text width=4.6cm, below=10mm of d3] (rel)
+  {{\smallicon[white]{check}}\\[1mm] Release artifact\\ \sub{anonymised, audit-sealed}};
+
+refusals
+\node[bad, text width=2.6cm, right=2.4cm of d1] (r1)
+  {{\smallicon[white]{cross}}\\[1mm] Refuse\\ \sub{reason: no-grant}};
+\node[bad, text width=2.6cm, right=2.4cm of d2] (r2)
+  {{\smallicon[white]{cross}}\\[1mm] Refuse\\ \sub{quorum not met}};
+\node[bad, text width=2.6cm, right=2.4cm of d3] (r3)
+  {{\smallicon[white]{cross}}\\[1mm] Refuse\\ \sub{budget exceeded}};
+
+edges
+\draw[arr] (req) -- (claims);
+\draw[arr] (claims) -- (consent);
+\draw[arr] (consent) -- (d1);
+\draw[arr] (d1) -- (quorum) node[lbl, pos=0.5, left=1mm] {yes};
+\draw[arr] (quorum) -- (d2);
+\draw[arr] (d2) -- (priv) node[lbl, pos=0.5, left=1mm] {yes};
+\draw[arr] (priv) -- (d3);
+\draw[arr] (d3) -- (rel) node[lbl, pos=0.5, left=1mm] {yes};
+
+\draw[arr] (d1) -- (r1) node[lbl, pos=0.5, above=1mm] {no};
+\draw[arr] (d2) -- (r2) node[lbl, pos=0.5, above=1mm] {no};
+\draw[arr] (d3) -- (r3) node[lbl, pos=0.5, above=1mm] {no};
+
+\end{tikzpicture}
+\end{document}

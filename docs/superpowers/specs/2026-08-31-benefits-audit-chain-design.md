@@ -13,7 +13,7 @@ lets a device confirm its own entries are present and unaltered without
 trusting the connector operator's word for it.
 
 Section 3.1 of the parent spec states the audit log is fed by the connector,
-not written by hand — an extension subscribes to EDC's event stream for every
+not written by hand, an extension subscribes to EDC's event stream for every
 negotiation, policy decision, and transfer, and commits what actually
 happened. This phase builds that extension.
 
@@ -38,15 +38,15 @@ A new EDC extension, `connector/extensions/benefits-audit` (package
 `EventRouter` for four confirmed event types (verified present in EDC
 0.18.0's `contract-spi` and `transfer-spi` jars):
 
-- `ContractNegotiationFinalized` — a release request cleared every ODRL
+- `ContractNegotiationFinalized`, a release request cleared every ODRL
   gate (steward quorum, k-anonymity, epsilon budget) and both parties agreed.
-- `ContractNegotiationTerminated` — a negotiation that had already been
+- `ContractNegotiationTerminated`, a negotiation that had already been
   admitted into the provider's own state machine was later terminated
   (either through the management API's explicit terminate operation, or a
   post-admission failure in the negotiation lifecycle). This is narrower
   than it sounds; see section 2.2.
-- `TransferProcessCompleted` — anonymised bytes were actually delivered.
-- `TransferProcessTerminated` — a transfer was started but did not finish.
+- `TransferProcessCompleted`, anonymised bytes were actually delivered.
+- `TransferProcessTerminated`, a transfer was started but did not finish.
 
 This is a fifth EDC extension point after policy engine, data plane,
 constraint functions and the management API, and it is deliberately
@@ -68,11 +68,11 @@ claim true.
 ### 2.2 A disclosed limitation: policy-refused negotiations are invisible to this audit chain
 
 Task 1's gate 0 probe (phase 4's implementation) found that EDC 0.18.0
-rejects an offer whose policy fails ODRL constraint evaluation — including
+rejects an offer whose policy fails ODRL constraint evaluation, including
 every one of `benefits-policy`'s functions: `PurposeFunction`,
 `RecipientClassFunction`, `FieldSetFunction`, `StewardQuorumFunction`, and
 `benefits-privacy`'s `KAnonymityFunction`/`EpsilonBudgetFunction`, since all
-six evaluate in the same `NEGOTIATION_SCOPE` pass — synchronously, inside
+six evaluate in the same `NEGOTIATION_SCOPE` pass, synchronously, inside
 the HTTP handler for the DSP negotiation-request endpoint, before a
 `ContractNegotiation` entity is ever persisted on the provider side. No
 entity means no state machine, and no state machine means `EventRouter`
@@ -91,7 +91,7 @@ operation produced `ContractNegotiationTerminated` exactly as expected.
 `expired-grant-field-excluded`, `k-below-threshold`, `budget-exceeded`) is
 invisible to this audit chain as scoped. This is the entire class of
 "policy decision" this project's steward-quorum, k-anonymity, and
-epsilon-budget machinery exists to make — and it is exactly the class the
+epsilon-budget machinery exists to make, and it is exactly the class the
 parent spec's section 3.1 implies is audited when it says the connector
 "subscribes to EDC events for every negotiation, policy decision, and
 transfer." That claim does not hold as originally written; the parent spec
@@ -99,8 +99,8 @@ is amended alongside this one (its own section 3.1, 4.5.1-style amendment)
 to state the boundary precisely.
 
 This is scoped narrowly on purpose. A negotiation that clears initial offer
-validation and is terminated afterward — a genuine post-admission
-termination, or an operator's explicit management-API termination — is
+validation and is terminated afterward, a genuine post-admission
+termination, or an operator's explicit management-API termination, is
 still audited; only refusal *at the initial offer-validation gate* is
 invisible. A future policy re-evaluation elsewhere in a negotiation's
 lifecycle, if EDC 0.18.0 has one, is not covered by this finding and is not
@@ -131,8 +131,8 @@ lets an attacker present an internal node's hash as if it were a leaf's
 (a second-preimage forgery), and duplicating a lone leaf to balance an odd
 level reintroduces the duplicate-transaction ambiguity CVE-2012-2459
 documented against early Bitcoin. Phase 4 avoids both by borrowing
-Certificate Transparency's domain-separation trick (RFC 6962) — a leaf
-hash and an internal-node hash can never be mistaken for one another —
+Certificate Transparency's domain-separation trick (RFC 6962), a leaf
+hash and an internal-node hash can never be mistaken for one another -
 without adopting RFC 6962's specific recursive tree shape, which exists
 to support consistency proofs across a growing tree that this design does
 not need:
@@ -157,7 +157,7 @@ phase 0 (conformance/README.md).
 
 `canonicalBytes(entry)` joins the seven non-seq fields with a separator,
 escaping the separator inside any field value with a leading backslash
-before backslash-escaping the backslash itself — the identical
+before backslash-escaping the backslash itself, the identical
 "backslash-first" rule `KAnonymity.java` established in phase 3 to prevent
 a group-key collision, applied here to prevent an entry's `plainLanguage`
 field from colluding with the field boundary and forging a different
@@ -203,8 +203,8 @@ Sealing is written defensively either way, as a single critical section
 guarded by one `ReentrantLock` inside the extension, so correctness does
 not depend on which answer gate 0 returns. This is cheaper than the budget
 accountant's compare-and-swap design (section 4.1 of the phase 3 spec) because sealing
-has exactly one writer by construction — the extension's own event
-callback — rather than N concurrent negotiation threads racing a shared
+has exactly one writer by construction, the extension's own event
+callback, rather than N concurrent negotiation threads racing a shared
 budget. Ruling R30's precedent (single-writer replace is acceptable when
 the writer is genuinely alone) applies here for the same reason it applied
 to the steward store, not for the reason it did not apply to the budget
@@ -218,8 +218,8 @@ accountant.
    assign them the next `epochId`, compute the Merkle root and
    `prevEpochHash` from the prior sealed epoch, write the `Epoch` document
    (carrying `firstSeq`/`lastSeq` internally, beyond the four public
-   fields, so a resumed seal — point 4 — and chain ordering — section
-   5 — both know exactly which entries and which epoch precede which),
+   fields, so a resumed seal, point 4, and chain ordering, section
+   5, both know exactly which entries and which epoch precede which),
    then stamp each member entry's `epoch` field individually. This landed
    as per-document PUTs rather than the single `_bulk_docs` call an
    earlier draft of this section described, because per-document stamping
@@ -230,7 +230,7 @@ accountant.
    its per-entry stamps, the next sealing attempt on restart detects an
    `Epoch` document whose recorded `firstSeq`..`lastSeq` range still has
    at least one unstamped entry and resumes at the stamping step rather
-   than recomputing the root — recomputing after a partial crash could
+   than recomputing the root, recomputing after a partial crash could
    compute a different root if a new entry arrived in between, orphaning
    the already-written `Epoch` document.
 
@@ -253,7 +253,7 @@ An `AuditStore` interface (`append`, `nextSeq`, `unsealedEntries`,
 `sealEpoch`, `incompleteEpochs`, `entriesFor(participantRef)`,
 `entriesInEpoch(epochId)`, `epochChain()`) separates this from the
 CouchDB-backed implementation, and tests inject an in-memory fake so the
-Merkle and sealing logic is verified without a database — the same seam
+Merkle and sealing logic is verified without a database, the same seam
 `ContributionSource` provided in phase 3, for the same reason.
 `entriesInEpoch` exists so a proof can be rebuilt later from exactly the
 entries a given epoch was sealed over (`AuditResource`, section 7);
@@ -261,7 +261,7 @@ entries a given epoch was sealed over (`AuditResource`, section 7);
 
 `epochChain()` returns epochs ordered by `firstSeq`, not by `sealedAt`.
 Two epochs sealed within the same millisecond would tie under
-timestamp ordering — silently, since nothing rejects the tie — which
+timestamp ordering, silently, since nothing rejects the tie, which
 would corrupt both chain construction (`EpochSealer` reads the prior
 epoch to compute the next `prevEpochHash`) and verification (`verifyChain`
 would then reject an untampered chain). `firstSeq` is monotonic and
@@ -273,18 +273,18 @@ matters for.
 Read from EDC 0.18.0's compiled classes directly (`javap` against
 `contract-spi` and `transfer-spi`), not assumed:
 
-`Event`, the common base class, carries no timestamp accessor — `timestamp`
+`Event`, the common base class, carries no timestamp accessor, `timestamp`
 is therefore stamped by the listener itself, `Instant.now()` at the moment
 the event is received, not read off the event.
 
 `ContractNegotiationFinalized` and `ContractNegotiationTerminated` both
 extend `ContractNegotiationEvent`, which declares `getCounterPartyId()`
-directly — that is `actor` for both. `Finalized` additionally exposes
+directly, that is `actor` for both. `Finalized` additionally exposes
 `getContractAgreement()`, guaranteed present, whose `getAssetId()` and
 `getPolicy()` give `datasetRef` and the policy to read `statedPurpose`
 from. `Terminated` has no agreement (negotiation never completed), so it
 reads the same two values off `getLastContractOffer()` instead, which
-`ContractNegotiationEvent` also declares directly — this accessor exists
+`ContractNegotiationEvent` also declares directly, this accessor exists
 on the base class specifically so a Terminated event still has something
 to read. `statedPurpose` in both cases is the value of the scalar
 `benefits:purpose` constraint on that policy's permission (phase 2, ruling
@@ -293,20 +293,20 @@ never a set).
 
 `TransferProcessCompleted` and `TransferProcessTerminated` extend
 `TransferProcessEvent`, which declares `getAssetId()` (`datasetRef`) but
-carries no counter-party or policy accessor at all — only
+carries no counter-party or policy accessor at all, only
 `getContractId()`, the agreement id.
 
 **Correlation key: agreement id, not asset id.** An earlier version of this
 design correlated a transfer's `actor`/`statedPurpose` by looking up the
 most recent `AuditEntry` sharing the same `datasetRef`. Task 6's reviewer
 found this ambiguous and wrong whenever the same asset is negotiated more
-than once — a second negotiation for the same asset (a different
+than once, a second negotiation for the same asset (a different
 participant, or a re-negotiation) shifts "most recent entry for this
 asset" onto the wrong negotiation, misattributing a transfer's actor and
 purpose. `getContractId()`'s value is the agreement id EDC assigns exactly
 once per finalized negotiation, with no such ambiguity, and
 `ContractNegotiationFinalized.getContractAgreement().getId()` is that same
-value on the negotiation side — so the listener keys an in-memory cache
+value on the negotiation side, so the listener keys an in-memory cache
 (`Map<String, NegotiationInfo>`, populated in `onFinalized`, read in both
 transfer handlers) by agreement id instead of querying the persisted store
 by asset id. `AuditStore.entriesForAsset` (added to support the rejected
@@ -318,7 +318,7 @@ completes after a restart occurring between its negotiation finalizing and
 the transfer itself will find no cached entry and fall back to
 `actor = event.getParticipantContextId()`,
 `statedPurpose = "unknown (no cached negotiation info for contract <id>)"`
-— exactly the honest, disclosed fallback the earlier design already used
+- exactly the honest, disclosed fallback the earlier design already used
 for its own no-match case, not a new failure mode. The alternative (a
 persisted, restart-durable correlation store keyed by agreement id) is
 strictly more robust but adds a second CouchDB-backed structure to a phase
@@ -353,7 +353,7 @@ Returning only entries whose `actor` equals the requested `participantRef`
 keeps the boundary the parent spec's section 4.7 describes: a participant
 can verify their own entries and the full root chain without seeing any
 other participant's entries. Authentication for this endpoint is out of
-scope for phase 4 (no device identity infrastructure exists yet — the
+scope for phase 4 (no device identity infrastructure exists yet, the
 parent spec section 3 already defers real DIDs/verifiable credentials as a
 stated limitation); the endpoint accepts a `participantRef` path parameter
 directly, the same trust level phase 3's aggregate transfer already
@@ -364,12 +364,12 @@ operates at.
 New package `packages/audit-verify` (TypeScript), mirroring `consent-core`'s
 existing structure. Exports:
 
-- `leafHash(entry): string` and `canonicalBytes(entry): string` — the exact
+- `leafHash(entry): string` and `canonicalBytes(entry): string`, the exact
   escaping rule from 3.2, proven identical to the Java implementation by a
   shared conformance vector file under `conformance/`, following the
   existing TS-to-Java contract pattern.
 - `verifyInclusion(leafHash, index, proof, root): boolean`
-- `verifyChain(epochs: Epoch[]): boolean` — recomputes each
+- `verifyChain(epochs: Epoch[]): boolean`, recomputes each
   `prevEpochHash` from its predecessor and confirms the stored value
   matches, across the whole returned chain.
 
@@ -435,5 +435,5 @@ section 3, mock IAM throughout). External witnessing of epoch roots
 (parent spec section 4.7's stated limitation: sealing remains a trusted
 operation without it). The steward portal and participant web/mobile UI
 that will eventually call this endpoint (phase 6). E3's actual experiment
-run and figure generation (phase 7) — this phase produces the mechanism
+run and figure generation (phase 7), this phase produces the mechanism
 E3 measures, not the measurement itself.

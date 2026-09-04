@@ -3,8 +3,8 @@
 Date: 2026-09-01
 Status: pending review
 Amends: docs/superpowers/specs/2026-09-01-benefits-interfaces-design.md §2 ("Ruling: no
-unified API gateway" -- unchanged, restated below for clarity) and §3 ("Ruling: single
-shared CouchDB database, not one database per participant" -- superseded; "Read-side" --
+unified API gateway", unchanged, restated below for clarity) and §3 ("Ruling: single
+shared CouchDB database, not one database per participant", superseded; "Read-side" --
 corrected)
 Parent spec: docs/superpowers/specs/2026-08-30-benefits-reference-implementation-design.md
 Builds on: phase 6 (branch phase-6-interfaces, all 15 plan tasks plus a backend fix wave,
@@ -20,11 +20,11 @@ that even fixing that bootstrap gap would violate the interfaces spec's own §3 
 The review traced this to something more fundamental than a missed bootstrap step.
 `packages/consent-web-client` (§7 of the interfaces spec) and `apps/participant-mobile`
 both write directly to the shared `benefits` database using each participant's own
-provisioned CouchDB Basic-Auth credentials -- PouchDB replication for the web client, plain
+provisioned CouchDB Basic-Auth credentials, PouchDB replication for the web client, plain
 HTTP `PUT` for mobile. CouchDB has no write-only permission: any credential capable of
 writing to a database is, structurally, also capable of reading the entire database via
 `_all_docs`, `_changes`, or any view. So the moment a participant can push their own
-consent grants to the shared database -- which every phase 6 client does -- they can also
+consent grants to the shared database, which every phase 6 client does, they can also
 read every other participant's records, regardless of what the client application's own
 code chooses to expose. `resolveConflicts()` in `packages/consent-web-client/src/sync.ts`
 does exactly this today (`remote.allDocs({include_docs: true})` against the shared
@@ -47,7 +47,7 @@ to read from. They don't have to. CouchDB's `_replicator` database lets an admin
 configure a one-way, continuous replication job per participant database, target the
 existing shared `benefits` database, and let CouchDB's own replication engine do the
 fan-in. `CouchDbAuditStore` and `CouchDbContributionSource` keep scanning exactly one
-database, unchanged, at the source level -- they were never touched by phase 6 and this
+database, unchanged, at the source level, they were never touched by phase 6 and this
 spec doesn't touch them either. The thing that changes is upstream of them: where a
 participant's write *first* lands, not where the pipeline reads from.
 
@@ -59,14 +59,14 @@ server-to-server mechanism, not a gateway relaying live requests.
 
 Each provisioned participant gets a private CouchDB database, `participant-<ref>`
 (matching the naming convention `packages/consent-web-client` already uses for the
-participant's *local* PouchDB, `participant-${participantRef}` -- same name, now also the
+participant's *local* PouchDB, `participant-${participantRef}`, same name, now also the
 name of their remote database).
 
 `_security` on `participant-<ref>`:
 ```json
 {"members": {"names": ["<ref>"]}, "admins": {"roles": ["_admin"]}}
 ```
-Exactly one non-admin user -- that participant -- can read or write it. No one else
+Exactly one non-admin user, that participant, can read or write it. No one else
 (including other participants) can.
 
 A continuous, one-way `_replicator` job, created under admin credentials at provisioning
@@ -92,7 +92,7 @@ All three steps (user, database, replication job) happen under the same provisio
 if any step fails partway, the endpoint reports which step failed rather than claiming
 success (matching the honest-error-handling pattern the phase 6 fix wave already
 established for re-provisioning). The exact retry/rollback behavior for a partial failure
-is left to the plan -- this is provisioning-time, low-frequency, administered by a steward,
+is left to the plan, this is provisioning-time, low-frequency, administered by a steward,
 not a high-throughput path needing sophisticated recovery.
 
 ## 5. Identity enforcement
@@ -110,7 +110,7 @@ replicate that false identity into the shared aggregate. The database-level ACL 
 second one survives replication.
 
 **Shared source of truth for the validation function.** The `validate_doc_update` function
-body is plain JavaScript executed by CouchDB's own query server -- it is not Node code, only
+body is plain JavaScript executed by CouchDB's own query server, it is not Node code, only
 currently *constructed* by `build-design-doc.ts` (TypeScript). Provisioning is Java. Rather
 than reimplementing the same function body in Java and letting the two drift, the function
 body is extracted to one static resource (e.g. a `.js` file checked into the repo) that
@@ -118,11 +118,11 @@ both `build-design-doc.ts` and `CouchDbUserProvisioner` read and embed verbatim.
 file location and how each language loads it (a resource file for Java, an import/read for
 TypeScript) is left to the plan.
 
-**Defense in depth on the shared database -- measured, not assumed.** `benefits`'s own
+**Defense in depth on the shared database, measured, not assumed.** `benefits`'s own
 existing copy of this design doc (installed by phase 6 Task 1, unchanged) stays in place.
 The implementation plan's final review measured, live, exactly what this section asked to
 have measured: CouchDB's replication write path (`_bulk_docs` with `new_edits: false`) does
-invoke the *target* database's `validate_doc_update` -- a reject-everything function
+invoke the *target* database's `validate_doc_update`, a reject-everything function
 installed on the target genuinely blocked a replicated write. But `CouchDbReplicationProvisioner`
 authenticates the replication job as a CouchDB admin on both source and target (§3, §4), and
 the validation function's own `_admin`-role exemption (added for seed/admin writes, above)
@@ -130,7 +130,7 @@ short-circuits before the identity check ever runs. An admin-authenticated write
 forged `participantRef` was confirmed to replicate into `benefits` unchallenged.
 
 So the mechanism fires, but provides no protection: the secondary boundary is not a real
-backstop, and the entire identity guarantee rests on the primary boundary alone -- the
+backstop, and the entire identity guarantee rests on the primary boundary alone, the
 per-participant database's own copy of the same check, which does hold (§3's `_security`
 plus this section's write-side check together mean a participant can never get a forged
 `participantRef` document out of their own database in the first place, so nothing forged
@@ -152,14 +152,14 @@ violation the final review found as a side effect of the redesign, not a separat
 
 ## 7. What does not change
 
-- `AuditResource`, `StewardResource`, `ReleaseRequestResource` -- already use the
+- `AuditResource`, `StewardResource`, `ReleaseRequestResource`, already use the
   session-authenticated, server-side-filtered pattern this spec extends to participant
   sync; none of them ever touched participant CouchDB credentials directly.
 - `CouchDbAuditStore`, `CouchDbContributionSource`, the privacy pipeline, budget accounting
-  -- all keep reading the single `benefits` database, untouched.
-- CORS configuration (`tools/lib.sh`'s `configure_couchdb`, `provider.properties`) -- governs
+ , all keep reading the single `benefits` database, untouched.
+- CORS configuration (`tools/lib.sh`'s `configure_couchdb`, `provider.properties`), governs
   which origins may talk to CouchDB at all, independent of which database.
-- `tools/lib.sh`'s `ensure_couchdb` -- creates `benefits` and `_users` once, generically, at
+- `tools/lib.sh`'s `ensure_couchdb`, creates `benefits` and `_users` once, generically, at
   bootstrap; per-participant databases are created per-participant, at provisioning time,
   not part of generic bootstrap.
 
@@ -175,7 +175,7 @@ New coverage the plan must include:
   it appears with the same content.
 - The forged-identity replication test from §5.
 - Re-run (not just re-read) the participant-web and participant-mobile live click-throughs
-  the phase 6 fix wave already performed once C1 was fixed -- this time confirming "Sync
+  the phase 6 fix wave already performed once C1 was fixed, this time confirming "Sync
   now" actually succeeds end to end, since the C2 gap this spec fixes was the reason it
   didn't the first time.
 
@@ -194,9 +194,9 @@ with the backend-read topology this ruling was protecting (`CouchDbAuditStore`/
 replication rather than avoided by rejecting per-participant databases outright.
 
 **Interfaces spec §3, "Read-side"** stands as originally written for `AuditResource` (§4)
-and `StewardResource` (§5.4) -- both already implement it correctly. For participant sync
+and `StewardResource` (§5.4), both already implement it correctly. For participant sync
 specifically, the mechanism is now: participants are never handed credentials to the shared
-database at all (stronger than "a connector resource filters server-side" -- there is no
+database at all (stronger than "a connector resource filters server-side", there is no
 resource in this path, only a private database only they can reach), with the shared
 database populated via admin-configured replication instead.
 
@@ -218,13 +218,13 @@ deployment) is a known, deliberate step rather than a surprise.
 
 **Replication job health is not monitored.** `CouchDbReplicationProvisioner`'s job document
 embeds the CouchDB admin credential at provisioning time. Rotating that credential silently
-breaks every existing participant's replication job at once -- their local writes keep
+breaks every existing participant's replication job at once, their local writes keep
 succeeding (their own database still works), but nothing reaches the shared aggregate, and
 no surface (the participant app, the steward portal, the connector's own logs) reports it.
 The implementation plan's final review confirmed this is not theoretical: crashed jobs with
 this exact failure mode already exist on this project's own development CouchDB instance.
 A real fix needs a steward-visible replication-health view, deliberately out of scope for
-this spec -- recorded here as known future work, not silently accepted.
+this spec, recorded here as known future work, not silently accepted.
 
 **Existing replication jobs don't pick up later changes to the job body.** `ensureReplication`
 is create-only: a repeat call for an already-provisioned participant is a 409-tolerated
@@ -234,7 +234,7 @@ already existed without it; those pre-existing jobs keep replicating unfiltered 
 unless something explicitly deletes and recreates them (the two jobs this project's own
 development instance had accumulated during this plan's live verification were deleted by
 hand once this was found). The same applies to any future change to the job body. A real fix
-needs `ensureReplication` to diff and update rather than only create -- deliberately out of
+needs `ensureReplication` to diff and update rather than only create, deliberately out of
 scope here for the same reason as the health-monitoring gap above: this is provisioning-time,
 low-frequency infrastructure, not a place to add update/migration machinery speculatively
 before a second real need for it appears.

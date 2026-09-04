@@ -1,0 +1,36 @@
+% fig-privacy-pipeline.tex
+% Privacy pipeline: k-anonymity grouping, suppression, Laplace noise,
+% atomic epsilon budget.
+\documentclass[border=10pt]{standalone}
+\input{figstyle}
+
+\begin{document}
+\begin{tikzpicture}[every node/.style={font=\sffamily, text=ink}]
+
+pipeline
+\node[data, text width=2.0cm] (rec)
+  {{\smallicon[white]{doc}}\\[1mm] Contribution records\\ \sub{consented}};
+\node[proc, text width=2.0cm, right=7mm of rec] (grp)
+  {{\smallicon[white]{userpair}}\\[1mm] Group by\\ \sub{quasi-identifiers}};
+\node[diam, text width=1.8cm, aspect=2.2, right=9mm of grp] (kanon)
+  {Group size\\ $\geq k$?};
+\node[proc, text width=2.3cm, right=9mm of kanon] (lap)
+  {{\smallicon[white]{shield}}\\[1mm] Laplace noise\\ \sub{scale $\Delta f / \varepsilon$}};
+\node[proc, text width=2.8cm, right=7mm of lap] (budget)
+  {{\smallicon[white]{lock}}\\[1mm] Budget accountant\\ \sub{atomic $\varepsilon$ decrement}};
+\node[okstyle, text width=2.0cm, right=7mm of budget] (art)
+  {{\smallicon[white]{check}}\\[1mm] Release artifact\\ \sub{anonymised}};
+
+\node[bad, text width=1.8cm, above=5mm of kanon] (supp)
+  {{\smallicon[white]{cross}}\\[1mm] Suppress group\\ \sub{dropped}};
+
+edges
+\draw[arr] (rec) -- (grp);
+\draw[arr] (grp) -- (kanon);
+\draw[arr] (kanon) -- (lap) node[lbl, pos=0.5, above=0.5mm] {yes};
+\draw[arr] (lap) -- (budget);
+\draw[arr] (budget) -- (art);
+\draw[arr] (kanon) -- (supp) node[lbl, pos=0.5, left=0.5mm] {no};
+
+\end{tikzpicture}
+\end{document}

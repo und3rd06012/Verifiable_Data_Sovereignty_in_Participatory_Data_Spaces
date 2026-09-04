@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common/sqlite_api.dart';
 
 class Outbox {
   final Database db;

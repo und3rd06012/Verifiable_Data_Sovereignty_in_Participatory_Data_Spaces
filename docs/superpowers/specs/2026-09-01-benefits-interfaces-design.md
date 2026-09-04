@@ -8,8 +8,8 @@ phase-4-audit-chain, phase-5-device-fleet
 
 ## 1. Purpose
 
-Phase 6 builds the three real interfaces the parent spec names — participant
-web client, steward portal, and the Flutter mobile client — and the backend
+Phase 6 builds the three real interfaces the parent spec names, participant
+web client, steward portal, and the Flutter mobile client, and the backend
 surface they actually require to be real, not demonstration shells. That
 backend surface does not fully exist yet:
 
@@ -17,14 +17,14 @@ backend surface does not fully exist yet:
   a gap phase 3's own spec section 8.1 already recorded.
 - `StewardAuthorizationStore` is in-memory, and its own doc comment states
   it uses replace, not append, semantics, with an explicit warning that a
-  concurrent write path — exactly what a portal with multiple stewards
-  co-signing independently is — must not be built against it until an
+  concurrent write path, exactly what a portal with multiple stewards
+  co-signing independently is, must not be built against it until an
   atomic append operation exists.
 - `AuditResource` has no authentication at all: it trusts the
   `participantRef` path parameter outright.
 - No participant-identity enforcement exists on writes to CouchDB; every
   simulated device in phase 5 wrote under shared credentials.
-- The steward domain model itself has no rubric, veto, or appeal concept —
+- The steward domain model itself has no rubric, veto, or appeal concept -
   `StewardAuthorization` today is only a dataset hash plus a list of
   co-sign signatures.
 
@@ -35,7 +35,7 @@ none of the three clients is real without them.
 
 The parent spec's Tier 1 (participant devices write straight to CouchDB,
 enforced by the S1 `validate_doc_update` gate) and Tier 3 (steward/community
-connector against the EDC Management API) already exist and are proven —
+connector against the EDC Management API) already exist and are proven -
 phase 5 proved Tier 1 end to end with real PouchDB. Phase 6 extends both
 tiers with real clients rather than inserting a new backend gateway in front
 of either.
@@ -43,7 +43,7 @@ of either.
 **Ruling: no unified API gateway in front of CouchDB.** A gateway that
 fronted Tier 1 for participant-web and mobile would mean either
 reimplementing CouchDB's replication protocol server-side or dropping real
-replication for the web client too — both throw away phase 5's proof that a
+replication for the web client too, both throw away phase 5's proof that a
 real sync protocol is what E2 measures against. Participant-web and
 participant-mobile keep writing straight to CouchDB; steward-portal keeps
 talking to the connector. This is an extension of the existing two tiers,
@@ -58,7 +58,7 @@ from writing another participant's document.
 **Provisioning.** Each participant gets their own CouchDB database user,
 created by a steward-facing provisioning action (§5.4) at onboarding. The
 credential handoff UX (QR code, magic link, manual entry) is left to the
-plan — the backend-side provisioning endpoint is fixed regardless of which
+plan, the backend-side provisioning endpoint is fixed regardless of which
 the plan picks.
 
 **Ruling: single shared CouchDB database, not one database per
@@ -82,7 +82,7 @@ rejected unless `userCtx.name` equals the document's own `participantRef`
 the mechanism proven by conformance vectors in Gate 1.
 
 **Read-side.** Participants are never handed raw read credentials against
-the shared database — that would let any provisioned user read everyone's
+the shared database, that would let any provisioned user read everyone's
 records. Every participant-facing read goes through a connector HTTP
 resource that filters server-side by `participantRef`, extending the exact
 pattern `AuditResource` already established (§4), not a new one.
@@ -91,7 +91,7 @@ pattern `AuditResource` already established (§4), not a new one.
 
 Today (`connector/extensions/benefits-audit/.../AuditResource.java`):
 zero authentication. `forParticipant(@PathParam("participantRef") ...)`
-trusts the path parameter outright — its own doc comment says filtering by
+trusts the path parameter outright, its own doc comment says filtering by
 that parameter "is the whole privacy boundary this endpoint provides."
 
 Phase 6 adds a real check: the caller presents the requested participant's
@@ -108,12 +108,12 @@ reasoning as §3's write-side check.
 ### 5.1 Domain model gap
 
 `StewardAuthorization` (`connector/extensions/benefits-policy/.../StewardAuthorization.java`)
-is currently just `(releaseRequestId, datasetHash, signatures, issuedAt)` —
+is currently just `(releaseRequestId, datasetHash, signatures, issuedAt)` -
 no rubric, no veto, no appeal. The phasing table's phase 6 gate names all
 four actions (review, co-sign, veto, appeal) as things the portal must do.
 The exact record shape (extend `StewardAuthorization` vs. a sibling type
 per action) is left to the plan; the spec fixes only that all four actions
-must exist as distinct, queryable states — a veto is not merely "no
+must exist as distinct, queryable states, a veto is not merely "no
 signature," and an appeal must reference the veto it contests.
 
 ### 5.2 Concurrency fix (required before any HTTP path)
@@ -127,8 +127,8 @@ write path is introduced."* A steward portal with multiple stewards
 co-signing the same release request from separate HTTP requests is exactly
 that concurrent write path. Phase 6 adds an atomic append operation (e.g.
 `appendSignature(releaseRequestId, signature)`) with real concurrency
-control, and `StewardResource` calls only that — never the wholesale
-`save()` — once more than one signer can act on the same request.
+control, and `StewardResource` calls only that, never the wholesale
+`save()`, once more than one signer can act on the same request.
 
 ### 5.3 Persistence
 
@@ -145,12 +145,12 @@ Registered directly against EDC's `WebService`, the same way
 `AuditResource` is (a steward portal, like a participant, is not a
 dataspace-protocol consumer for these actions):
 
-- `GET /steward/queue` — pending release requests needing review
-- `POST /steward/{requestId}/review` — rubric score/notes
+- `GET /steward/queue`, pending release requests needing review
+- `POST /steward/{requestId}/review`, rubric score/notes
 - `POST /steward/{requestId}/co-sign`
 - `POST /steward/{requestId}/veto`
 - `POST /steward/{requestId}/appeal`
-- `POST /steward/participants/{participantRef}/provision` — the
+- `POST /steward/participants/{participantRef}/provision`, the
   onboarding action from §3: creates the participant's CouchDB user,
   returns one-time setup credentials
 
@@ -160,18 +160,18 @@ dataspace-protocol consumer for these actions):
 The parent spec's open question 1 (whether EDC 0.18.0's scope-based
 authorization changes steward-portal auth against the Management API,
 "Settled in phase 0") turns out to name a mechanism that does not exist:
-`BenefitsIamExtension`'s `IdentityService` is an explicit mock — its
+`BenefitsIamExtension`'s `IdentityService` is an explicit mock, its
 `verifyJwtToken` JSON-parses a caller-supplied token string and re-wraps
 it as claims with no cryptographic verification, and
 `obtainClientCredentials` reads claims from static config, never from a
 runtime-supplied credential. There is nothing real here to reuse.
 
 This turns out not to matter: `StewardResource`, like `AuditResource`, is
-registered directly against EDC's `WebService` (§5.4) — a plain HTTP
-resource, not a dataspace-protocol/Management-API endpoint — so it was
+registered directly against EDC's `WebService` (§5.4), a plain HTTP
+resource, not a dataspace-protocol/Management-API endpoint, so it was
 never going to go through `IdentityService` in the first place. Stewards
 get the same real mechanism participants get (§3, §4): a CouchDB user
-provisioned at onboarding, validated the same way — a Basic-Auth header
+provisioned at onboarding, validated the same way, a Basic-Auth header
 checked against CouchDB's `/_session` endpoint. `StewardResource`'s
 provisioning action (§5.4's `POST
 /steward/participants/{participantRef}/provision`) gets a steward-side
@@ -181,7 +181,7 @@ sibling, provisioning a steward's own CouchDB user the same way.
 
 `PrivacyPipeline.compute()` (§6) charges epsilon through a
 `BudgetAccountant`; only `InMemoryBudgetAccountant` exists today. A
-privacy budget that resets on every restart is not a budget — it stops
+privacy budget that resets on every restart is not a budget, it stops
 enforcing anything across time, defeating the reason it exists. Phase 6
 adds `CouchDbBudgetAccountant`, mirroring `CouchDbAuditStore`'s pattern
 exactly (§5.3), alongside `CouchDbStewardAuthorizationStore` and
@@ -200,7 +200,7 @@ datasetSpec}`, wired to a real `CouchDbContributionSource` +
 `StewardResource`'s queue (§5.4) surfaces; co-signs, vetoes, and appeals
 all reference this same request id. The existing S2 constraint functions
 (`PurposeFunction`, `RecipientClassFunction`, `FieldSetFunction`,
-`StewardQuorumFunction`) are unchanged — they now evaluate a policy fed by
+`StewardQuorumFunction`) are unchanged, they now evaluate a policy fed by
 a real pipeline run instead of test-tooling-seeded data.
 
 ## 7. packages/consent-web-client (new)
@@ -208,12 +208,12 @@ a real pipeline run instead of test-tooling-seeded data.
 Browser PouchDB (`pouchdb-adapter-idb`, not the memory adapter phase 5's
 `device-sim` uses) wrapping the same write/outbox/revoke/conflict-resolution
 logic phase 5 proved (`device.ts`, `sync.ts`'s identity-based
-`resolveConflicts`), reimplemented for browser persistence — not a
+`resolveConflicts`), reimplemented for browser persistence, not a
 dependency on `device-sim` itself, which stays simulation-only per its own
 package comments. Real PouchDB replication is the right choice for the web
 client specifically, since browser IndexedDB is a genuinely supported
 PouchDB adapter, unlike Dart's ecosystem (the reason the mobile client
-uses a different architecture at all — parent spec's Flutter amendment).
+uses a different architecture at all, parent spec's Flutter amendment).
 Consumed by `apps/participant-web`.
 
 ## 8. apps/participant-web
@@ -221,7 +221,7 @@ Consumed by `apps/participant-web`.
 - Consent cards: grant/revoke via `consent-web-client`, writing under the
   participant's own provisioned CouchDB credentials (§3).
 - Privacy dashboard: current grants, read from the same in-memory
-  `ParticipantClient` instance the consent screen uses — a single client is
+  `ParticipantClient` instance the consent screen uses, a single client is
   constructed once per session and shared across screens, since grant state
   lives only in that object's own array (phase 5's `Device` design, ported
   as-is), never in PouchDB. Only contributed records go through PouchDB.
@@ -231,21 +231,21 @@ Consumed by `apps/participant-web`.
 
 - Local outbox: `sqflite` (or `Hive`) queue, porting phase 5's leak-prevention
   rule (`Device.revoke()`'s outbox sweep, `sentIds` tracking) to Dart. No
-  PouchDB, no bidirectional replication, no conflict resolution — the
+  PouchDB, no bidirectional replication, no conflict resolution, the
   already-recorded decision (parent spec §1.2): mobile costs "bidirectional
   replication and the published 'user preference first' conflict
   resolution," not the S1 enforcement claim itself.
 - Sync: queued records are pushed directly to CouchDB's HTTP API (plain
   per-document `PUT`, no PouchDB library) under the participant's
   provisioned credentials. The same §3 identity check enforces every push
-  regardless of how it got there — enforcement does not depend on
+  regardless of how it got there, enforcement does not depend on
   replication behavior.
 - Audit viewer and privacy dashboard call the same connector resources as
-  participant-web (§4, §8) — shared backend, thin client.
+  participant-web (§4, §8), shared backend, thin client.
 
 ## 10. apps/steward-portal
 
-Review queue, rubric entry, co-sign, veto, appeal — a thin client over
+Review queue, rubric entry, co-sign, veto, appeal, a thin client over
 `StewardResource` (§5.4), authenticated per §5.5.
 
 ## 11. Gates
@@ -260,13 +260,13 @@ plain HTTP to real CouchDB under a provisioned user; (c) one call to
 
 **Gate 1, participant-identity write enforcement.** A write whose
 authenticated CouchDB user does not match the document's `participantRef`
-is rejected by the real `validate_doc_update` — proven through actual
+is rejected by the real `validate_doc_update`, proven through actual
 CouchDB, matching phase 5's precedent of testing the real gate, not a mock.
 
 **Gate 2, steward workflow.** Review, then co-sign from two genuinely
 concurrent HTTP calls (proving the atomic-append fix, §5.2, actually
 replaced the replace-semantics bug rather than just changing its
-signature), then veto, then appeal — all verified by reading back from
+signature), then veto, then appeal, all verified by reading back from
 `CouchDbStewardAuthorizationStore`, not in-memory state.
 
 **Gate 3, release-request creation.** A live `POST /release-requests`
@@ -274,16 +274,16 @@ genuinely invokes `PrivacyPipeline` against real CouchDB contributions and
 persists via `CouchDbReleaseArtifactStore`; the resulting artifact is what
 the unchanged S2 constraint functions evaluate.
 
-**Gate 4, end to end.** Each app's golden path — manual click-through, not
-automated — matching the phasing table's own literal gate text for phase 6.
+**Gate 4, end to end.** Each app's golden path, manual click-through, not
+automated, matching the phasing table's own literal gate text for phase 6.
 
 ## 12. Out of scope
 
 CouchDB database-per-participant topology (ruled against, §3). A custom
-identity provider or JWT issuance — reuses CouchDB's own user auth for
+identity provider or JWT issuance, reuses CouchDB's own user auth for
 both participants and stewards (§3, §5.5); fixing or replacing
 `BenefitsIamExtension`'s mock `IdentityService` (found during plan-stage
-grounding, §5.5) is explicitly out of scope — it is unused by any phase 6
+grounding, §5.5) is explicitly out of scope, it is unused by any phase 6
 HTTP surface, and touching it is a separate concern from building real
 interfaces. Production-grade credential rotation, password reset, MFA.
 The formal E1/E3/E4/G1/G2 experiments (phase 7). The manuscript (phase 8).
@@ -291,5 +291,5 @@ The formal E1/E3/E4/G1/G2 experiments (phase 7). The manuscript (phase 8).
 ## 13. Open questions
 
 1. Exact participant- and steward-onboarding credential-handoff UX (QR
-   code, magic link, manual entry) — left to the plan; the provisioning
+   code, magic link, manual entry), left to the plan; the provisioning
    endpoints (§5.4, §5.5) are fixed regardless of which the plan picks.

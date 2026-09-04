@@ -12,21 +12,21 @@
 
 ## Global Constraints
 
-- No unified API gateway in front of CouchDB — participant-web and participant-mobile write straight to CouchDB; steward-portal talks only to the connector (spec §2).
+- No unified API gateway in front of CouchDB, participant-web and participant-mobile write straight to CouchDB; steward-portal talks only to the connector (spec §2).
 - Single shared CouchDB database, not one database per participant (spec §3).
 - CouchDB user roles are the authorization boundary: participants are provisioned with `"roles": []`, stewards with `"roles": ["steward"]`. `StewardResource` requires the `"steward"` role from `/_session`; `AuditResource` requires only identity match, no role.
-- CouchDB users with the `_admin` role are exempt from the new participant-identity write check — this is required, not optional: every phase 4/5 admin-authenticated test and every existing `tools/*.sh` script authenticates as `admin:benefits` and would otherwise break.
-- The participant-identity write check lives entirely in `packages/consent-couchdb/src/build-design-doc.ts`. It is NOT a `consent-core` change and does NOT touch conformance vectors or `ConsentEvaluator.java` — `userCtx` has no equivalent in the pure `evaluateRecord` conformance surface, which stays tri-consumer (TS/Java/CouchDB) exactly as phase 5 left it.
-- New CouchDB-backed stores (`CouchDbStewardAuthorizationStore`, `CouchDbReleaseRequestStore`, `CouchDbReleaseArtifactStore`, `CouchDbBudgetAccountant`) reuse the existing four settings keys — `benefits.couchdb.url`, `benefits.couchdb.database` (each appending its own suffix, e.g. `-steward`, `-requests`, `-artifacts`, `-budget`), `benefits.couchdb.user`, `benefits.couchdb.password` — matching `CouchDbAuditStore`'s constructor shape exactly: `(String baseUrl, String database, String user, String password, ObjectMapper mapper)`.
-- Every CouchDB Mango selector is built via `ObjectMapper`, never string interpolation (existing `CouchDbAuditStore`/`CouchDbContributionSource` convention — a past defect class).
-- Every CouchDB I/O exception becomes `EdcException`; an `InterruptedException` re-sets the thread's interrupt flag before rethrowing as `EdcException` — no exception to this pattern.
+- CouchDB users with the `_admin` role are exempt from the new participant-identity write check, this is required, not optional: every phase 4/5 admin-authenticated test and every existing `tools/*.sh` script authenticates as `admin:benefits` and would otherwise break.
+- The participant-identity write check lives entirely in `packages/consent-couchdb/src/build-design-doc.ts`. It is NOT a `consent-core` change and does NOT touch conformance vectors or `ConsentEvaluator.java`, `userCtx` has no equivalent in the pure `evaluateRecord` conformance surface, which stays tri-consumer (TS/Java/CouchDB) exactly as phase 5 left it.
+- New CouchDB-backed stores (`CouchDbStewardAuthorizationStore`, `CouchDbReleaseRequestStore`, `CouchDbReleaseArtifactStore`, `CouchDbBudgetAccountant`) reuse the existing four settings keys, `benefits.couchdb.url`, `benefits.couchdb.database` (each appending its own suffix, e.g. `-steward`, `-requests`, `-artifacts`, `-budget`), `benefits.couchdb.user`, `benefits.couchdb.password`, matching `CouchDbAuditStore`'s constructor shape exactly: `(String baseUrl, String database, String user, String password, ObjectMapper mapper)`.
+- Every CouchDB Mango selector is built via `ObjectMapper`, never string interpolation (existing `CouchDbAuditStore`/`CouchDbContributionSource` convention, a past defect class).
+- Every CouchDB I/O exception becomes `EdcException`; an `InterruptedException` re-sets the thread's interrupt flag before rethrowing as `EdcException`, no exception to this pattern.
 - A new Gradle module needs an `include(":connector:extensions:<name>")` line in root `settings.gradle.kts` AND an `implementation(project(":connector:extensions:<name>"))` line in `connector/runtime/build.gradle.kts`, or it never loads at runtime.
-- A new extension registering an HTTP resource needs `api(libs.edc.web.spi)` in its own `build.gradle.kts` (see `benefits-audit/build.gradle.kts`) and must register its own `PortMapping` via `PortMappingRegistry` before `webService.registerResource(...)` — a brand-new context name has no auto-registered port mapping, confirmed by `BenefitsAuditExtension`'s own doc comment.
+- A new extension registering an HTTP resource needs `api(libs.edc.web.spi)` in its own `build.gradle.kts` (see `benefits-audit/build.gradle.kts`) and must register its own `PortMapping` via `PortMappingRegistry` before `webService.registerResource(...)`, a brand-new context name has no auto-registered port mapping, confirmed by `BenefitsAuditExtension`'s own doc comment.
 - Root `package.json`'s `"workspaces"` field is `["packages/*"]` only; it needs `"apps/*"` added for the two new web apps.
-- The root `tsconfig.json`'s ES5 target/lib exists solely because CouchDB's query-server source parser rejects object spread — it applies only to code bundled into the CouchDB design document (`consent-core`'s `evaluate.ts` path). Any browser-targeted package or app (`consent-web-client`, `apps/participant-web`, `apps/steward-portal`) gets its own separate `tsconfig.json`, not an extension of the root one.
-- New TS packages/apps pin `typescript@5.7.2` and `vitest@2.1.8`, matching root's hoisted versions. New npm dependencies are verified against the real npm registry before being added (phase 5 caught a nonexistent `@types/pouchdb-adapter-memory@6.1.7` this way — the real version is `6.1.6`).
+- The root `tsconfig.json`'s ES5 target/lib exists solely because CouchDB's query-server source parser rejects object spread, it applies only to code bundled into the CouchDB design document (`consent-core`'s `evaluate.ts` path). Any browser-targeted package or app (`consent-web-client`, `apps/participant-web`, `apps/steward-portal`) gets its own separate `tsconfig.json`, not an extension of the root one.
+- New TS packages/apps pin `typescript@5.7.2` and `vitest@2.1.8`, matching root's hoisted versions. New npm dependencies are verified against the real npm registry before being added (phase 5 caught a nonexistent `@types/pouchdb-adapter-memory@6.1.7` this way, the real version is `6.1.6`).
 - No emojis and no em-dashes in any code, comments, commit messages, or UI copy this plan produces (standing project convention).
-- `EventSubscriber.on` is a generic method (`<E extends Event> void on(EventEnvelope<E>)`) and cannot be implemented by a lambda — this plan does not touch event subscription, but any new code that does must follow `BenefitsAuditEventListener`'s existing anonymous-class pattern, not a lambda.
+- `EventSubscriber.on` is a generic method (`<E extends Event> void on(EventEnvelope<E>)`) and cannot be implemented by a lambda, this plan does not touch event subscription, but any new code that does must follow `BenefitsAuditEventListener`'s existing anonymous-class pattern, not a lambda.
 
 ---
 
@@ -260,12 +260,12 @@ Modify `packages/consent-couchdb/src/build-design-doc.ts`, replacing the `valida
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `cd packages/consent-couchdb && npx vitest run test/identity.integration.test.ts`
-Expected: all 5 tests PASS (or all skipped if CouchDB is unreachable in this environment — start it per README before re-running: `docker compose -f deploy/docker-compose.yml up -d`).
+Expected: all 5 tests PASS (or all skipped if CouchDB is unreachable in this environment, start it per README before re-running: `docker compose -f deploy/docker-compose.yml up -d`).
 
 - [ ] **Step 6: Run the full existing consent-couchdb suite to confirm no regression**
 
 Run: `cd packages/consent-couchdb && npx vitest run`
-Expected: `design-doc.test.ts` and `couchdb.integration.test.ts` (both admin-authenticated) still PASS unchanged — this is the direct regression check for the `_admin` exemption.
+Expected: `design-doc.test.ts` and `couchdb.integration.test.ts` (both admin-authenticated) still PASS unchanged, this is the direct regression check for the `_admin` exemption.
 
 - [ ] **Step 7: Commit**
 
@@ -289,9 +289,9 @@ git commit -m "feat(consent-couchdb): enforce participant-identity on writes and
 
 **Interfaces:**
 - Consumes: nothing from Task 1 (independent subsystem).
-- Produces: `StewardAuthorization(releaseRequestId, datasetHash, signatures, reviews, vetoes, appeals, issuedAt)` — a 7-arg record. `StewardAuthorizationStore.appendReview/appendSignature/appendVeto/appendAppeal(...)`, each returning the updated `StewardAuthorization`. Task 3 (`CouchDbStewardAuthorizationStore`) implements the same interface. Task 9 (`StewardResource`) calls only these four append methods, never `save()`, once handling live HTTP requests.
+- Produces: `StewardAuthorization(releaseRequestId, datasetHash, signatures, reviews, vetoes, appeals, issuedAt)`, a 7-arg record. `StewardAuthorizationStore.appendReview/appendSignature/appendVeto/appendAppeal(...)`, each returning the updated `StewardAuthorization`. Task 3 (`CouchDbStewardAuthorizationStore`) implements the same interface. Task 9 (`StewardResource`) calls only these four append methods, never `save()`, once handling live HTTP requests.
 
-Spec §5.1 requires review, co-sign, veto, and appeal to be four distinct, queryable states — a steward who scores the rubric without signing must be representable. `StewardSignature` (the co-sign record) stays unchanged so `StewardQuorumFunction`'s existing, already-tested contract (`distinctStewardCount()` over `signatures` only) is untouched.
+Spec §5.1 requires review, co-sign, veto, and appeal to be four distinct, queryable states, a steward who scores the rubric without signing must be representable. `StewardSignature` (the co-sign record) stays unchanged so `StewardQuorumFunction`'s existing, already-tested contract (`distinctStewardCount()` over `signatures` only) is untouched.
 
 `StewardAuthorizationStore.save()`'s own doc comment (unchanged, still true) says replace-semantics require the caller to be the sole writer; this task adds the atomic append operation that comment says is required before any concurrent write path exists. `save()` stays, for the one caller that is genuinely a sole writer: `BenefitsPolicyExtension.seed()` (test/demo seeding, run once at startup, never concurrent).
 
@@ -371,7 +371,7 @@ public record StewardAuthorization(
 - [ ] **Step 3: Update `InMemoryStewardAuthorizationStoreTest` for the new constructor shape, and run it to confirm it fails to compile first**
 
 Run: `./gradlew :connector:extensions:benefits-policy:compileTestJava`
-Expected: FAIL — `StewardAuthorization` no longer has a 4-arg constructor.
+Expected: FAIL, `StewardAuthorization` no longer has a 4-arg constructor.
 
 Update every `new StewardAuthorization(...)` call site in this file to the 7-arg form, passing `List.of()` for the three new lists:
 
@@ -399,7 +399,7 @@ Update every `new StewardAuthorization(...)` call site in this file to the 7-arg
 
 (Only the two call sites above construct a `StewardAuthorization` directly in this file; the other three tests call `authorization(...)`.)
 
-Similarly update `StewardQuorumFunctionTest`'s own authorization-construction helper (it seeds via `store.save(new StewardAuthorization(...))` in its `@BeforeEach`/test bodies) to the 7-arg form with `List.of()` for reviews/vetoes/appeals — read the file first to find the exact call sites, since the excerpt available to this plan only shows the file's first 40 lines.
+Similarly update `StewardQuorumFunctionTest`'s own authorization-construction helper (it seeds via `store.save(new StewardAuthorization(...))` in its `@BeforeEach`/test bodies) to the 7-arg form with `List.of()` for reviews/vetoes/appeals, read the file first to find the exact call sites, since the excerpt available to this plan only shows the file's first 40 lines.
 
 - [ ] **Step 4: Write the new append tests in `InMemoryStewardAuthorizationStoreTest`**
 
@@ -490,7 +490,7 @@ public interface StewardAuthorizationStore {
      * Atomically appends a review, creating a fresh authorization (with the given
      * datasetHash) if none exists yet for this release request id. If an authorization
      * already exists, the given datasetHash is ignored in favour of the one already
-     * stored -- datasetHash is fixed at first creation, not updated on later appends.
+     * stored, datasetHash is fixed at first creation, not updated on later appends.
      */
     StewardAuthorization appendReview(String releaseRequestId, String datasetHash, StewardReview review);
 
@@ -501,7 +501,7 @@ public interface StewardAuthorizationStore {
     /**
      * Appends an appeal contesting an existing veto. Throws EdcException if no
      * authorization exists yet for this release request id, or if no veto by
-     * appeal.vetoStewardId() is recorded against it -- an appeal cannot create the
+     * appeal.vetoStewardId() is recorded against it, an appeal cannot create the
      * veto it contests.
      */
     StewardAuthorization appendAppeal(String releaseRequestId, StewardAppeal appeal);
@@ -590,7 +590,7 @@ public class InMemoryStewardAuthorizationStore implements StewardAuthorizationSt
 }
 ```
 
-`appendAppeal`'s existence check happens outside `compute()` deliberately: the veto-existence validation must reject before any mutation, and `Map.compute()`'s remapping function cannot itself decide to leave the map unchanged by throwing without also being re-entered on retry in some `Map` implementations -- reading first and validating, then computing only the append, keeps the failure path exception-only-no-side-effect. A veto appended concurrently between the check and the `compute()` call is not a race this in-memory store needs to close: appeals are user-initiated, rare, and not on the phase 6 gate's tested concurrency path (only concurrent co-signs, Gate 2, are).
+`appendAppeal`'s existence check happens outside `compute()` deliberately: the veto-existence validation must reject before any mutation, and `Map.compute()`'s remapping function cannot itself decide to leave the map unchanged by throwing without also being re-entered on retry in some `Map` implementations, reading first and validating, then computing only the append, keeps the failure path exception-only-no-side-effect. A veto appended concurrently between the check and the `compute()` call is not a race this in-memory store needs to close: appeals are user-initiated, rare, and not on the phase 6 gate's tested concurrency path (only concurrent co-signs, Gate 2, are).
 
 - [ ] **Step 7: Run to verify all tests pass**
 
@@ -621,7 +621,7 @@ json.dump([{
 
 - [ ] **Step 9: Run the existing shell probe cases to confirm no regression**
 
-Run: `./tools/run-case.sh quorum-met` (requires CouchDB and built jars per README; if unavailable in this environment, note that in the report rather than skip silently -- this script's JSON shape change is a real regression risk for the whole probe suite).
+Run: `./tools/run-case.sh quorum-met` (requires CouchDB and built jars per README; if unavailable in this environment, note that in the report rather than skip silently, this script's JSON shape change is a real regression risk for the whole probe suite).
 Expected: the script completes the same way it did before this task (negotiation succeeds), confirming Jackson deserializes the new 7-field seed JSON into `StewardAuthorization` without error.
 
 - [ ] **Step 10: Commit**
@@ -650,7 +650,7 @@ git commit -m "feat(benefits-policy): steward review/veto/appeal domain model wi
 - Consumes: Task 2's 7-arg `StewardAuthorization`, `StewardReview`, `StewardVeto`, `StewardAppeal`, and the four `append*` methods on `StewardAuthorizationStore`.
 - Produces: `CouchDbStewardAuthorizationStore(String baseUrl, String database, String user, String password, ObjectMapper mapper)`, a `StewardAuthorizationStore` implementation Task 9's `StewardResource` runs against when `benefits.steward.persistence.enabled=true`.
 
-`InMemoryStewardAuthorizationStore`'s `ConcurrentHashMap.compute()` (Task 2) is atomic per key in the JVM, but CouchDB has no such primitive — only optimistic concurrency via `_rev`. `CouchDbAuditStore.put()`'s existing read-then-write pattern (no `_rev` conflict retry) is sufficient there because nothing writes the same audit document concurrently; it is NOT sufficient here, because two stewards co-signing the same release request from separate HTTP requests (Task 9) is precisely the concurrent write path `StewardAuthorizationStore`'s own doc comment (Task 2) says must be handled. This task's append methods use a read-check-`_rev`-PUT-retry-on-409 loop instead.
+`InMemoryStewardAuthorizationStore`'s `ConcurrentHashMap.compute()` (Task 2) is atomic per key in the JVM, but CouchDB has no such primitive, only optimistic concurrency via `_rev`. `CouchDbAuditStore.put()`'s existing read-then-write pattern (no `_rev` conflict retry) is sufficient there because nothing writes the same audit document concurrently; it is NOT sufficient here, because two stewards co-signing the same release request from separate HTTP requests (Task 9) is precisely the concurrent write path `StewardAuthorizationStore`'s own doc comment (Task 2) says must be handled. This task's append methods use a read-check-`_rev`-PUT-retry-on-409 loop instead.
 
 - [ ] **Step 1: Write the failing integration test**
 
@@ -1057,7 +1057,7 @@ Change the `store` field from a `final` field-initializer to one built during `i
 
 The rest of the file (`name()`, `seed(ServiceExtensionContext)`) is unchanged; `seed()` already refers to `store` as a field, not a local, so it needs no edit.
 
-**No `build.gradle.kts` change in this task.** `StewardResource` (Task 9) is registered from `benefits-privacy`'s extension, not this module's -- `benefits-privacy` already depends on `benefits-policy` (`implementation(project(":connector:extensions:benefits-policy"))`, existing), so it can `@Inject StewardAuthorizationStore` across the module boundary via EDC's own service injection, the same way `StewardQuorumFunction` already does within this module. The reverse dependency does not exist (`benefits-policy` cannot see `benefits-privacy`'s classes), and `StewardResource`'s queue needs both `StewardAuthorizationStore` (this module) and `ReleaseRequestStore` (Task 4, `benefits-privacy`) joined together -- it can only live where both are visible, which is `benefits-privacy`. This module (`benefits-policy`) never gains a `WebService`/`web.spi` dependency under this plan.
+**No `build.gradle.kts` change in this task.** `StewardResource` (Task 9) is registered from `benefits-privacy`'s extension, not this module's, `benefits-privacy` already depends on `benefits-policy` (`implementation(project(":connector:extensions:benefits-policy"))`, existing), so it can `@Inject StewardAuthorizationStore` across the module boundary via EDC's own service injection, the same way `StewardQuorumFunction` already does within this module. The reverse dependency does not exist (`benefits-policy` cannot see `benefits-privacy`'s classes), and `StewardResource`'s queue needs both `StewardAuthorizationStore` (this module) and `ReleaseRequestStore` (Task 4, `benefits-privacy`) joined together, it can only live where both are visible, which is `benefits-privacy`. This module (`benefits-policy`) never gains a `WebService`/`web.spi` dependency under this plan.
 
 - [ ] **Step 6: Run the whole module's test suite to confirm no regression**
 
@@ -1087,9 +1087,9 @@ git commit -m "feat(benefits-policy): persist steward authorizations to CouchDB 
 - Consumes: nothing from earlier tasks.
 - Produces: `ReleaseRequest(String releaseRequestId, String purpose, String recipientClass, List<String> fields, String siteId, Instant requestedAt)`. `ReleaseRequestStore.save/findById/all()`. Task 7 (`POST /release-requests`) creates these; Task 9 (`StewardResource`'s queue) reads `all()` and joins each with its `StewardAuthorizationStore` entry to build the review queue.
 
-**IMPORTANT — package note confirmed by grounding research:** `benefits-privacy`'s Gradle module lives at `connector/extensions/benefits-privacy/`, but its Java package is `org.benefits.policy` — the same package `benefits-policy`'s own classes use, just a different module directory. Do not create `org.benefits.privacy` — it does not exist anywhere in this codebase.
+**IMPORTANT, package note confirmed by grounding research:** `benefits-privacy`'s Gradle module lives at `connector/extensions/benefits-privacy/`, but its Java package is `org.benefits.policy`, the same package `benefits-policy`'s own classes use, just a different module directory. Do not create `org.benefits.privacy`, it does not exist anywhere in this codebase.
 
-No entity in this codebase today stores *what was requested* (purpose, recipient class, fields, site) for a steward to review against — `StewardAuthorizationStore` only ever stores decisions (signatures, and now reviews/vetoes/appeals) keyed by a release request id that something else must have minted first. `ReleaseRequestStore` is that something else. `save()` uses plain replace semantics deliberately: a release request is created once (Task 7) and never mutated afterward — unlike steward authorizations, there is no concurrent-writer scenario here, so no atomic append is needed (mirrors `ReleaseArtifactStore`'s own doc comment reasoning, Task 5).
+No entity in this codebase today stores *what was requested* (purpose, recipient class, fields, site) for a steward to review against, `StewardAuthorizationStore` only ever stores decisions (signatures, and now reviews/vetoes/appeals) keyed by a release request id that something else must have minted first. `ReleaseRequestStore` is that something else. `save()` uses plain replace semantics deliberately: a release request is created once (Task 7) and never mutated afterward, unlike steward authorizations, there is no concurrent-writer scenario here, so no atomic append is needed (mirrors `ReleaseArtifactStore`'s own doc comment reasoning, Task 5).
 
 - [ ] **Step 1: Write the failing `InMemoryReleaseRequestStoreTest`**
 
@@ -1168,7 +1168,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * Holds what was asked for, keyed by release request id -- distinct from
+ * Holds what was asked for, keyed by release request id, distinct from
  * StewardAuthorizationStore, which holds what stewards decided about it. A request is
  * created once (the POST /release-requests handler) and never mutated afterward, so
  * save() is a plain replace with no concurrent-writer scenario to guard against,
@@ -1464,7 +1464,7 @@ git commit -m "feat(benefits-privacy): add ReleaseRequest domain and store"
 - Consumes: nothing new from earlier tasks (parallels `ReleaseArtifactStore`, unchanged interface).
 - Produces: `CouchDbReleaseArtifactStore(String baseUrl, String database, String user, String password, ObjectMapper mapper)` implementing `ReleaseArtifactStore`. Task 7's release-request endpoint persists `PrivacyPipeline.compute()`'s output through this when persistence is enabled.
 
-`ReleaseArtifactStore`'s own doc comment (unchanged, quoted in spec §5.3's reasoning): replace semantics is *acceptable* here, unlike the steward store — "replacing an artifact loses data rather than violating a privacy guarantee, because the budget was already charged when the artifact was computed." No retry loop needed; this mirrors `CouchDbAuditStore`'s plain read-then-write `put()`.
+`ReleaseArtifactStore`'s own doc comment (unchanged, quoted in spec §5.3's reasoning): replace semantics is *acceptable* here, unlike the steward store, "replacing an artifact loses data rather than violating a privacy guarantee, because the budget was already charged when the artifact was computed." No retry loop needed; this mirrors `CouchDbAuditStore`'s plain read-then-write `put()`.
 
 - [ ] **Step 1: Write the failing integration test**
 
@@ -1699,7 +1699,7 @@ dependencies {
 - [ ] **Step 7: Run the whole module's test suite to confirm no regression**
 
 Run: `./gradlew :connector:extensions:benefits-privacy:test`
-Expected: PASS, including `BenefitsAggregateDataSourceFactoryTest` (unaffected -- it constructs its own `InMemoryReleaseArtifactStore` directly, not through the extension).
+Expected: PASS, including `BenefitsAggregateDataSourceFactoryTest` (unaffected, it constructs its own `InMemoryReleaseArtifactStore` directly, not through the extension).
 
 - [ ] **Step 8: Commit**
 
@@ -1722,7 +1722,7 @@ git commit -m "feat(benefits-privacy): persist release artifacts to CouchDB"
 - Consumes: nothing new from earlier tasks.
 - Produces: `CouchDbBudgetAccountant(String baseUrl, String database, String user, String password, ObjectMapper mapper, double total)` implementing `BudgetAccountant`. Task 7's release-request endpoint charges epsilon through this when persistence is enabled.
 
-`BudgetAccountant`'s own doc comment (unchanged) is explicit: `reserve` must be atomic because "two callers each reading the same remaining budget and each deciding they can afford it would overspend... a privacy guarantee violated." `InMemoryBudgetAccountant` gets this via `AtomicReference.compareAndSet` in a spin loop. CouchDB has no in-process compare-and-set; the equivalent is optimistic concurrency via `_rev` -- read the current remaining balance and its `_rev`, decide, `PUT` with that `_rev`, and on a `409` (someone else's reservation landed first) retry the whole read-decide-write cycle rather than blindly retrying the write. This is the same reasoning as Task 3's `appendWithRetry`, but here the budget check itself, not just the append, must happen inside the loop on each retry -- checking staleness once before the loop would let a concurrent reservation slip through between the check and a later attempt's write.
+`BudgetAccountant`'s own doc comment (unchanged) is explicit: `reserve` must be atomic because "two callers each reading the same remaining budget and each deciding they can afford it would overspend... a privacy guarantee violated." `InMemoryBudgetAccountant` gets this via `AtomicReference.compareAndSet` in a spin loop. CouchDB has no in-process compare-and-set; the equivalent is optimistic concurrency via `_rev`, read the current remaining balance and its `_rev`, decide, `PUT` with that `_rev`, and on a `409` (someone else's reservation landed first) retry the whole read-decide-write cycle rather than blindly retrying the write. This is the same reasoning as Task 3's `appendWithRetry`, but here the budget check itself, not just the append, must happen inside the loop on each retry, checking staleness once before the loop would let a concurrent reservation slip through between the check and a later attempt's write.
 
 - [ ] **Step 1: Write the failing integration test**
 
@@ -1838,7 +1838,7 @@ import java.util.Base64;
  * reserve() uses a read-check-PUT-with-_rev-retry-on-409 loop: the budget check must
  * happen fresh on every retry attempt, not once before the loop, or a concurrent
  * reservation that lands between this call's check and a later attempt's write would
- * let both succeed and overspend -- exactly the violation BudgetAccountant's own doc
+ * let both succeed and overspend, exactly the violation BudgetAccountant's own doc
  * comment says reserve must never allow.
  */
 public class CouchDbBudgetAccountant implements BudgetAccountant {
@@ -1957,11 +1957,11 @@ public class CouchDbBudgetAccountant implements BudgetAccountant {
 - [ ] **Step 4: Run to verify it passes**
 
 Run: `./gradlew :connector:extensions:benefits-privacy:test --tests CouchDbBudgetAccountantIntegrationTest`
-Expected: PASS, including the concurrency test (requires live CouchDB; a genuinely non-atomic implementation would fail `concurrentReservesNeverOverspend` intermittently, not deterministically -- if this test is flaky, that is a real bug, not a test to loosen).
+Expected: PASS, including the concurrency test (requires live CouchDB; a genuinely non-atomic implementation would fail `concurrentReservesNeverOverspend` intermittently, not deterministically, if this test is flaky, that is a real bug, not a test to loosen).
 
 - [ ] **Step 5: `BenefitsPrivacyExtension` gains a settings-driven `BudgetAccountant`**
 
-This extension does not construct a `BudgetAccountant` today at all -- `KAnonymityFunction`/`EpsilonBudgetFunction` (unaffected by this plan) read committed artifacts, not the accountant, and nothing in the current codebase builds one outside test code. Task 7's release-request endpoint is the first real caller. Add a package-visible builder method now, used by Task 7:
+This extension does not construct a `BudgetAccountant` today at all, `KAnonymityFunction`/`EpsilonBudgetFunction` (unaffected by this plan) read committed artifacts, not the accountant, and nothing in the current codebase builds one outside test code. Task 7's release-request endpoint is the first real caller. Add a package-visible builder method now, used by Task 7:
 
 ```java
     BudgetAccountant buildBudgetAccountant(ServiceExtensionContext context) {
@@ -1977,7 +1977,7 @@ This extension does not construct a `BudgetAccountant` today at all -- `KAnonymi
     }
 ```
 
-Add this method to the same class body as `buildArtifactStore` (Task 5). It reuses the same `benefits.privacy.persistence.enabled` flag Task 5 introduced -- one flag governs both new persisted stores in this extension, since they are enabled or disabled together for a given deployment.
+Add this method to the same class body as `buildArtifactStore` (Task 5). It reuses the same `benefits.privacy.persistence.enabled` flag Task 5 introduced, one flag governs both new persisted stores in this extension, since they are enabled or disabled together for a given deployment.
 
 - [ ] **Step 6: Run the whole module's test suite to confirm no regression**
 
@@ -1993,7 +1993,7 @@ git add connector/extensions/benefits-privacy/src/main/java/org/benefits/policy/
 git commit -m "feat(benefits-privacy): persist the differential privacy budget to CouchDB"
 ```
 
-### Task 7: POST /release-requests — real pipeline invocation
+### Task 7: POST /release-requests, real pipeline invocation
 
 **Files:**
 - Create: `connector/extensions/benefits-privacy/src/main/java/org/benefits/policy/ReleaseRequestResource.java`
@@ -2005,11 +2005,11 @@ git commit -m "feat(benefits-privacy): persist the differential privacy budget t
 - Consumes: Task 4's `ReleaseRequest`/`ReleaseRequestStore`, Task 5's `CouchDbReleaseArtifactStore`/`ReleaseArtifactStore` (already wired as the `artifactStore` field), Task 6's `buildBudgetAccountant(context)`, and unmodified existing classes `PrivacyPipeline`, `QuerySpec`, `CouchDbContributionSource`, `LaplaceNoiseSource`.
 - Produces: a live `POST /release-requests` HTTP endpoint. Task 9's `StewardResource` (same module) reads `ReleaseRequestStore.all()` to build its review queue, joining each `ReleaseRequest` with the matching `StewardAuthorizationStore` entry.
 
-Closes phase 3's own stated gap (spec §6): today only `tools/run-case.sh` invokes `PrivacyPipeline` against contributions, through test-tooling JSON seeding, never a live request. `BenefitsAggregateDataSourceFactory`'s own doc comment confirms the intended architecture: "the artifact is produced once when the release request is created and stored" -- computation belongs at request-creation time, not at transfer time, which is exactly what this resource does.
+Closes phase 3's own stated gap (spec §6): today only `tools/run-case.sh` invokes `PrivacyPipeline` against contributions, through test-tooling JSON seeding, never a live request. `BenefitsAggregateDataSourceFactory`'s own doc comment confirms the intended architecture: "the artifact is produced once when the release request is created and stored", computation belongs at request-creation time, not at transfer time, which is exactly what this resource does.
 
 - [ ] **Step 1: Write the failing resource test**
 
-This is a JAX-RS resource test constructed directly (no live CouchDB needed for this particular test -- it uses an in-memory `ContributionSource`/`BudgetAccountant`/stores to test the resource's own request handling logic in isolation; Task 8's `StewardResource` tests take the same approach, and the CouchDB-backed classes underneath are already separately proven by Tasks 3, 4, 5, 6's own integration tests):
+This is a JAX-RS resource test constructed directly (no live CouchDB needed for this particular test, it uses an in-memory `ContributionSource`/`BudgetAccountant`/stores to test the resource's own request handling logic in isolation; Task 8's `StewardResource` tests take the same approach, and the CouchDB-backed classes underneath are already separately proven by Tasks 3, 4, 5, 6's own integration tests):
 
 ```java
 package org.benefits.policy;
@@ -2086,7 +2086,7 @@ class ReleaseRequestResourceTest {
 }
 ```
 
-`InMemoryContributionSource` is an existing class (per `benefits-privacy`'s existing test suite, `InMemoryContributionSourceTest.java`) -- confirm its exact constructor/`add` method by reading it before writing this step for real; if it does not expose an `add(Contribution)` method, use whatever it does expose to seed it (its shape is not covered by this plan's grounding research, which focused on `CouchDbContributionSource` since that is what the live endpoint uses).
+`InMemoryContributionSource` is an existing class (per `benefits-privacy`'s existing test suite, `InMemoryContributionSourceTest.java`), confirm its exact constructor/`add` method by reading it before writing this step for real; if it does not expose an `add(Contribution)` method, use whatever it does expose to seed it (its shape is not covered by this plan's grounding research, which focused on `CouchDbContributionSource` since that is what the live endpoint uses).
 
 - [ ] **Step 2: Run to verify it fails to compile**
 
@@ -2227,7 +2227,7 @@ Add `import org.eclipse.edc.web.spi.WebService;`, `import org.eclipse.edc.web.sp
 
 - [ ] **Step 5b: Register the new port with `tools/lib.sh`'s cleanup list**
 
-`tools/lib.sh` line 9 hardcodes every port `stop_all` (used by every `tools/*.sh` probe script's `trap ... EXIT`) knows to free: `PORTS="19191 19192 19193 19194 19195 19196 19197 19291 29191 29192 29193 29194 29195 29196 29291"`. Port `19198` (the default `web.http.releaseRequests.port` above) is new and confirmed free against this exact list -- add it:
+`tools/lib.sh` line 9 hardcodes every port `stop_all` (used by every `tools/*.sh` probe script's `trap ... EXIT`) knows to free: `PORTS="19191 19192 19193 19194 19195 19196 19197 19291 29191 29192 29193 29194 29195 29196 29291"`. Port `19198` (the default `web.http.releaseRequests.port` above) is new and confirmed free against this exact list, add it:
 
 ```bash
 PORTS="19191 19192 19193 19194 19195 19196 19197 19198 19291 29191 29192 29193 29194 29195 29196 29291"
@@ -2264,7 +2264,7 @@ git commit -m "feat(benefits-privacy): wire POST /release-requests to real pipel
 - Consumes: nothing from earlier tasks (independent of Tasks 1-7).
 - Produces: `AuditResource(AuditStore store, SessionAuthenticator authenticator)`, `forParticipant(String participantRef, String authorizationHeader)` now returns `jakarta.ws.rs.core.Response` (200 with the existing `AuditResponse` body, or 403), not a bare `AuditResponse`. Task 12 (`apps/participant-web`) and Task 14 (Flutter audit viewer) both call this endpoint and must send the participant's own CouchDB Basic-Auth header.
 
-Today `AuditResource` trusts the `participantRef` path parameter outright -- its own doc comment says filtering by it "is the whole privacy boundary this endpoint provides." This closes that: the caller presents a Basic-Auth header, this resource asks CouchDB's own `/_session` endpoint who that is, and rejects unless the authenticated name matches the requested `participantRef`. `SessionAuthenticator` is an interface specifically so `AuditResourceTest` can inject a stub rather than requiring live CouchDB for resource-logic tests; `CouchDbSessionAuthenticator` is the real implementation, proven separately against live CouchDB.
+Today `AuditResource` trusts the `participantRef` path parameter outright, its own doc comment says filtering by it "is the whole privacy boundary this endpoint provides." This closes that: the caller presents a Basic-Auth header, this resource asks CouchDB's own `/_session` endpoint who that is, and rejects unless the authenticated name matches the requested `participantRef`. `SessionAuthenticator` is an interface specifically so `AuditResourceTest` can inject a stub rather than requiring live CouchDB for resource-logic tests; `CouchDbSessionAuthenticator` is the real implementation, proven separately against live CouchDB.
 
 - [ ] **Step 1: Write `SessionAuthenticator`**
 
@@ -2571,7 +2571,7 @@ Change the one line that constructs `AuditResource`:
         monitor.info("BENEFITS audit chain registered, epochSize=" + epochSize);
 ```
 
-Add `import com.fasterxml.jackson.databind.ObjectMapper;` to this file's imports (it is not already imported at the top level -- `buildStore` currently constructs one inline as `new ObjectMapper()` with the fully qualified... check: the existing file's `buildStore` method already uses `new ObjectMapper()` unqualified per the grounding research excerpt, meaning the import already exists. Confirm by reading the file's current import list before editing; add the import only if it is missing).
+Add `import com.fasterxml.jackson.databind.ObjectMapper;` to this file's imports (it is not already imported at the top level, `buildStore` currently constructs one inline as `new ObjectMapper()` with the fully qualified... check: the existing file's `buildStore` method already uses `new ObjectMapper()` unqualified per the grounding research excerpt, meaning the import already exists. Confirm by reading the file's current import list before editing; add the import only if it is missing).
 
 - [ ] **Step 11: Run the whole module's test suite to confirm no regression**
 
@@ -2604,12 +2604,12 @@ git commit -m "feat(benefits-audit): require the caller's own CouchDB identity o
 - Modify: `tools/lib.sh`
 
 **Interfaces:**
-- Consumes: Task 2/3's `StewardAuthorizationStore` and its four `append*` methods (injected via EDC's cross-extension `@Provider`/`@Inject`, not a Gradle dependency -- `benefits-privacy` already compiles against `benefits-policy`'s types via `implementation(project(":connector:extensions:benefits-policy"))`); Task 4's `ReleaseRequest`/`ReleaseRequestStore`.
+- Consumes: Task 2/3's `StewardAuthorizationStore` and its four `append*` methods (injected via EDC's cross-extension `@Provider`/`@Inject`, not a Gradle dependency, `benefits-privacy` already compiles against `benefits-policy`'s types via `implementation(project(":connector:extensions:benefits-policy"))`); Task 4's `ReleaseRequest`/`ReleaseRequestStore`.
 - Produces: a live `StewardResource` at `GET /steward/queue`, `POST /steward/{requestId}/review`, `POST /steward/{requestId}/co-sign`, `POST /steward/{requestId}/veto`, `POST /steward/{requestId}/appeal`, `POST /steward/participants/{participantRef}/provision`. Task 15 (`apps/steward-portal`) is the client for all six.
 
 **Ruling: this resource lives in `benefits-privacy`, not `benefits-policy`.** `StewardResource`'s queue joins `ReleaseRequestStore` (only visible in `benefits-privacy`, where it was created, Task 4) with `StewardAuthorizationStore` (`benefits-policy`). `benefits-privacy` depends on `benefits-policy`; the reverse dependency does not exist and this plan does not add it. Only `benefits-privacy` can see both types, so this resource can only live there.
 
-**Ruling: a separate `StewardAuthenticator`, not a reuse of Task 8's `SessionAuthenticator`.** `SessionAuthenticator` lives in `benefits-audit`'s package (`org.benefits.audit`); `benefits-privacy` has no dependency on `benefits-audit` (confirmed: `benefits-audit` depends on `benefits-policy`, not the other way, and `benefits-privacy` depends only on `benefits-policy`). Sharing the interface across modules would need a new dependency edge for one interface -- not worth it. `StewardAuthenticator` here does the same `/_session` HTTP call as Task 8's authenticator, plus one more check Task 8's never needed: the authenticated user's `roles` must include `"steward"` (spec §5.5's Global Constraint). A provisioned participant's valid CouchDB credentials must NOT pass this check.
+**Ruling: a separate `StewardAuthenticator`, not a reuse of Task 8's `SessionAuthenticator`.** `SessionAuthenticator` lives in `benefits-audit`'s package (`org.benefits.audit`); `benefits-privacy` has no dependency on `benefits-audit` (confirmed: `benefits-audit` depends on `benefits-policy`, not the other way, and `benefits-privacy` depends only on `benefits-policy`). Sharing the interface across modules would need a new dependency edge for one interface, not worth it. `StewardAuthenticator` here does the same `/_session` HTTP call as Task 8's authenticator, plus one more check Task 8's never needed: the authenticated user's `roles` must include `"steward"` (spec §5.5's Global Constraint). A provisioned participant's valid CouchDB credentials must NOT pass this check.
 
 **Ruling: `datasetHash` is caller-supplied on every review/co-sign/veto request body, not computed here.** No code anywhere in this codebase computes a dataset hash (`run-case.sh`'s seed data always hardcodes one, e.g. `"hash-" + case`); inventing a hashing scheme is out of this plan's scope. `StewardAuthorizationStore.append*`'s own contract (Task 2) already tolerates this: the passed `datasetHash` is used only if no authorization exists yet for the release request id, and ignored (the original is kept) on every later append.
 
@@ -2622,7 +2622,7 @@ package org.benefits.policy;
 /**
  * Resolves a caller-supplied Authorization header to the authenticated steward's
  * username, or null if the header is missing, CouchDB rejects it, or the
- * authenticated user's roles do not include "steward" -- a provisioned
+ * authenticated user's roles do not include "steward", a provisioned
  * participant's own valid credentials must not pass this check.
  */
 public interface StewardAuthenticator {
@@ -2649,7 +2649,7 @@ import java.util.List;
 /**
  * Creates a CouchDB user via the standard /_users/org.couchdb.user:<name> PUT
  * convention, authenticated as a CouchDB admin. 201 (created) and 409 (already
- * exists, e.g. re-provisioning) are both treated as success -- provisioning is
+ * exists, e.g. re-provisioning) are both treated as success, provisioning is
  * idempotent by design, matching the reasoning in Task 1's ensureCouchDbUser test
  * helper.
  */
@@ -2990,11 +2990,11 @@ public class StewardResource {
 - [ ] **Step 5: Run to verify it passes**
 
 Run: `./gradlew :connector:extensions:benefits-privacy:test --tests StewardResourceTest`
-Expected: PASS (the `provisionParticipant` path is untested here since these tests pass `null` for `provisioner` deliberately -- none of these five tests calls it).
+Expected: PASS (the `provisionParticipant` path is untested here since these tests pass `null` for `provisioner` deliberately, none of these five tests calls it).
 
 - [ ] **Step 5b: Write the failing `CouchDbStewardAuthenticatorIntegrationTest`**
 
-Every test above uses a stub `StewardAuthenticator`; nothing yet proves `CouchDbStewardAuthenticator` itself enforces the `"steward"` role against real CouchDB -- the exact promise Global Constraints makes ("a provisioned participant's valid credentials must NOT pass this check"). This mirrors Task 8's `CouchDbSessionAuthenticatorIntegrationTest` pattern:
+Every test above uses a stub `StewardAuthenticator`; nothing yet proves `CouchDbStewardAuthenticator` itself enforces the `"steward"` role against real CouchDB, the exact promise Global Constraints makes ("a provisioned participant's valid credentials must NOT pass this check"). This mirrors Task 8's `CouchDbSessionAuthenticatorIntegrationTest` pattern:
 
 ```java
 package org.benefits.policy;
@@ -3056,7 +3056,7 @@ class CouchDbStewardAuthenticatorIntegrationTest {
 ```
 
 Run: `./gradlew :connector:extensions:benefits-privacy:test --tests CouchDbStewardAuthenticatorIntegrationTest`
-Expected: fails to compile before `CouchDbStewardAuthenticator` exists (Step 1 already wrote it in this task, so if Steps are followed in order this test should already compile and simply need running); PASS once run (requires live CouchDB). The middle test, `rejectsAValidUserWithoutTheStewardRole`, is the one that would have caught a missing role check entirely -- confirm it fails first if you temporarily remove the role check from Step 1's `CouchDbStewardAuthenticator`, to prove this test is load-bearing, then restore the check.
+Expected: fails to compile before `CouchDbStewardAuthenticator` exists (Step 1 already wrote it in this task, so if Steps are followed in order this test should already compile and simply need running); PASS once run (requires live CouchDB). The middle test, `rejectsAValidUserWithoutTheStewardRole`, is the one that would have caught a missing role check entirely, confirm it fails first if you temporarily remove the role check from Step 1's `CouchDbStewardAuthenticator`, to prove this test is load-bearing, then restore the check.
 
 - [ ] **Step 6: Write the failing Gate 2 concurrency test, against real CouchDB**
 
@@ -3077,7 +3077,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Gate 2: two genuinely concurrent HTTP-shaped calls (two threads calling the
- * resource's coSign method, backed by real CouchDB) must both persist -- this is
+ * resource's coSign method, backed by real CouchDB) must both persist, this is
  * the direct proof that the atomic-append fix (Task 2, Task 3) actually closed
  * StewardAuthorizationStore's own documented replace-semantics race, not just a
  * unit-level ConcurrentHashMap test.
@@ -3154,7 +3154,7 @@ Expected: fails to compile before Step 4's implementation exists; PASS afterward
         }
 ```
 
-`buildReleaseRequestStore(context)` is Task 7's existing method, called a second time here -- constructing a second `ReleaseRequestStore` instance for the same underlying CouchDB database (when persistence is enabled) is fine, since neither instance holds in-process state beyond an HTTP client; both read and write the same documents.
+`buildReleaseRequestStore(context)` is Task 7's existing method, called a second time here, constructing a second `ReleaseRequestStore` instance for the same underlying CouchDB database (when persistence is enabled) is fine, since neither instance holds in-process state beyond an HTTP client; both read and write the same documents.
 
 - [ ] **Step 8b: Register the new port with `tools/lib.sh`'s cleanup list**
 
@@ -3191,7 +3191,7 @@ git commit -m "feat(benefits-privacy): add StewardResource (review, co-sign, vet
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks (a standalone operational script, like every other file in `tools/`).
-- Produces: a way to create the first steward CouchDB user, closing the chicken-and-egg gap `StewardResource`'s provisioning endpoint (Task 9) cannot close by itself -- provisioning a *participant* requires an authenticated steward already; provisioning the *first* steward cannot go through that same endpoint, since no steward yet exists to authenticate the call. This satisfies spec §5.5's "a steward-side sibling, provisioning a steward's own CouchDB user the same way" -- this script is that sibling, run once per steward by whoever administers the deployment, using CouchDB admin credentials directly rather than a steward's.
+- Produces: a way to create the first steward CouchDB user, closing the chicken-and-egg gap `StewardResource`'s provisioning endpoint (Task 9) cannot close by itself, provisioning a *participant* requires an authenticated steward already; provisioning the *first* steward cannot go through that same endpoint, since no steward yet exists to authenticate the call. This satisfies spec §5.5's "a steward-side sibling, provisioning a steward's own CouchDB user the same way", this script is that sibling, run once per steward by whoever administers the deployment, using CouchDB admin credentials directly rather than a steward's.
 
 This is spec §5.5's provisioning path realized as an operational script rather than an HTTP endpoint, mirroring the existing `tools/*.sh` convention (`lib.sh` sourcing, direct `curl` against CouchDB) rather than inventing a new pattern.
 
@@ -3265,9 +3265,9 @@ git commit -m "feat(tools): add steward CouchDB user bootstrap script"
 
 **Interfaces:**
 - Consumes: `@benefits/consent-core`'s `ConsentGrant`, `ContributionRecord` types (unchanged).
-- Produces: `ParticipantClient` (renamed from phase 5's `Device` -- this is the real client, not a simulated one; spec §7 calls this out explicitly), `syncDevice`, `resolveConflicts`. Task 12 (`apps/participant-web`) imports and uses these directly.
+- Produces: `ParticipantClient` (renamed from phase 5's `Device`, this is the real client, not a simulated one; spec §7 calls this out explicitly), `syncDevice`, `resolveConflicts`. Task 12 (`apps/participant-web`) imports and uses these directly.
 
-This is `packages/device-sim`'s `device.ts`/`sync.ts` logic (already gate-proven in phase 5, including the C3 leaked-record fix and the identity-based conflict resolution fix) ported to browser persistence -- `pouchdb-adapter-idb` instead of `pouchdb-adapter-memory` is the only substantive change to the sync/device logic itself. **Not a dependency on `device-sim`**, which stays simulation-only per its own package comments (spec §7). This package also does not repeat `device-sim`'s parked packaging defect: `package.json`'s `"main"` points at a real, built `dist/index.js` from a real `src/index.ts`, so it is importable by name from `apps/participant-web` (Task 12) from the start.
+This is `packages/device-sim`'s `device.ts`/`sync.ts` logic (already gate-proven in phase 5, including the C3 leaked-record fix and the identity-based conflict resolution fix) ported to browser persistence, `pouchdb-adapter-idb` instead of `pouchdb-adapter-memory` is the only substantive change to the sync/device logic itself. **Not a dependency on `device-sim`**, which stays simulation-only per its own package comments (spec §7). This package also does not repeat `device-sim`'s parked packaging defect: `package.json`'s `"main"` points at a real, built `dist/index.js` from a real `src/index.ts`, so it is importable by name from `apps/participant-web` (Task 12) from the start.
 
 - [ ] **Step 1: Verify the new npm dependencies against the real registry before using them**
 
@@ -3303,9 +3303,9 @@ Run: `npm view pouchdb-adapter-idb versions --json | tail -5` and `npm view fake
 }
 ```
 
-Every version number above other than the ones already used elsewhere in this repo (`pouchdb-core`, `pouchdb-adapter-http`, `pouchdb-replication`, `@benefits/consent-core`) is a placeholder pending Step 1's real registry check -- correct any that Step 1 found to not exist.
+Every version number above other than the ones already used elsewhere in this repo (`pouchdb-core`, `pouchdb-adapter-http`, `pouchdb-replication`, `@benefits/consent-core`) is a placeholder pending Step 1's real registry check, correct any that Step 1 found to not exist.
 
-- [ ] **Step 3: `tsconfig.json`** (browser target, NOT the root ES5-constrained one -- Global Constraints)
+- [ ] **Step 3: `tsconfig.json`** (browser target, NOT the root ES5-constrained one, Global Constraints)
 
 ```json
 {
@@ -3336,7 +3336,7 @@ PouchDB.plugin(idbAdapter);
 PouchDB.plugin(httpAdapter);
 PouchDB.plugin(replicationPlugin);
 
-// The idb adapter is the real browser persistence layer -- this is the
+// The idb adapter is the real browser persistence layer, this is the
 // actual participant client, not a simulation (device-sim's memory
 // adapter is deliberately test-only, spec section 3 of the phase 5
 // design). IndexedDB survives page reloads within one browser profile,
@@ -3420,7 +3420,7 @@ export class ParticipantClient {
 }
 ```
 
-Unlike `device-sim`'s `Device`, this client's local database name is stable (`participant-${participantRef}`, no timestamp/random suffix) -- a real participant reopening the app must reconnect to the SAME IndexedDB database across sessions, not create a fresh one every time, since IndexedDB (unlike the memory adapter phase 5's fleet uses) actually persists across page reloads and that persistence is the whole point.
+Unlike `device-sim`'s `Device`, this client's local database name is stable (`participant-${participantRef}`, no timestamp/random suffix), a real participant reopening the app must reconnect to the SAME IndexedDB database across sessions, not create a fresh one every time, since IndexedDB (unlike the memory adapter phase 5's fleet uses) actually persists across page reloads and that persistence is the whole point.
 
 - [ ] **Step 6: `src/sync.ts`**, `device-sim/src/sync.ts` verbatim except the type name (`Device` to `ParticipantClient`) and dropping the `conflictInjector` re-export (that is a test-harness-only concern specific to `device-sim`'s experiment tooling, not part of a real client):
 
@@ -3438,7 +3438,7 @@ export async function syncDevice(client: ParticipantClient, remoteUrl: string): 
   return { pushed: result.docs_written };
 }
 
-// Identity, not recency, decides -- see device-sim/src/sync.ts's own comment
+// Identity, not recency, decides, see device-sim/src/sync.ts's own comment
 // (phase 5 spec section 5) for the full reasoning behind this rule; it applies
 // unchanged to a real client's own conflicts.
 export async function resolveConflicts(client: ParticipantClient, remoteUrl: string): Promise<{ resolvedCount: number }> {
@@ -3472,7 +3472,7 @@ export async function resolveConflicts(client: ParticipantClient, remoteUrl: str
 }
 ```
 
-- [ ] **Step 7: `src/index.ts`** -- this is the fix for `device-sim`'s parked packaging defect, applied from the start:
+- [ ] **Step 7: `src/index.ts`**, this is the fix for `device-sim`'s parked packaging defect, applied from the start:
 
 ```typescript
 export { ParticipantClient } from './device';
@@ -3480,7 +3480,7 @@ export { syncDevice, resolveConflicts, createRemoteDb } from './sync';
 export { createLocalDb } from './pouchdb';
 ```
 
-(`createRemoteDb` is re-exported from `sync.ts`'s own import surface for convenience; it is defined in `pouchdb.ts` and re-exported once, not twice -- confirm this file only lists it under one of the two export lines when writing it, not both.)
+(`createRemoteDb` is re-exported from `sync.ts`'s own import surface for convenience; it is defined in `pouchdb.ts` and re-exported once, not twice, confirm this file only lists it under one of the two export lines when writing it, not both.)
 
 - [ ] **Step 8: `test/setup.ts`**, needed because `pouchdb-adapter-idb` requires a real `indexedDB` global, which Node (where `vitest` runs) does not provide:
 
@@ -3488,7 +3488,7 @@ export { createLocalDb } from './pouchdb';
 import 'fake-indexeddb/auto';
 ```
 
-Add to `package.json`'s test script or a `vitest.config.ts` `setupFiles` entry -- follow whichever pattern the root `vitest` configuration (if any) already uses for other packages; if none exists, add a minimal `vitest.config.ts` in this package:
+Add to `package.json`'s test script or a `vitest.config.ts` `setupFiles` entry, follow whichever pattern the root `vitest` configuration (if any) already uses for other packages; if none exists, add a minimal `vitest.config.ts` in this package:
 
 ```typescript
 import { defineConfig } from 'vitest/config';
@@ -3500,7 +3500,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 9: `test/device.test.ts`**, a direct port of `device-sim/test/device.test.ts`'s test cases (read that file first for the exact existing assertions to mirror -- grant/revoke/outbox-sweep behavior is identical logic, only the underlying adapter differs) constructing `ParticipantClient` instead of `Device`.
+- [ ] **Step 9: `test/device.test.ts`**, a direct port of `device-sim/test/device.test.ts`'s test cases (read that file first for the exact existing assertions to mirror, grant/revoke/outbox-sweep behavior is identical logic, only the underlying adapter differs) constructing `ParticipantClient` instead of `Device`.
 
 - [ ] **Step 10: `test/sync.integration.test.ts`**, a direct port of `device-sim/test/sync.integration.test.ts` (read that file's full content, already reproduced in this plan's Global Constraints preamble research) with `Device` replaced by `ParticipantClient`, and `injectConflict` imported from a small local test-only helper instead of `device-sim`'s `conflictInjector` (this package has no dependency on `device-sim`):
 
@@ -3519,18 +3519,18 @@ export async function injectConflict(remoteUrl: string, docId: string, conflicti
 }
 ```
 
-This mirrors `device-sim/src/conflictInjector.ts`'s approach (direct HTTP PUT with `?new_edits=false` at a higher generation) -- read that file for its exact current behavior before writing this port, since this plan's grounding research did not capture its full literal source.
+This mirrors `device-sim/src/conflictInjector.ts`'s approach (direct HTTP PUT with `?new_edits=false` at a higher generation), read that file for its exact current behavior before writing this port, since this plan's grounding research did not capture its full literal source.
 
-Include the C3 regression test from `device-sim`'s suite (`'does not retroactively delete an already-synced record when a later revoke sweeps the outbox'`) unchanged in spirit -- it proves the exact same `sentIds`/leak-prevention logic this package's `device.ts` shares verbatim with `device-sim`'s.
+Include the C3 regression test from `device-sim`'s suite (`'does not retroactively delete an already-synced record when a later revoke sweeps the outbox'`) unchanged in spirit, it proves the exact same `sentIds`/leak-prevention logic this package's `device.ts` shares verbatim with `device-sim`'s.
 
 - [ ] **Step 11: Run the full test suite**
 
 Run: `cd packages/consent-web-client && npx vitest run`
-Expected: unit tests (`device.test.ts`) pass without any external dependency (idb adapter works fully in-process against `fake-indexeddb`). Integration tests (`sync.integration.test.ts`) require live CouchDB, following the same `describe.skipIf`-with-top-level-`await` reachability pattern established in phase 5 (Global Constraints do not repeat this pattern's code here -- copy it from `device-sim/test/sync.integration.test.ts`, already reproduced in full in this plan's preamble research above).
+Expected: unit tests (`device.test.ts`) pass without any external dependency (idb adapter works fully in-process against `fake-indexeddb`). Integration tests (`sync.integration.test.ts`) require live CouchDB, following the same `describe.skipIf`-with-top-level-`await` reachability pattern established in phase 5 (Global Constraints do not repeat this pattern's code here, copy it from `device-sim/test/sync.integration.test.ts`, already reproduced in full in this plan's preamble research above).
 
 - [ ] **Step 12: Add `consent-web-client` to the workspace and run `npm install`**
 
-`consent-web-client` is under `packages/*`, already covered by the existing `workspaces` glob -- no change needed there (only `apps/*`, Task 12, needs a new glob entry).
+`consent-web-client` is under `packages/*`, already covered by the existing `workspaces` glob, no change needed there (only `apps/*`, Task 12, needs a new glob entry).
 
 Run: `npm install && npm run build --workspace=@benefits/consent-web-client`
 Expected: installs cleanly, builds `dist/index.js` and `dist/index.d.ts`.
@@ -3545,7 +3545,7 @@ git commit -m "feat(consent-web-client): browser PouchDB participant client"
 ### Task 12: apps/participant-web
 
 **Files:**
-- Modify: `package.json` (root -- add `"apps/*"` to `workspaces`)
+- Modify: `package.json` (root, add `"apps/*"` to `workspaces`)
 - Create: `apps/participant-web/package.json`
 - Create: `apps/participant-web/tsconfig.json`
 - Create: `apps/participant-web/index.html`
@@ -3561,7 +3561,7 @@ git commit -m "feat(consent-web-client): browser PouchDB participant client"
 - Consumes: Task 11's `@benefits/consent-web-client` (`ParticipantClient`, `syncDevice`, `resolveConflicts`), Task 8's authenticated `AuditResource` (`GET /audit/{participantRef}` with an `Authorization` header).
 - Produces: nothing later tasks import from (a leaf app); this is Gate 4's first click-through target.
 
-Real, minimal, demo-grade per the phase 6 gate's own literal text ("manual click through, paper screenshots") -- functional, not polished. Login is a plain participant-ref-plus-CouchDB-credentials form (credentials obtained out of band from the steward-portal provisioning flow, Task 15) stored only in memory for the session, never persisted to `localStorage` (a provisioned participant's password is a real CouchDB credential, not a UI convenience token).
+Real, minimal, demo-grade per the phase 6 gate's own literal text ("manual click through, paper screenshots"), functional, not polished. Login is a plain participant-ref-plus-CouchDB-credentials form (credentials obtained out of band from the steward-portal provisioning flow, Task 15) stored only in memory for the session, never persisted to `localStorage` (a provisioned participant's password is a real CouchDB credential, not a UI convenience token).
 
 - [ ] **Step 1: Root `package.json`**
 
@@ -3583,7 +3583,7 @@ Real, minimal, demo-grade per the phase 6 gate's own literal text ("manual click
 }
 ```
 
-- [ ] **Step 2: Verify React/Vite dependency versions against the real npm registry**, following this plan's established convention (Task 11, Step 1) -- confirm current stable versions of `react`, `react-dom`, `vite`, `@vitejs/plugin-react`, `typescript` types for React, before writing Step 3.
+- [ ] **Step 2: Verify React/Vite dependency versions against the real npm registry**, following this plan's established convention (Task 11, Step 1), confirm current stable versions of `react`, `react-dom`, `vite`, `@vitejs/plugin-react`, `typescript` types for React, before writing Step 3.
 
 - [ ] **Step 3: `apps/participant-web/package.json`**
 
@@ -3613,7 +3613,7 @@ Real, minimal, demo-grade per the phase 6 gate's own literal text ("manual click
 }
 ```
 
-Replace every `REPLACE_WITH_VERIFIED_VERSION` with the exact version Step 2 confirmed exists -- do not leave any of these placeholders in the committed file.
+Replace every `REPLACE_WITH_VERIFIED_VERSION` with the exact version Step 2 confirmed exists, do not leave any of these placeholders in the committed file.
 
 - [ ] **Step 4: `apps/participant-web/tsconfig.json`**
 
@@ -3890,7 +3890,7 @@ export function AuditViewer({ session }: { session: Session }) {
 Run: `npm install && npm run build --workspace=@benefits/participant-web`
 Expected: builds without type errors.
 
-- [ ] **Step 14: Manual click-through** (Gate 4 for this app -- start the dev server and exercise the golden path in a real browser)
+- [ ] **Step 14: Manual click-through** (Gate 4 for this app, start the dev server and exercise the golden path in a real browser)
 
 Run: `npm run dev --workspace=@benefits/participant-web` (requires CouchDB running and at least one participant already provisioned via Task 9's `POST /steward/participants/{participantRef}/provision` or Task 10's script, for a genuine login). Open the printed local URL, log in, grant a consent, sync, revoke, sync again, and load the audit trail. Confirm no console errors and that each action's effect is visible (grant appears in the list, sync reports a pushed count, revoke shows a swept count, audit entries load once the account has at least one recorded event).
 
@@ -3916,9 +3916,9 @@ git commit -m "feat(participant-web): consent cards, privacy dashboard, audit vi
 - Consumes: nothing from earlier tasks (Dart has no way to import TypeScript packages; this is an independent port of the same leak-prevention logic, not a code dependency).
 - Produces: `Outbox`, `ParticipantClient`, `syncOutbox`. Task 14 (Flutter UI) builds screens on top of these.
 
-Per the parent spec's already-recorded Flutter decision: a local outbox, plain HTTP pushes to CouchDB (no PouchDB replication library exists for Dart against real CouchDB), no bidirectional conflict resolution. `sqflite` is the local outbox backend; `sqflite_common_ffi` lets these tests run as plain Dart unit tests (no emulator/device needed) -- `sqflite`'s default platform channel implementation does not work under `flutter test` without it, a common, well-documented Flutter testing gotcha.
+Per the parent spec's already-recorded Flutter decision: a local outbox, plain HTTP pushes to CouchDB (no PouchDB replication library exists for Dart against real CouchDB), no bidirectional conflict resolution. `sqflite` is the local outbox backend; `sqflite_common_ffi` lets these tests run as plain Dart unit tests (no emulator/device needed), `sqflite`'s default platform channel implementation does not work under `flutter test` without it, a common, well-documented Flutter testing gotcha.
 
-- [ ] **Step 1: Verify Dart package versions against pub.dev before writing `pubspec.yaml`** -- confirm current stable versions of `sqflite`, `path`, `http`, `sqflite_common_ffi`, and the Flutter/Dart SDK constraint this repo's other tooling implies (no Flutter code exists yet in this repo to match against; use whatever stable Flutter SDK is available in the implementation environment, and record the exact version used in the task report).
+- [ ] **Step 1: Verify Dart package versions against pub.dev before writing `pubspec.yaml`**, confirm current stable versions of `sqflite`, `path`, `http`, `sqflite_common_ffi`, and the Flutter/Dart SDK constraint this repo's other tooling implies (no Flutter code exists yet in this repo to match against; use whatever stable Flutter SDK is available in the implementation environment, and record the exact version used in the task report).
 
 - [ ] **Step 2: `pubspec.yaml`**
 
@@ -4016,7 +4016,7 @@ void main() {
 }
 ```
 
-This last test is the same C3 regression phase 5's `device-sim` and Task 11's `consent-web-client` both carry -- here it holds structurally, since `sweepUnsentMatching` only ever queries rows where `sent = 0`, so an already-sent record can never be matched regardless of its content.
+This last test is the same C3 regression phase 5's `device-sim` and Task 11's `consent-web-client` both carry, here it holds structurally, since `sweepUnsentMatching` only ever queries rows where `sent = 0`, so an already-sent record can never be matched regardless of its content.
 
 - [ ] **Step 4: Run to verify it fails**
 
@@ -4209,7 +4209,7 @@ class ParticipantClient {
 Run: `cd apps/participant-mobile && flutter test test/participant_client_test.dart`
 Expected: PASS.
 
-- [ ] **Step 10: Write `sync.dart`** (no test in this step -- an HTTP-calling function against real CouchDB is exercised by Gate 0's probe and Gate 4's manual click-through, Task 14, not a unit test; its logic is a thin loop with no branching worth a mock-HTTP unit test on its own)
+- [ ] **Step 10: Write `sync.dart`** (no test in this step, an HTTP-calling function against real CouchDB is exercised by Gate 0's probe and Gate 4's manual click-through, Task 14, not a unit test; its logic is a thin loop with no branching worth a mock-HTTP unit test on its own)
 
 ```dart
 import 'dart:convert';
@@ -4226,7 +4226,7 @@ class SyncResult {
 /// section 1.2). A record is marked sent only after its own individual PUT
 /// succeeds, one at a time, not as a whole-batch operation on a single
 /// "replication complete" event the way device-sim's original TypeScript sync
-/// does -- this avoids that implementation's own parked gap (a single failed
+/// does, this avoids that implementation's own parked gap (a single failed
 /// document among several would have marked the whole batch sent regardless).
 Future<SyncResult> syncOutbox(Outbox outbox, String remoteUrl, String authHeader) async {
   final pending = await outbox.unsent();
@@ -4273,7 +4273,7 @@ git commit -m "feat(participant-mobile): local outbox, participant client, Couch
 - Consumes: Task 13's `Outbox`, `ParticipantClient`, `syncOutbox`.
 - Produces: a runnable Flutter app; Gate 4's manual click-through target for the mobile surface.
 
-Plain Material widgets, no design system -- matches the phase 6 gate's own "manual click through, paper screenshots" text. Session state (participant ref + CouchDB password, obtained out of band from steward-portal provisioning) lives in memory only, passed down via constructor parameters, not a state-management library -- this app has four screens and does not need one.
+Plain Material widgets, no design system, matches the phase 6 gate's own "manual click through, paper screenshots" text. Session state (participant ref + CouchDB password, obtained out of band from steward-portal provisioning) lives in memory only, passed down via constructor parameters, not a state-management library, this app has four screens and does not need one.
 
 - [ ] **Step 1: `lib/session.dart`**
 
@@ -4302,7 +4302,7 @@ class Session {
 import 'dart:convert';
 ```
 
-(The `import 'dart:convert';` line above is placed after the class body only to keep this plan's example compact -- write it as the file's first line, before the class declaration, as Dart requires.)
+(The `import 'dart:convert';` line above is placed after the class body only to keep this plan's example compact, write it as the file's first line, before the class declaration, as Dart requires.)
 
 - [ ] **Step 2: `lib/login_screen.dart`**
 
@@ -4606,11 +4606,11 @@ class _BenefitsAppState extends State<BenefitsApp> {
 - [ ] **Step 7: Run the existing test suite to confirm no regression**
 
 Run: `cd apps/participant-mobile && flutter test`
-Expected: Task 13's tests still PASS (this task adds no new automated tests -- UI screens are Gate 4's manual click-through target, matching the phase 6 gate's own "manual click through, paper screenshots" text, the same standard `apps/participant-web` (Task 12) was held to).
+Expected: Task 13's tests still PASS (this task adds no new automated tests, UI screens are Gate 4's manual click-through target, matching the phase 6 gate's own "manual click through, paper screenshots" text, the same standard `apps/participant-web` (Task 12) was held to).
 
 - [ ] **Step 8: Manual click-through** (Gate 4 for this app)
 
-Run: `cd apps/participant-mobile && flutter run` on a connected device or emulator (requires CouchDB reachable from that device/emulator -- on an Android emulator, `localhost` inside the emulator is not the host machine; use `10.0.2.2` or the host's real LAN address in `Session`'s default URLs for this manual run). Log in with a provisioned participant's credentials (Task 9 or Task 10), grant a consent, sync, revoke, sync again, load the audit trail. Confirm each screen updates and no exception is thrown.
+Run: `cd apps/participant-mobile && flutter run` on a connected device or emulator (requires CouchDB reachable from that device/emulator, on an Android emulator, `localhost` inside the emulator is not the host machine; use `10.0.2.2` or the host's real LAN address in `Session`'s default URLs for this manual run). Log in with a provisioned participant's credentials (Task 9 or Task 10), grant a consent, sync, revoke, sync again, load the audit trail. Confirm each screen updates and no exception is thrown.
 
 - [ ] **Step 9: Commit**
 
@@ -4638,7 +4638,7 @@ git commit -m "feat(participant-mobile): consent, dashboard, and audit screens"
 
 Same conventions as Task 12 (`apps/participant-web`): plain, functional, in-memory-only session credentials, no CSS framework. A steward logs in with the CouchDB credentials Task 10's bootstrap script (or a prior provisioning round) issued.
 
-- [ ] **Step 1: `apps/steward-portal/package.json`** (same dependency set and verified-version discipline as Task 12, Step 2 -- reuse the exact versions confirmed there rather than re-verifying, since both apps share the same React/Vite stack)
+- [ ] **Step 1: `apps/steward-portal/package.json`** (same dependency set and verified-version discipline as Task 12, Step 2, reuse the exact versions confirmed there rather than re-verifying, since both apps share the same React/Vite stack)
 
 ```json
 {
@@ -4667,7 +4667,7 @@ Same conventions as Task 12 (`apps/participant-web`): plain, functional, in-memo
 
 Replace every `SAME_VERSION_AS_TASK_12` with the literal version string Task 12 used (read `apps/participant-web/package.json`, already committed, to copy them exactly).
 
-- [ ] **Step 2: `apps/steward-portal/tsconfig.json`, `vite.config.ts`, `index.html`** -- identical in shape to Task 12's Steps 4-6, with the page title changed to "BENEFITS steward portal" and no reference to `@benefits/consent-web-client` (this app talks only to `StewardResource`, never to CouchDB directly).
+- [ ] **Step 2: `apps/steward-portal/tsconfig.json`, `vite.config.ts`, `index.html`**, identical in shape to Task 12's Steps 4-6, with the page title changed to "BENEFITS steward portal" and no reference to `@benefits/consent-web-client` (this app talks only to `StewardResource`, never to CouchDB directly).
 
 - [ ] **Step 3: `apps/steward-portal/src/config.ts`**
 
@@ -4675,7 +4675,7 @@ Replace every `SAME_VERSION_AS_TASK_12` with the literal version string Task 12 
 export const STEWARD_API_BASE_URL = import.meta.env.VITE_STEWARD_API_URL ?? 'http://localhost:19199/steward';
 ```
 
-- [ ] **Step 4: `apps/steward-portal/src/main.tsx`** -- identical in shape to Task 12's Step 8, rendering `App` from this app's own `App.tsx`.
+- [ ] **Step 4: `apps/steward-portal/src/main.tsx`**, identical in shape to Task 12's Step 8, rendering `App` from this app's own `App.tsx`.
 
 - [ ] **Step 5: `apps/steward-portal/src/App.tsx`**
 
@@ -4803,7 +4803,7 @@ export function Queue({ session }: { session: Session }) {
 }
 ```
 
-The `datasetHash` values above (`'hash-' + releaseRequestId`) are placeholder demo data, matching the spec ruling in Task 9 that no code anywhere in this repo computes a real dataset hash -- a click-through demo needs some deterministic value to pass, not a real hashing scheme.
+The `datasetHash` values above (`'hash-' + releaseRequestId`) are placeholder demo data, matching the spec ruling in Task 9 that no code anywhere in this repo computes a real dataset hash, a click-through demo needs some deterministic value to pass, not a real hashing scheme.
 
 - [ ] **Step 7: `apps/steward-portal/src/ProvisionParticipant.tsx`**
 
@@ -4838,7 +4838,7 @@ export function ProvisionParticipant({ session }: { session: Session }) {
       </form>
       {result && (
         <p>
-          Give these to the participant once, out of band -- they will not be shown again:
+          Give these to the participant once, out of band, they will not be shown again:
           ID <code>{result.participantRef}</code>, password <code>{result.password}</code>
         </p>
       )}
@@ -4854,7 +4854,7 @@ Expected: builds without type errors.
 
 - [ ] **Step 9: Manual click-through** (Gate 4 for this app)
 
-Run: `npm run dev --workspace=@benefits/steward-portal` (requires CouchDB and a provisioned steward account, Task 10). Log in, view the queue (empty is fine if no release request has been created yet via Task 7's endpoint -- create one first via `curl` against `POST /release-requests` to have something to review), co-sign or veto it, confirm the queue reflects the new state on reload, then provision a test participant and confirm a password is returned.
+Run: `npm run dev --workspace=@benefits/steward-portal` (requires CouchDB and a provisioned steward account, Task 10). Log in, view the queue (empty is fine if no release request has been created yet via Task 7's endpoint, create one first via `curl` against `POST /release-requests` to have something to review), co-sign or veto it, confirm the queue reflects the new state on reload, then provision a test participant and confirm a password is returned.
 
 - [ ] **Step 10: Commit**
 

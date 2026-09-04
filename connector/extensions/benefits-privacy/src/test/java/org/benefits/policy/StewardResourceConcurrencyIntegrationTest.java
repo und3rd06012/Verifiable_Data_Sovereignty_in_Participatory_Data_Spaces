@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Gate 2: two genuinely concurrent HTTP-shaped calls (two threads calling the
- * resource's coSign method, backed by real CouchDB) must both persist -- this is
+ * resource's coSign method, backed by real CouchDB) must both persist, this is
  * the direct proof that the atomic-append fix (Task 2, Task 3) actually closed
  * StewardAuthorizationStore's own documented replace-semantics race, not just a
  * unit-level ConcurrentHashMap test.

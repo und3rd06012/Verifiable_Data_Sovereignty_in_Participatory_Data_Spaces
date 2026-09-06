@@ -54,88 +54,116 @@
 \citation{katrakazas2026}
 \@writefile{toc}{\contentsline {section}{\numberline {3}System Architecture and Implementation}{9}{section.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}From Specification to Running System}{9}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}The EDC Connector Layer}{9}{subsection.3.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces The BENEFITS reference architecture. Participant devices (web and mobile) sync a consent-filtered PouchDB outbox into a private CouchDB whose \texttt  {validate\_doc\_update} function enforces the device-side gate (S1). The community connector aggregates per-participant databases, runs the privacy pipeline, and releases through an EDC connector under ODRL constraints, steward co-signatures, and the audit chain (S2). Shared conformance vectors pin identical verdicts across the TypeScript and Java implementations.}}{10}{figure.caption.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces The full system architecture, tier by tier, from participant devices through the community connector to the data space.}}{9}{figure.caption.1}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{fig:architecture}{{1}{10}{The BENEFITS reference architecture. Participant devices (web and mobile) sync a consent-filtered PouchDB outbox into a private CouchDB whose \texttt {validate\_doc\_update} function enforces the device-side gate (S1). The community connector aggregates per-participant databases, runs the privacy pipeline, and releases through an EDC connector under ODRL constraints, steward co-signatures, and the audit chain (S2). Shared conformance vectors pin identical verdicts across the TypeScript and Java implementations}{figure.caption.1}{}}
-\newlabel{fig:architecture@cref}{{[figure][1][]1}{[1][9][]10}}
+\newlabel{fig:architecture}{{1}{9}{The full system architecture, tier by tier, from participant devices through the community connector to the data space}{figure.caption.1}{}}
+\newlabel{fig:architecture@cref}{{[figure][1][]1}{[1][9][]9}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The two enforcement points, the CouchDB validator at the device boundary and the EDC constraint functions at the connector boundary, pinned together by the shared conformance vectors.}}{10}{figure.caption.2}\protected@file@percent }
+\newlabel{fig:enforcement-points}{{2}{10}{The two enforcement points, the CouchDB validator at the device boundary and the EDC constraint functions at the connector boundary, pinned together by the shared conformance vectors}{figure.caption.2}{}}
+\newlabel{fig:enforcement-points@cref}{{[figure][2][]2}{[1][9][]10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces The release decision flow, from request through consent checks to the steward quorum, privacy pipeline, and release.}}{11}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:release-flow}{{3}{11}{The release decision flow, from request through consent checks to the steward quorum, privacy pipeline, and release}{figure.caption.3}{}}
+\newlabel{fig:release-flow@cref}{{[figure][3][]3}{[1][10][]11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces The privacy pipeline stages: records, grouping, k-anonymity, Laplace noise, and budget accounting.}}{12}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:privacy-pipeline}{{4}{12}{The privacy pipeline stages: records, grouping, k-anonymity, Laplace noise, and budget accounting}{figure.caption.4}{}}
+\newlabel{fig:privacy-pipeline@cref}{{[figure][4][]4}{[1][11][]12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}The EDC Connector Layer}{12}{subsection.3.2}\protected@file@percent }
 \citation{mugge2023}
 \citation{kalogeropoulos2023}
 \citation{norikane2025}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Paying for the Two-Language Boundary}{11}{subsection.3.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The two enforcement points of the consent model. One rule set is compiled twice: into the CouchDB \texttt  {validate\_doc\_update} function (S1, TypeScript) and into the ODRL constraint functions evaluated by the EDC policy engine (S2, Java). The conformance vectors run against both suites and require byte-identical verdicts. Any disagreement is a defect in the departing implementation.}}{12}{figure.caption.2}\protected@file@percent }
-\newlabel{fig:enforcement-points}{{2}{12}{The two enforcement points of the consent model. One rule set is compiled twice: into the CouchDB \texttt {validate\_doc\_update} function (S1, TypeScript) and into the ODRL constraint functions evaluated by the EDC policy engine (S2, Java). The conformance vectors run against both suites and require byte-identical verdicts. Any disagreement is a defect in the departing implementation}{figure.caption.2}{}}
-\newlabel{fig:enforcement-points@cref}{{[figure][2][]2}{[1][11][]12}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}The Steward-Quorum Release Gate}{13}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Paying for the Two-Language Boundary}{13}{subsection.3.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Consent and audit conformance vectors, with the specific case each one exercises.}}{14}{table.caption.5}\protected@file@percent }
+\newlabel{tab:t1}{{1}{14}{Consent and audit conformance vectors, with the specific case each one exercises}{table.caption.5}{}}
+\newlabel{tab:t1@cref}{{[table][1][]1}{[1][14][]14}}
 \citation{katrakazas2026}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Release decision flow at the boundary: consent match, steward quorum, and privacy-budget checks, each with a specific refusal reason.}}{14}{figure.caption.3}\protected@file@percent }
-\newlabel{fig:release-flow}{{3}{14}{Release decision flow at the boundary: consent match, steward quorum, and privacy-budget checks, each with a specific refusal reason}{figure.caption.3}{}}
-\newlabel{fig:release-flow@cref}{{[figure][3][]3}{[1][13][]14}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}The Steward-Quorum Release Gate}{15}{subsection.3.4}\protected@file@percent }
 \citation{kokoriskogias2020}
 \citation{raisaro2019}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}The Privacy Pipeline}{15}{subsection.3.5}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces The privacy pipeline: k-anonymity grouping with suppression, Laplace noise calibrated to a per-site epsilon budget, and the atomic budget accountant.}}{15}{figure.caption.4}\protected@file@percent }
-\newlabel{fig:privacy-pipeline}{{4}{15}{The privacy pipeline: k-anonymity grouping with suppression, Laplace noise calibrated to a per-site epsilon budget, and the atomic budget accountant}{figure.caption.4}{}}
-\newlabel{fig:privacy-pipeline@cref}{{[figure][4][]4}{[1][15][]15}}
 \citation{mironov2017}
 \citation{prasser2020}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}The Audit Chain}{16}{subsection.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}The Privacy Pipeline}{16}{subsection.3.5}\protected@file@percent }
 \citation{schneier1999}
 \citation{laurie2013}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}What the Phase Gates Verified}{17}{subsection.3.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4}Experimental Methodology}{18}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}E1: Signature-Verification Cost at the Edge}{18}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}The Audit Chain}{17}{subsection.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}What the Phase Gates Verified}{18}{subsection.3.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Enforcement-correctness cases checked at the policy and steward-quorum gate. All nine passed.}}{18}{table.caption.6}\protected@file@percent }
+\newlabel{tab:t2}{{2}{18}{Enforcement-correctness cases checked at the policy and steward-quorum gate. All nine passed}{table.caption.6}{}}
+\newlabel{tab:t2@cref}{{[table][2][]2}{[1][18][]18}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experimental Methodology}{19}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}E1: Signature-Verification Cost at the Edge}{20}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}E2: Revocation Propagation Under Network Partition}{20}{subsection.4.2}\protected@file@percent }
 \citation{crosby2009}
 \citation{melara2015}
 \citation{hu2021}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}E2: Revocation Propagation Under Network Partition}{19}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}E3: Audit-Chain Verification Cost at Scale}{19}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}E3: Audit-Chain Verification Cost at Scale}{21}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}E4: Privacy-Budget-Versus-Utility Tradeoff}{21}{subsection.4.4}\protected@file@percent }
 \citation{abadi2016}
 \citation{hay2016}
 \citation{rogers2021}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}E4: Privacy-Budget-Versus-Utility Tradeoff}{20}{subsection.4.4}\protected@file@percent }
 \citation{katrakazas2026}
 \citation{kokoriskogias2020}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}G1: Quorum Availability Under the Built Policy and the Veto Policy SIDS 2026 Specified}{21}{subsection.4.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}G2: Consent Heterogeneity Versus Aggregate Utility}{21}{subsection.4.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{22}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}E1: Signature-Verification Cost at the Edge}{23}{subsection.5.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces E1: signature-verification cost at the edge. Median wall time against batch size for the baseline, structural, and signature arms on log-log axes, one panel per field count (1, 5, 20). IQR bands shown for each arm.}}{23}{figure.caption.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}E2: Revocation Propagation Under Network Partition}{24}{subsection.5.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces E2: revocation propagation and consistency latency against online probability, with IQR bands.}}{24}{figure.caption.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}E3: Audit-Chain Verification Cost at Scale}{25}{subsection.5.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces E3: audit-chain verification cost at scale. (\textbf  {a}) Inclusion proof size against epoch size. (\textbf  {b}) Inclusion-proof verification time against epoch size. (\textbf  {c}) Chain-of-custody verification time against chain length.}}{25}{figure.caption.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}E4: Privacy-Budget-Versus-Utility Tradeoff}{25}{subsection.5.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces E4: privacy-budget-versus-utility tradeoff. Surviving median relative error against epsilon, one panel per population size, one line per k threshold, uniform skew only.}}{25}{figure.caption.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}G1: Quorum Availability Under the Built Policy and the Veto Policy SIDS 2026 Specified}{26}{subsection.5.5}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces G1: quorum failure rate against action probability for Arm A (the built, veto-blind policy) and Arm B (SIDS 2026's specified veto policy), one panel per quorum fraction.}}{26}{figure.caption.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}G2: Consent Heterogeneity Versus Aggregate Utility}{28}{subsection.5.6}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces G2: surviving coverage error and surviving exclusion error against consent heterogeneity h, one panel per epsilon, with IQR bands.}}{28}{figure.caption.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}G1: Quorum Availability Under the Built Policy and the Veto Policy SIDS 2026 Specified}{22}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}G2: Consent Heterogeneity Versus Aggregate Utility}{23}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{24}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}E1: Signature-Verification Cost at the Edge}{24}{subsection.5.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces E1: signature-verification cost at the edge. Median wall time against batch size for the baseline, structural, and signature arms on log-log axes, one panel per field count (1, 5, 20). IQR bands shown for each arm.}}{24}{figure.caption.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces E1 wall time by batch size and arm, field\_count = 1, median (IQR) in milliseconds.}}{25}{table.caption.8}\protected@file@percent }
+\newlabel{tab:t3}{{3}{25}{E1 wall time by batch size and arm, field\_count = 1, median (IQR) in milliseconds}{table.caption.8}{}}
+\newlabel{tab:t3@cref}{{[table][3][]3}{[1][25][]25}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}E2: Revocation Propagation Under Network Partition}{26}{subsection.5.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces E2: revocation propagation and consistency latency against online probability, with IQR bands.}}{26}{figure.caption.9}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces E2 propagation and consistency ticks by online probability, median (IQR).}}{26}{table.caption.10}\protected@file@percent }
+\newlabel{tab:t4}{{4}{26}{E2 propagation and consistency ticks by online probability, median (IQR)}{table.caption.10}{}}
+\newlabel{tab:t4@cref}{{[table][4][]4}{[1][26][]26}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}E3: Audit-Chain Verification Cost at Scale}{27}{subsection.5.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces E3: audit-chain verification cost at scale. (\textbf  {a}) Inclusion proof size against epoch size. (\textbf  {b}) Inclusion-proof verification time against epoch size. (\textbf  {c}) Chain-of-custody verification time against chain length.}}{27}{figure.caption.11}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces E3 inclusion-proof size and verification time by epoch size, median (IQR).}}{27}{table.caption.12}\protected@file@percent }
+\newlabel{tab:t5}{{5}{27}{E3 inclusion-proof size and verification time by epoch size, median (IQR)}{table.caption.12}{}}
+\newlabel{tab:t5@cref}{{[table][5][]5}{[1][27][]27}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces E3 chain-of-custody verification time by chain length, median of ten timed repetitions.}}{27}{table.caption.13}\protected@file@percent }
+\newlabel{tab:t6}{{6}{27}{E3 chain-of-custody verification time by chain length, median of ten timed repetitions}{table.caption.13}{}}
+\newlabel{tab:t6@cref}{{[table][6][]6}{[1][27][]27}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}E4: Privacy-Budget-Versus-Utility Tradeoff}{28}{subsection.5.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces E4: privacy-budget-versus-utility tradeoff. Surviving median relative error against epsilon, one panel per population size, one line per k threshold, uniform skew only.}}{28}{figure.caption.14}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces E4 surviving median relative error at epsilon = 0.1 and epsilon = 2.0, uniform skew, median (IQR) [surviving points / total grid points].}}{29}{table.caption.15}\protected@file@percent }
+\newlabel{tab:t7}{{7}{29}{E4 surviving median relative error at epsilon = 0.1 and epsilon = 2.0, uniform skew, median (IQR) [surviving points / total grid points]}{table.caption.15}{}}
+\newlabel{tab:t7@cref}{{[table][7][]7}{[1][28][]29}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}G1: Quorum Availability Under the Built Policy and the Veto Policy SIDS 2026 Specified}{29}{subsection.5.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces G1: quorum failure rate against action probability for Arm A (the built, veto-blind policy) and Arm B (SIDS 2026's specified veto policy), one panel per quorum fraction.}}{29}{figure.caption.16}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces G1 quorum failure rate and its components, veto\_share = 0.3, N = 20.}}{30}{table.caption.17}\protected@file@percent }
+\newlabel{tab:t8}{{8}{30}{G1 quorum failure rate and its components, veto\_share = 0.3, N = 20}{table.caption.17}{}}
+\newlabel{tab:t8@cref}{{[table][8][]8}{[1][30][]30}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}G2: Consent Heterogeneity Versus Aggregate Utility}{31}{subsection.5.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces G2: surviving coverage error and surviving exclusion error against consent heterogeneity h, one panel per epsilon, with IQR bands.}}{31}{figure.caption.18}\protected@file@percent }
 \citation{katrakazas2026}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion}{29}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Two Lines of Evidence, Not One}{29}{subsection.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Returning to the Open Governance Challenges}{29}{subsection.6.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces G2 surviving coverage and exclusion error by heterogeneity h, population = 100, median (IQR).}}{32}{table.caption.19}\protected@file@percent }
+\newlabel{tab:t9}{{9}{32}{G2 surviving coverage and exclusion error by heterogeneity h, population = 100, median (IQR)}{table.caption.19}{}}
+\newlabel{tab:t9@cref}{{[table][9][]9}{[1][32][]32}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion}{32}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Two Lines of Evidence, Not One}{32}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Returning to the Open Governance Challenges}{33}{subsection.6.2}\protected@file@percent }
 \citation{katrakazas2026}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}The Steward-Quorum Gaps and What "Verified, Not Architected" Requires}{34}{subsection.6.3}\protected@file@percent }
 \citation{katrakazas2026}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}The Steward-Quorum Gaps and What "Verified, Not Architected" Requires}{31}{subsection.6.3}\protected@file@percent }
 \citation{albalwy2026}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}E1 and the Absence of a Crossover}{32}{subsection.6.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Limitations}{33}{subsection.6.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}E1 and the Absence of a Crossover}{36}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Limitations}{36}{subsection.6.5}\protected@file@percent }
 \citation{katrakazas2026}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion}{34}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion}{38}{section.7}\protected@file@percent }
 \citation{katrakazas2026}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Future Work}{35}{section.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}From Simulation to Field Conditions}{36}{subsection.8.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Closing the Steward-Quorum Gaps}{36}{subsection.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Future Work}{39}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}From Simulation to Field Conditions}{39}{subsection.8.1}\protected@file@percent }
 \citation{kokoriskogias2020}
 \citation{raisaro2019}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}From Epsilon to Deliberation}{37}{subsection.8.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Sustainable Steward Governance Across Three Sites}{37}{subsection.8.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}From Sovereignty Mechanisms to Service Decisions}{38}{subsection.8.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Closing the Steward-Quorum Gaps}{40}{subsection.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}From Epsilon to Deliberation}{40}{subsection.8.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Sustainable Steward Governance Across Three Sites}{41}{subsection.8.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Whether Sovereignty Changes What Happens}{41}{subsection.8.5}\protected@file@percent }
 \citation{katrakazas2026}
 \bibdata{references}
 \bibcite{katrakazas2026}{{1}{2026}{{Katrakazas and Ntib}}{{}}}
 \bibcite{abowd2022}{{2}{2022}{{Abowd et~al.}}{{Abowd, Ashmead, Cumings-Menon, Garfinkel, Heineck, Heiss, Johns, Kifer, Leclerc, Machanavajjhala, Moran, Sexton, Spence, and Zhuravlev}}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}References}{42}{section.9}\protected@file@percent }
 \bibcite{idsram4}{{3}{2022}{{Steinbuss et~al.}}{{Steinbuss, Otto, Teuscher, and Pettenpohl}}}
 \bibcite{gaiax}{{4}{2022}{{Gaia-X European Association for Data and Cloud AISBL}}{{}}}
 \bibcite{decode2019}{{5}{2019}{{DECODE Consortium}}{{}}}
@@ -144,7 +172,6 @@
 \bibcite{openhumans2019}{{8}{2019}{{{Greshake Tzovaras} et~al.}}{{}}}
 \bibcite{mydata2020}{{9}{2020}{{Langford et~al.}}{{}}}
 \bibcite{mcinnis2024}{{10}{2024}{{McInnis et~al.}}{{McInnis, Pindus, Kareem, and Nebeker}}}
-\@writefile{toc}{\contentsline {section}{\numberline {9}References}{39}{section.9}\protected@file@percent }
 \bibcite{chereja2025}{{11}{2025}{{Chereja et~al.}}{{}}}
 \bibcite{dam2023}{{12}{2023}{{Dam et~al.}}{{Dam, Klausner, Neumaier, and Priebe}}}
 \bibcite{mugge2023}{{13}{2023}{{M{\"u}gge et~al.}}{{M{\"u}gge, {Grosse Erdmann}, Riedelsheimer, Manoury, Smolka, Wichmann, and Lindow}}}
@@ -164,7 +191,7 @@
 \bibcite{raisaro2019}{{27}{2019}{{Raisaro et~al.}}{{Raisaro, Troncoso-Pastoriza, Misbach, {S{\'a} Sousa}, Pradervand, Missiaglia, Michielin, Ford, and Hubaux}}}
 \bibcite{zhao2024}{{28}{2024}{{Zhao and Su}}{{}}}
 \bibcite{albalwy2026}{{29}{2026}{{Albalwy}}{{}}}
-\newlabel{LastPage}{{8.5}{40}{From Sovereignty Mechanisms to Service Decisions}{page.40}{}}
-\gdef\lastpage@lastpage{40}
-\gdef\lastpage@lastpageHy{40}
-\gdef \@abspage@last{40}
+\newlabel{LastPage}{{8.5}{44}{Whether Sovereignty Changes What Happens}{page.44}{}}
+\gdef\lastpage@lastpage{44}
+\gdef\lastpage@lastpageHy{44}
+\gdef \@abspage@last{44}

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Converts the drafted markdown chapters into MDPI LaTeX body content.
 Deterministic script, not a rewrite: escapes special characters, converts
-citations to \\cite{key}, converts headers/bold/backticks, inserts figures
-into Chapter 5 at the points the prose already names them."""
+citations to \\cite{key}, converts headers/bold/backticks/pipe tables,
+inserts figures into Chapter 5 at the points the prose already names them."""
 import re
 import sys
 
@@ -171,6 +171,91 @@ def convert_headers(text):
     return "\n".join(out)
 
 
+TABLE_CAPTION_RE = re.compile(r"^Table (\d+)\.\s+(.+)$")
+TABLE_WIDE_COLUMN_CHARS = 35
+
+
+def _split_table_row(line):
+    line = line.strip()
+    if line.startswith("|"):
+        line = line[1:]
+    if line.endswith("|"):
+        line = line[:-1]
+    return [c.strip() for c in line.split("|")]
+
+
+def _column_alignment(sep_cell):
+    sep_cell = sep_cell.strip()
+    left = sep_cell.startswith(":")
+    right = sep_cell.endswith(":")
+    if left and right:
+        return "c"
+    if right:
+        return "r"
+    return "l"
+
+
+def convert_tables(text):
+    """Converts a `Table N. caption` paragraph immediately followed by a
+    markdown pipe table into a booktabs LaTeX table environment. Runs after
+    citations/math/code/escaping/bold, so cell text is already LaTeX-ready;
+    splitting on `|` is safe because authored table cells never contain a
+    literal pipe character."""
+    lines = text.split("\n")
+    out = []
+    i, n = 0, len(lines)
+    while i < n:
+        m = TABLE_CAPTION_RE.match(lines[i].strip())
+        j = i + 1
+        while m and j < n and lines[j].strip() == "":
+            j += 1
+        is_table_start = (
+            m and j < n and lines[j].strip().startswith("|")
+            and j + 1 < n and re.match(r"^\|?[\s:|-]+$", lines[j + 1].strip())
+        )
+        if is_table_start:
+            table_num, caption = m.group(1), m.group(2)
+            header = _split_table_row(lines[j])
+            aligns = [_column_alignment(c) for c in _split_table_row(lines[j + 1])]
+            k = j + 2
+            rows = []
+            while k < n and lines[k].strip().startswith("|"):
+                rows.append(_split_table_row(lines[k]))
+                k += 1
+            widest = [
+                max([len(header[c])] + [len(r[c]) for r in rows])
+                for c in range(len(header))
+            ]
+            spec = "".join(
+                "X" if w > TABLE_WIDE_COLUMN_CHARS else a
+                for w, a in zip(widest, aligns)
+            )
+            use_x = "X" in spec
+            env = "tabularx" if use_x else "tabular"
+            begin_tabular = (
+                f"\\begin{{tabularx}}{{\\textwidth}}{{{spec}}}" if use_x
+                else f"\\begin{{tabular}}{{{spec}}}"
+            )
+            tex = [f"\\begin{{table}}[H]", f"\\caption{{{caption}\\label{{tab:t{table_num}}}}}"]
+            if not use_x:
+                tex.append("\\small")
+            tex.append(begin_tabular)
+            tex.append("\\toprule")
+            tex.append(" & ".join(header) + " \\\\")
+            tex.append("\\midrule")
+            for r in rows:
+                tex.append(" & ".join(r) + " \\\\")
+            tex.append("\\bottomrule")
+            tex.append(f"\\end{{{env}}}")
+            tex.append("\\end{table}")
+            out.append("\n".join(tex))
+            i = k
+            continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out)
+
+
 FIGURE_INSERTS = {
     "Figure 1 (e1-crossover.pdf)": (
         "e1-crossover", "E1: signature-verification cost at the edge. Median wall time "
@@ -239,6 +324,7 @@ def convert_file(path, insert_figs=False):
         text = text.replace(token, val)
     text = convert_bold(text)
     text = restore_citations(text)
+    text = convert_tables(text)
     if insert_figs:
         text = insert_figures(text)
     return text
